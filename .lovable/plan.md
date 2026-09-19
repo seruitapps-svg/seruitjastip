@@ -11,7 +11,7 @@ Aplikasi satu halaman utama: user mengisi form order jastip, sistem menghitung j
 ## Aturan Paket
 - **Batas standar per paket:** maks 5 kg, dimensi maks 100 x 100 cm.
 - Form minta input berat (kg) dan dimensi (P x L x T cm).
-- **Di atas batas standar** (lebih berat/besar, tapi masih memungkinkan diantar motor): order tetap bisa, ada **biaya tambahan** (tarif placeholder — user konfirmasi).
+- **Di atas batas standar** (lebih berat/besar, tapi masih memungkinkan diantar motor): order tetap bisa, ada **biaya tambahan flat Rp 5.000**.
 - Jika tidak muat motor sama sekali: form beri catatan agar konfirmasi admin via WA dulu.
 
 ## Pembayaran
@@ -31,7 +31,7 @@ Isi detail: barang/belanjaan, berat & dimensi paket, nama, no. WA, catatan
 Pilih pembayaran: COD atau Transfer
         ↓
 Sistem hitung jarak & durasi (Routes API) + estimasi harga:
-  tarif dasar + (per km x jarak) + biaya tambahan jika paket > 5kg / > 100x100cm
+  Rp 5.000 (dasar) + Rp 1.000/km + Rp 5.000 jika paket > 5kg / > 100x100cm
         ↓
 Halaman ringkasan: rincian + rincian biaya + peta rute A→B
   (Transfer: tampil QRIS + nominal)
@@ -50,9 +50,9 @@ Klik "Kirim Order via WhatsApp" → WA admin terbuka, pesan sudah terisi otomati
 - **Halaman utama** (`/`): hero singkat, pilihan 3 layanan, form order dengan peta
 - **Komponen peta & autocomplete**: Google Maps JS API (browser key bawaan Lovable), pin A/B, gambar rute
 - **Perhitungan jarak**: Routes API via server function (melindungi quota; validasi input dengan zod)
-- **Kalkulasi harga**: tarif dasar + per km + biaya tambahan berat/dimensi (angka placeholder)
+- **Kalkulasi harga**: Rp 5.000 dasar + Rp 1.000/km + Rp 5.000 tambahan jika paket > 5 kg / > 100x100 cm
 - **Tampilan QRIS**: gambar QRIS statis (aset aplikasi) muncul saat metode Transfer dipilih
-- **Generator pesan WA**: teks + link rute, buka `wa.me/<no-admin>?text=...` dengan encodeURIComponent
+- **Generator pesan WA**: teks + link rute, buka `wa.me/6285783797770?text=...` dengan encodeURIComponent
 - Validasi form client + server (zod): batas panjang input, format nomor WA
 
 ## Yang TIDAK Dibangun (sesuai konsep)
@@ -67,8 +67,7 @@ Klik "Kirim Order via WhatsApp" → WA admin terbuka, pesan sudah terisi otomati
 - Tanpa database dulu (bisa ditambah nanti jika mau arsip order)
 - Estimasi harga ditampilkan sebagai "estimasi" — harga final konfirmasi admin via WA
 
-## Yang Saya Butuhkan dari Anda
-- Nomor WhatsApp admin tujuan order
-- Tarif: biaya dasar (Rp) + per km (Rp)
-- Tarif biaya tambahan untuk paket > 5 kg / > 100x100 cm (Rp flat atau per kg?)
-- Gambar QRIS (bisa dikirim nanti; sementara saya pakai placeholder)
+## Data yang Sudah Dikonfirmasi
+- WA admin: 085783797770 (wa.me/6285783797770)
+- Tarif: Rp 5.000 dasar + Rp 1.000/km; biaya tambahan barang besar flat Rp 5.000
+- Masih menyusul: gambar QRIS asli (sementara pakai placeholder)
