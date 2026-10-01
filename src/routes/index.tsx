@@ -18,6 +18,7 @@ import {
   PACKAGE_LIMITS,
   PRICING,
   SERVICES,
+  TALANGAN_MAX,
   formatRupiah,
   type ServiceId,
 } from "@/lib/config";
@@ -309,8 +310,9 @@ function Index() {
 
           {serviceId === "belanja" && (
             <p className="rounded-lg bg-accent px-3 py-2 text-xs text-accent-foreground">
-              Driver bisa menalangi belanjaan maks {formatRupiah(100000)}. Anda
-              bayar balik talangan + ongkir saat barang diterima.
+              Driver bisa menalangi belanjaan maks{" "}
+              {formatRupiah(TALANGAN_MAX)}. Anda bayar balik talangan + ongkir
+              saat barang diterima.
             </p>
           )}
 
@@ -516,7 +518,8 @@ function Index() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">
-                  Jarak ({summary.price.billedKm} km × {formatRupiah(1000)})
+                  Jarak ({summary.price.billedKm} km ×{" "}
+                  {formatRupiah(PRICING.perKm)})
                 </span>
                 <span className="text-foreground">
                   {formatRupiah(summary.price.distanceFare)}
