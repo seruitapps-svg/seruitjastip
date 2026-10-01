@@ -14,7 +14,14 @@ import { PlaceAutocomplete, type SelectedPlace } from "@/components/order/PlaceA
 import { RouteMap } from "@/components/order/RouteMap";
 import { computeRoute } from "@/lib/maps.functions";
 import { calculatePrice, type PriceBreakdown } from "@/lib/pricing";
-import { PACKAGE_LIMITS, SERVICES, formatRupiah, type ServiceId } from "@/lib/config";
+import {
+  PACKAGE_LIMITS,
+  PRICING,
+  SERVICES,
+  TALANGAN_MAX,
+  formatRupiah,
+  type ServiceId,
+} from "@/lib/config";
 import { buildWaLink, buildWaMessage, type OrderData } from "@/lib/wa-message";
 
 export const Route = createFileRoute("/")({
@@ -222,7 +229,10 @@ function Index() {
             jarak & harga otomatis, order langsung via WhatsApp.
           </p>
           <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-accent-foreground">
-            Tarif: Rp 5.000 + Rp 1.000/km · Paket s.d. 5 kg / 100×100 cm
+            Tarif: {formatRupiah(PRICING.baseFare)} +{" "}
+            {formatRupiah(PRICING.perKm)}/km · Paket s.d.{" "}
+            {PACKAGE_LIMITS.maxWeightKg} kg / {PACKAGE_LIMITS.maxDimCm}×
+            {PACKAGE_LIMITS.maxDimCm} cm
           </div>
         </section>
 
@@ -300,8 +310,9 @@ function Index() {
 
           {serviceId === "belanja" && (
             <p className="rounded-lg bg-accent px-3 py-2 text-xs text-accent-foreground">
-              Driver bisa menalangi belanjaan maks {formatRupiah(100000)}. Anda
-              bayar balik talangan + ongkir saat barang diterima.
+              Driver bisa menalangi belanjaan maks{" "}
+              {formatRupiah(TALANGAN_MAX)}. Anda bayar balik talangan + ongkir
+              saat barang diterima.
             </p>
           )}
 
@@ -339,7 +350,8 @@ function Index() {
           <p className="text-xs text-muted-foreground">
             Batas standar: {PACKAGE_LIMITS.maxWeightKg} kg &{" "}
             {PACKAGE_LIMITS.maxDimCm}×{PACKAGE_LIMITS.maxDimCm} cm. Di atas itu
-            kena biaya tambahan {formatRupiah(5000)} (selama masih muat motor).
+            kena biaya tambahan {formatRupiah(PRICING.oversizeFee)} (selama
+            masih muat motor).
           </p>
 
           {serviceId === "kirim" && (
@@ -506,7 +518,8 @@ function Index() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">
-                  Jarak ({summary.price.billedKm} km × {formatRupiah(1000)})
+                  Jarak ({summary.price.billedKm} km ×{" "}
+                  {formatRupiah(PRICING.perKm)})
                 </span>
                 <span className="text-foreground">
                   {formatRupiah(summary.price.distanceFare)}

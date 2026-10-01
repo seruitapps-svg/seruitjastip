@@ -1,4 +1,4 @@
-import { ADMIN_WA_NUMBER, SERVICES, formatRupiah } from "./config";
+import { ADMIN_WA_NUMBER, PRICING, SERVICES, formatRupiah } from "./config";
 import type { PriceBreakdown } from "./pricing";
 
 export interface OrderData {
@@ -55,7 +55,7 @@ export function buildWaMessage(
     "",
     "*Rincian Biaya (estimasi)*",
     `Tarif dasar: ${formatRupiah(price.baseFare)}`,
-    `Jarak ${price.billedKm} km x ${formatRupiah(1000)}: ${formatRupiah(price.distanceFare)}`,
+    `Jarak ${price.billedKm} km x ${formatRupiah(PRICING.perKm)}: ${formatRupiah(price.distanceFare)}`,
   ];
   if (price.oversize) {
     lines.push(`Biaya tambahan paket besar: ${formatRupiah(price.oversizeFee)}`);

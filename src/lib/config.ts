@@ -2,7 +2,7 @@
 export const ADMIN_WA_NUMBER = "6285783797770";
 
 export const PRICING = {
-  baseFare: 5000, // tarif dasar
+  baseFare: 3000, // tarif dasar
   perKm: 1000, // per kilometer
   oversizeFee: 5000, // biaya tambahan flat jika melebihi batas paket
 } as const;
