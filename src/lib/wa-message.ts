@@ -1,4 +1,4 @@
-import { ADMIN_WA_NUMBER, SERVICES, formatRupiah } from "./config";
+import { ADMIN_WA_NUMBER, PRICING, SERVICES, formatRupiah } from "./config";
 import type { PriceBreakdown } from "./pricing";
 
 export interface OrderData {
