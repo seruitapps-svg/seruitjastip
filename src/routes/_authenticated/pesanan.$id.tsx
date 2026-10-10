@@ -149,7 +149,7 @@ function OrderDetail() {
             encodedPolyline={o.encoded_polyline}
             className="h-52 w-full rounded-xl border border-border"
           />
-          {row("Layanan", SERVICE_NAME[o.service])}
+          {row("Layanan", SERVICE_NAME[o.service] ?? o.service)}
           {row("Dari", o.origin_address)}
           {row("Ke", o.dest_address)}
           {row("Jarak", `${(o.distance_meters / 1000).toFixed(1)} km · ±${Math.round(o.duration_seconds / 60)} menit`)}
