@@ -1,0 +1,149 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
+import { AppHeader } from "@/components/AppHeader";
+
+export const Route = createFileRoute("/auth")({
+  validateSearch: z.object({ redirect: z.string().optional() }),
+  head: () => ({
+    meta: [
+      { title: "Masuk — Seruit" },
+      { name: "description", content: "Masuk atau daftar akun Seruit untuk memesan jastip." },
+      { property: "og:title", content: "Masuk — Seruit" },
+      { property: "og:description", content: "Masuk atau daftar akun Seruit." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: AuthPage,
+});
+
+function safePath(p?: string) {
+  if (!p) return "/";
+  try {
+    const u = new URL(p, window.location.origin);
+    return u.origin === window.location.origin ? u.pathname + u.search : "/";
+  } catch {
+    return "/";
+  }
+}
+
+function AuthPage() {
+  const { redirect } = Route.useSearch();
+  const navigate = useNavigate();
+  const [mode, setMode] = useState<"masuk" | "daftar" | "lupa">("masuk");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (redirect) sessionStorage.setItem("seruit-after-login", safePath(redirect));
+    const go = () => {
+      const target = sessionStorage.getItem("seruit-after-login") || "/";
+      sessionStorage.removeItem("seruit-after-login");
+      navigate({ to: target, replace: true });
+    };
+    supabase.auth.getUser().then(({ data }) => data.user && go());
+    const { data: sub } = supabase.auth.onAuthStateChange((e) => {
+      if (e === "SIGNED_IN") go();
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [redirect, navigate]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setErr("");
+    setMsg("");
+    setBusy(true);
+    try {
+      if (mode === "masuk") {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      } else if (mode === "daftar") {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: window.location.origin, data: { full_name: name } },
+        });
+        if (error) throw error;
+        setMsg("Cek email Anda untuk konfirmasi akun, lalu masuk.");
+      } else {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        setMsg("Link reset kata sandi sudah dikirim ke email Anda.");
+      }
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Terjadi kesalahan.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function google() {
+    setErr("");
+    const res = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin + "/auth",
+    });
+    if (res.error) setErr(res.error.message ?? "Gagal masuk dengan Google.");
+  }
+
+  const inputCls =
+    "w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring";
+
+  return (
+    <div className="min-h-screen bg-background">
+      <AppHeader />
+      <main className="mx-auto max-w-sm px-4 py-10">
+        <h1 className="text-2xl font-extrabold text-foreground">
+          {mode === "masuk" ? "Masuk" : mode === "daftar" ? "Daftar akun" : "Lupa kata sandi"}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Akun dipakai untuk memesan, memantau status, dan chat dengan driver.
+        </p>
+
+        {mode !== "lupa" && (
+          <button
+            type="button"
+            onClick={google}
+            className="mt-6 w-full rounded-xl border border-border bg-card py-2.5 text-sm font-semibold text-foreground hover:bg-accent"
+          >
+            Lanjutkan dengan Google
+          </button>
+        )}
+
+        <form onSubmit={submit} className="mt-4 space-y-3">
+          {mode === "daftar" && (
+            <input className={inputCls} placeholder="Nama lengkap" value={name} onChange={(e) => setName(e.target.value)} required maxLength={60} />
+          )}
+          <input className={inputCls} type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          {mode !== "lupa" && (
+            <input className={inputCls} type="password" placeholder="Kata sandi (min. 6 karakter)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+          )}
+          {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
+          {msg && <p className="rounded-lg bg-accent px-3 py-2 text-sm text-accent-foreground">{msg}</p>}
+          <button disabled={busy} className="w-full rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground disabled:opacity-50">
+            {busy ? "Memproses…" : mode === "masuk" ? "Masuk" : mode === "daftar" ? "Daftar" : "Kirim link reset"}
+          </button>
+        </form>
+
+        <div className="mt-4 flex justify-between text-xs">
+          {mode === "masuk" ? (
+            <>
+              <button className="text-primary" onClick={() => setMode("daftar")}>Belum punya akun? Daftar</button>
+              <button className="text-muted-foreground" onClick={() => setMode("lupa")}>Lupa kata sandi?</button>
+            </>
+          ) : (
+            <button className="text-primary" onClick={() => setMode("masuk")}>Sudah punya akun? Masuk</button>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}

@@ -1,5 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { createOrder } from "@/lib/orders.functions";
+import { useAuth } from "@/hooks/use-auth";
+import { AppHeader } from "@/components/AppHeader";
+import { useState } from "react";
 import {
   Bike,
   Package,
@@ -22,7 +26,7 @@ import {
   formatRupiah,
   type ServiceId,
 } from "@/lib/config";
-import { buildWaLink, buildWaMessage, type OrderData } from "@/lib/wa-message";
+import type { OrderData } from "@/lib/wa-message";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -31,7 +35,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Pesan jasa titip, kirim barang, dan belanja dengan ongkir transparan. Hitung jarak & estimasi harga otomatis, order langsung via WhatsApp.",
+          "Pesan jasa titip, kirim barang, dan belanja dengan ongkir transparan. Hitung jarak & estimasi harga otomatis, pantau pesanan langsung di aplikasi.",
       },
       { property: "og:title", content: "Seruit — Jasa Titip, Kirim & Belanja" },
       {
@@ -92,12 +96,42 @@ function Index() {
   const itemLabel =
     serviceId === "belanja" ? "Daftar belanjaan" : "Deskripsi barang";
 
-  const waLink = useMemo(() => {
-    if (!summary) return "#";
-    return buildWaLink(
-      buildWaMessage(summary.order, summary.price, summary.durationSeconds),
-    );
-  }, [summary]);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const createOrderFn = useServerFn(createOrder);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submitOrder() {
+    if (!summary) return;
+    const o = summary.order;
+    setSubmitting(true);
+    setFormError("");
+    try {
+      const res = await createOrderFn({
+        data: {
+          serviceId: o.serviceId,
+          origin: { address: o.originAddress, lat: o.originLat, lng: o.originLng },
+          destination: { address: o.destAddress, lat: o.destLat, lng: o.destLng },
+          itemDetail: o.itemDetail,
+          weightKg: o.weightKg,
+          lengthCm: o.lengthCm,
+          widthCm: o.widthCm,
+          heightCm: o.heightCm,
+          senderName: o.senderName,
+          senderWa: o.senderWa,
+          recipientName: o.recipientName,
+          recipientWa: o.recipientWa,
+          paymentMethod: o.paymentMethod,
+          notes: o.notes,
+        },
+      });
+      navigate({ to: "/pesanan/$id", params: { id: res.id } });
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Gagal mengirim pesanan.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   async function handleCalculate(e: React.FormEvent) {
     e.preventDefault();
@@ -204,18 +238,7 @@ function Index() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur">
-        <div className="mx-auto flex max-w-2xl items-center gap-2 px-4 py-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Bike className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <span className="text-lg font-bold tracking-tight text-foreground">
-            Seruit
-          </span>
-        </div>
-      </header>
-
+      <AppHeader />
       <main className="mx-auto max-w-2xl px-4 pb-16">
         {/* Hero */}
         <section className="py-8 text-center">
@@ -226,7 +249,7 @@ function Index() {
           </h1>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
             Titip barang, kirim ke orang lain, atau minta dibelikan — hitung
-            jarak & harga otomatis, order langsung via WhatsApp.
+            jarak & harga otomatis, pantau pesanan langsung di aplikasi.
           </p>
           <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-accent-foreground">
             Tarif: {formatRupiah(PRICING.baseFare)} +{" "}
@@ -542,7 +565,7 @@ function Index() {
                 </span>
               </div>
               <p className="pt-1 text-[11px] text-muted-foreground">
-                Harga final dikonfirmasi admin via WhatsApp.
+                Harga final dikonfirmasi admin saat verifikasi.
               </p>
             </div>
 
@@ -573,18 +596,30 @@ function Index() {
               </div>
             )}
 
-            <a
-              href={waLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] py-3.5 text-sm font-bold text-white transition-opacity hover:opacity-90"
-            >
-              <MessageCircle className="h-5 w-5" />
-              Kirim Order via WhatsApp
-            </a>
+            {formError && (
+              <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{formError}</p>
+            )}
+            {user ? (
+              <button
+                type="button"
+                onClick={submitOrder}
+                disabled={submitting}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
+              >
+                <MessageCircle className="h-5 w-5" />
+                {submitting ? "Mengirim…" : "Kirim Pesanan"}
+              </button>
+            ) : (
+              <Link
+                to="/auth"
+                search={{ redirect: "/" }}
+                className="flex w-full items-center justify-center rounded-xl bg-primary py-3.5 text-sm font-bold text-primary-foreground"
+              >
+                Masuk untuk mengirim pesanan
+              </Link>
+            )}
             <p className="text-center text-xs text-muted-foreground">
-              WhatsApp akan terbuka dengan rincian order terisi otomatis —
-              Anda tinggal tekan kirim.
+              Pesanan akan diverifikasi admin, lalu diteruskan ke driver. Pantau status & chat di halaman pesanan.
             </p>
 
             <button
@@ -599,8 +634,7 @@ function Index() {
         )}
 
         <footer className="mt-10 text-center text-xs text-muted-foreground">
-          Seruit — jasa titip, kirim & belanja. Order dikelola via WhatsApp
-          admin.
+          Seruit — jasa titip, kirim & belanja. Pesanan diverifikasi admin.
         </footer>
       </main>
     </div>
