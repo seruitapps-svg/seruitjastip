@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { OrderCard, btnPrimary, btnDanger, btnOutline } from "@/components/order/OrderCard";
 import { useAuth } from "@/hooks/use-auth";
+import { WalletPanel } from "@/components/wallet/WalletPanel";
 import { STATUS_LABEL, type OrderStatus } from "@/lib/order-status";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -26,7 +27,7 @@ const FILTERS: Array<OrderStatus | "aktif" | "semua"> = ["menunggu_verifikasi", 
 function AdminPage() {
   const { isAdmin, ready } = useAuth();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"order" | "akun">("order");
+  const [tab, setTab] = useState<"order" | "akun" | "tarif">("order");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("menunggu_verifikasi");
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
@@ -43,6 +44,18 @@ function AdminPage() {
       return data;
     },
   });
+
+  const settings = useQuery({
+    queryKey: ["app-settings"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("app_settings").select("commission_percent").eq("id", 1).single();
+      if (error) throw error;
+      return Number(data.commission_percent);
+    },
+  });
+  const [pct, setPct] = useState("");
+  const [openWallet, setOpenWallet] = useState<string | null>(null);
 
   const accounts = useQuery({
     queryKey: ["admin-accounts"],
@@ -79,6 +92,8 @@ function AdminPage() {
     if (error) return setErr(error.message);
     qc.invalidateQueries({ queryKey: ["admin-orders"] });
     qc.invalidateQueries({ queryKey: ["admin-accounts"] });
+    qc.invalidateQueries({ queryKey: ["app-settings"] });
+    qc.invalidateQueries({ queryKey: ["wallet"] });
   }
 
   if (ready && !isAdmin)
@@ -100,6 +115,7 @@ function AdminPage() {
         <div className="flex gap-2">
           <button className={tabCls(tab === "order")} onClick={() => setTab("order")}>Pesanan</button>
           <button className={tabCls(tab === "akun")} onClick={() => setTab("akun")}>Akun & peran</button>
+          <button className={tabCls(tab === "tarif")} onClick={() => setTab("tarif")}>Biaya aplikasi</button>
         </div>
         {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
 
@@ -156,6 +172,34 @@ function AdminPage() {
           </>
         )}
 
+        {tab === "tarif" && (
+          <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+            <div className="text-sm text-foreground">
+              Potongan saat ini: <b>{settings.data ?? "…"}%</b> dari total ongkir tiap order, dipotong dari saldo driver saat order diambil
+              (dikembalikan bila order dibatalkan).
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step="0.5"
+                value={pct}
+                onChange={(e) => setPct(e.target.value)}
+                placeholder="mis. 10"
+                className="w-28 rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              />
+              <button
+                className={btnPrimary}
+                disabled={busy === "pct" || pct === ""}
+                onClick={() => run("pct", () => supabase.rpc("admin_set_commission", { _percent: Number(pct) })).then(() => setPct(""))}
+              >
+                Simpan %
+              </button>
+            </div>
+          </div>
+        )}
+
         {tab === "akun" && (
           <div className="space-y-2">
             {accounts.data?.map((a) => {
@@ -181,6 +225,41 @@ function AdminPage() {
                   >
                     {isAdm ? "Cabut admin" : "Jadikan admin"}
                   </button>
+                  {isDrv && (
+                    <button className={btnOutline} onClick={() => setOpenWallet(openWallet === a.id ? null : a.id)}>
+                      Saldo
+                    </button>
+                  )}
+                  {openWallet === a.id && (
+                    <div className="w-full space-y-2">
+                      <WalletPanel driverId={a.id} />
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          className={btnPrimary}
+                          disabled={busy === a.id}
+                          onClick={() => {
+                            const v = Number(window.prompt("Nominal top-up (Rp)") ?? "");
+                            if (!v) return;
+                            run(a.id, () => supabase.rpc("admin_adjust_wallet", { _driver_id: a.id, _amount: Math.round(v), _note: "Top-up admin" }));
+                          }}
+                        >
+                          Top-up
+                        </button>
+                        <button
+                          className={btnOutline}
+                          disabled={busy === a.id}
+                          onClick={() => {
+                            const v = Number(window.prompt("Penyesuaian (Rp, pakai minus untuk mengurangi, mis. -5000)") ?? "");
+                            if (!v) return;
+                            const note = window.prompt("Keterangan") ?? "";
+                            run(a.id, () => supabase.rpc("admin_adjust_wallet", { _driver_id: a.id, _amount: Math.round(v), _note: note }));
+                          }}
+                        >
+                          Sesuaikan
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}

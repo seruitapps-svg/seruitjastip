@@ -15,6 +15,13 @@
       "when": 1791698517930,
       "tag": "0001_permanent_superadmin_email",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791699932209,
+      "tag": "0002_driver_wallet_commission",
+      "breakpoints": true
     }
   ]
 }
