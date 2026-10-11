@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          commission_percent: number
+          id: number
+          updated_at: string
+        }
+        Insert: {
+          commission_percent?: number
+          id?: number
+          updated_at?: string
+        }
+        Update: {
+          commission_percent?: number
+          id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      driver_wallets: {
+        Row: {
+          balance: number
+          driver_id: string
+          updated_at: string
+        }
+        Insert: {
+          balance?: number
+          driver_id: string
+          updated_at?: string
+        }
+        Update: {
+          balance?: number
+          driver_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_messages: {
         Row: {
           body: string
@@ -90,6 +126,7 @@ export type Database = {
       orders: {
         Row: {
           admin_note: string
+          app_fee: number
           base_fare: number
           code: string
           created_at: string
@@ -101,6 +138,7 @@ export type Database = {
           driver_id: string | null
           duration_seconds: number
           encoded_polyline: string
+          fee_charged: boolean
           height_cm: number
           id: string
           item_detail: string
@@ -125,6 +163,7 @@ export type Database = {
         }
         Insert: {
           admin_note?: string
+          app_fee?: number
           base_fare: number
           code?: string
           created_at?: string
@@ -136,6 +175,7 @@ export type Database = {
           driver_id?: string | null
           duration_seconds: number
           encoded_polyline?: string
+          fee_charged?: boolean
           height_cm: number
           id?: string
           item_detail: string
@@ -160,6 +200,7 @@ export type Database = {
         }
         Update: {
           admin_note?: string
+          app_fee?: number
           base_fare?: number
           code?: string
           created_at?: string
@@ -171,6 +212,7 @@ export type Database = {
           driver_id?: string | null
           duration_seconds?: number
           encoded_polyline?: string
+          fee_charged?: boolean
           height_cm?: number
           id?: string
           item_detail?: string
@@ -237,15 +279,56 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          created_by: string | null
+          driver_id: string
+          id: string
+          kind: string
+          note: string
+          order_id: string | null
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          created_at?: string
+          created_by?: string | null
+          driver_id: string
+          id?: string
+          kind: string
+          note?: string
+          order_id?: string | null
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          created_by?: string | null
+          driver_id?: string
+          id?: string
+          kind?: string
+          note?: string
+          order_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      admin_adjust_wallet: {
+        Args: { _amount: number; _driver_id: string; _note?: string }
+        Returns: number
+      }
       admin_review_order: {
         Args: { _approve: boolean; _note?: string; _order_id: string }
         Returns: undefined
       }
+      admin_set_commission: { Args: { _percent: number }; Returns: undefined }
       admin_set_role: {
         Args: {
           _grant: boolean
@@ -272,6 +355,17 @@ export type Database = {
         Returns: boolean
       }
       is_permanent_admin: { Args: { _user_id: string }; Returns: boolean }
+      order_app_fee: { Args: { _total: number }; Returns: number }
+      wallet_apply: {
+        Args: {
+          _amount: number
+          _driver: string
+          _kind: string
+          _note: string
+          _order: string
+        }
+        Returns: number
+      }
     }
     Enums: {
       app_role: "superadmin" | "driver" | "user"
