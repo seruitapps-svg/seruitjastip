@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { formatRupiah } from "@/lib/pricing";
+import { formatRupiah } from "@/lib/config";
 
 const KIND_LABEL: Record<string, string> = {
   topup: "Top-up",

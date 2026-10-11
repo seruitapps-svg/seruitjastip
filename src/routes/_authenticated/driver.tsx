@@ -6,6 +6,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { OrderCard, btnPrimary, btnOutline } from "@/components/order/OrderCard";
 import { useAuth } from "@/hooks/use-auth";
 import { DRIVER_NEXT_LABEL } from "@/lib/order-status";
+import { WalletPanel } from "@/components/wallet/WalletPanel";
 
 export const Route = createFileRoute("/_authenticated/driver")({
   head: () => ({
@@ -59,6 +60,9 @@ function DriverPage() {
         qc.invalidateQueries({ queryKey: ["pool"] });
         qc.invalidateQueries({ queryKey: ["driver-jobs"] });
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_wallets" }, () =>
+        qc.invalidateQueries({ queryKey: ["wallet"] }),
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
@@ -73,6 +77,7 @@ function DriverPage() {
     if (error) return setErr(error.message);
     qc.invalidateQueries({ queryKey: ["pool"] });
     qc.invalidateQueries({ queryKey: ["driver-jobs"] });
+    qc.invalidateQueries({ queryKey: ["wallet"] });
     if (openAfter) navigate({ to: "/pesanan/$id", params: { id } });
   }
 
@@ -93,6 +98,7 @@ function DriverPage() {
     <div className="min-h-screen bg-background">
       <AppHeader />
       <main className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+        {user && <WalletPanel driverId={user.id} />}
         {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
         <section className="space-y-3">
           <h2 className="text-lg font-extrabold text-foreground">Sedang dikerjakan ({active.length})</h2>
