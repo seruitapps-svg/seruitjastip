@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { KeyRound, Trash2, X, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { OrderCard, btnPrimary, btnDanger, btnOutline } from "@/components/order/OrderCard";
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
 
-const FILTERS: Array<OrderStatus | "aktif" | "semua"> = ["menunggu_verifikasi", "aktif", "selesai", "semua"];
+const FILTERS: Array<OrderStatus | "aktif" | "semua"> = ["menunggu_verifikasi", "aktif", "selesai", "dibatalkan", "semua"];
 
 function AdminPage() {
   const { isAdmin, ready } = useAuth();
@@ -31,6 +32,7 @@ function AdminPage() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("menunggu_verifikasi");
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
 
   const orders = useQuery({
     queryKey: ["admin-orders", filter],
@@ -83,6 +85,48 @@ function AdminPage() {
       return data;
     },
   });
+
+  async function handleResetPassword(email: string | null) {
+    if (!email) {
+      window.alert("User tidak memiliki email.");
+      return;
+    }
+    if (!window.confirm(`Kirimkan link reset password ke ${email}?`)) return;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) window.alert("Gagal mengirim link: " + error.message);
+    else window.alert("Link reset password berhasil dikirim ke " + email);
+  }
+
+  async function handleDeleteUser(userId: string, name: string) {
+    if (!window.confirm(`PERINGATAN: Yakin ingin menghapus permanen akun "${name}"? Semua data terkait akun ini akan dihapus.`)) return;
+    setBusy(userId);
+    const { error } = await supabase.rpc("admin_delete_user", { _target_user_id: userId });
+    setBusy(null);
+    if (error) {
+      window.alert("Gagal menghapus: " + error.message);
+      return;
+    }
+    window.alert("Akun berhasil dihapus.");
+    setSelectedUser(null);
+    await qc.invalidateQueries({ queryKey: ["admin-accounts"] });
+    await qc.invalidateQueries({ queryKey: ["admin-orders"] });
+    await qc.invalidateQueries({ queryKey: ["admin-driver-registrations"] });
+  }
+
+  async function handleDeleteOrder(orderId: string, code: string) {
+    if (!window.confirm(`Hapus permanen pesanan #${code} dari riwayat?`)) return;
+    setBusy(orderId);
+    const { error } = await supabase.rpc("admin_delete_order", { _order_id: orderId });
+    setBusy(null);
+    if (error) {
+      window.alert("Gagal menghapus pesanan: " + error.message);
+      return;
+    }
+    await qc.invalidateQueries({ queryKey: ["admin-orders"] });
+  }
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -179,6 +223,14 @@ function AdminPage() {
                       }}
                     >
                       Batalkan
+                    </button>
+                  ) : ["selesai", "dibatalkan"].includes(o.status) ? (
+                    <button
+                      className={btnDanger}
+                      disabled={busy === o.id}
+                      onClick={() => handleDeleteOrder(o.id, o.code)}
+                    >
+                      Hapus riwayat
                     </button>
                   ) : undefined
                 }
@@ -327,68 +379,94 @@ function AdminPage() {
         )}
 
         {tab === "akun" && (
-          <div className="space-y-2">
-            {accounts.data?.map((a) => {
-              const isDrv = a.roles.includes("driver");
-              const isAdm = a.roles.includes("superadmin");
-              return (
-                <div key={a.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold text-foreground">{a.full_name || "(tanpa nama)"}</div>
-                    <div className="truncate text-xs text-muted-foreground">{a.email} · {a.roles.join(", ")}</div>
-                  </div>
-                  <button
-                    className={isDrv ? btnDanger : btnOutline}
-                    disabled={busy === a.id}
-                    onClick={() => run(a.id, () => supabase.rpc("admin_set_role", { _user_id: a.id, _role: "driver", _grant: !isDrv }))}
-                  >
-                    {isDrv ? "Cabut driver" : "Jadikan driver"}
-                  </button>
-                  <button
-                    className={isAdm ? btnDanger : btnOutline}
-                    disabled={busy === a.id}
-                    onClick={() => run(a.id, () => supabase.rpc("admin_set_role", { _user_id: a.id, _role: "superadmin", _grant: !isAdm }))}
-                  >
-                    {isAdm ? "Cabut admin" : "Jadikan admin"}
-                  </button>
-                  {isDrv && (
-                    <button className={btnOutline} onClick={() => setOpenWallet(openWallet === a.id ? null : a.id)}>
-                      Saldo
+          <div className="space-y-3">
+            {accounts.isLoading && <p className="text-sm text-muted-foreground">Memuat akun...</p>}
+            {accounts.isError && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">Gagal memuat akun: {accounts.error.message}</p>}
+            <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+              {accounts.data?.map((u) => (
+                <button
+                  type="button"
+                  key={u.id}
+                  onClick={() => setSelectedUser(u)}
+                  className="flex w-full items-center justify-between gap-3 p-3.5 text-left transition hover:bg-muted/40"
+                >
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                      {u.full_name?.charAt(0) || u.email?.charAt(0) || "U"}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold text-foreground">{u.full_name || "Tanpa Nama"}</span>
+                      <span className="block truncate text-xs text-muted-foreground">{u.email || u.phone || "Tidak ada kontak"}</span>
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">{u.roles?.join(", ") || "user"}</span>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {selectedUser && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => setSelectedUser(null)}>
+                <div role="dialog" aria-modal="true" aria-labelledby="account-detail-title" className="max-h-[90vh] w-full max-w-md space-y-4 overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-xl" onClick={(event) => event.stopPropagation()}>
+                  <div className="flex items-center justify-between border-b border-border pb-3">
+                    <h3 id="account-detail-title" className="text-lg font-bold text-foreground">Detail Profil Pengguna</h3>
+                    <button type="button" onClick={() => setSelectedUser(null)} className="rounded-lg p-1 hover:bg-muted" aria-label="Tutup detail profil">
+                      <X className="h-5 w-5" />
                     </button>
-                  )}
-                  {openWallet === a.id && (
-                    <div className="w-full space-y-2">
-                      <WalletPanel driverId={a.id} />
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          className={btnPrimary}
-                          disabled={busy === a.id}
-                          onClick={() => {
-                            const v = Number(window.prompt("Nominal top-up (Rp)") ?? "");
-                            if (!v) return;
-                            run(a.id, () => supabase.rpc("admin_adjust_wallet", { _driver_id: a.id, _amount: Math.round(v), _note: "Top-up admin" }));
-                          }}
-                        >
-                          Top-up
-                        </button>
-                        <button
-                          className={btnOutline}
-                          disabled={busy === a.id}
-                          onClick={() => {
-                            const v = Number(window.prompt("Penyesuaian (Rp, pakai minus untuk mengurangi, mis. -5000)") ?? "");
-                            if (!v) return;
-                            const note = window.prompt("Keterangan") ?? "";
-                            run(a.id, () => supabase.rpc("admin_adjust_wallet", { _driver_id: a.id, _amount: Math.round(v), _note: note }));
-                          }}
-                        >
-                          Sesuaikan
-                        </button>
+                  </div>
+                  <div className="space-y-2 break-words text-sm">
+                    <div><span className="text-muted-foreground">ID:</span> <span className="font-mono text-xs">{selectedUser.id}</span></div>
+                    <div><span className="text-muted-foreground">Nama:</span> <strong className="text-foreground">{selectedUser.full_name || "-"}</strong></div>
+                    <div><span className="text-muted-foreground">Email:</span> <strong className="text-foreground">{selectedUser.email || "-"}</strong></div>
+                    <div><span className="text-muted-foreground">Telepon:</span> <span>{selectedUser.phone || "-"}</span></div>
+                    <div><span className="text-muted-foreground">Peran:</span> <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">{selectedUser.roles?.join(", ") || "user"}</span></div>
+                    <div><span className="text-muted-foreground">Terdaftar:</span> <span>{selectedUser.created_at ? new Date(selectedUser.created_at).toLocaleDateString("id-ID") : "-"}</span></div>
+                  </div>
+                  <div className="space-y-2 border-t border-border pt-4">
+                    <button type="button" onClick={() => handleResetPassword(selectedUser.email)} className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-muted">
+                      <KeyRound className="h-4 w-4" /> Kirim Link Reset Password
+                    </button>
+                    <button type="button" disabled={busy === selectedUser.id} onClick={() => handleDeleteUser(selectedUser.id, selectedUser.full_name || selectedUser.email || selectedUser.id)} className="flex w-full items-center justify-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/20 disabled:opacity-50">
+                      <Trash2 className="h-4 w-4" /> Hapus Akun Ini
+                    </button>
+                  </div>
+                  {(() => {
+                    const isDrv = selectedUser.roles.includes("driver");
+                    const isAdm = selectedUser.roles.includes("superadmin");
+                    return (
+                      <div className="space-y-2 border-t border-border pt-4">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kelola Peran</p>
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" className={isDrv ? btnDanger : btnOutline} disabled={busy === selectedUser.id} onClick={() => run(selectedUser.id, () => supabase.rpc("admin_set_role", { _user_id: selectedUser.id, _role: "driver", _grant: !isDrv }))}>{isDrv ? "Cabut driver" : "Jadikan driver"}</button>
+                          <button type="button" className={isAdm ? btnDanger : btnOutline} disabled={busy === selectedUser.id} onClick={() => run(selectedUser.id, () => supabase.rpc("admin_set_role", { _user_id: selectedUser.id, _role: "superadmin", _grant: !isAdm }))}>{isAdm ? "Cabut admin" : "Jadikan admin"}</button>
+                          {isDrv && <button type="button" className={btnOutline} onClick={() => setOpenWallet(openWallet === selectedUser.id ? null : selectedUser.id)}>Saldo</button>}
+                        </div>
+                        {openWallet === selectedUser.id && isDrv && (
+                          <div className="space-y-2">
+                            <WalletPanel driverId={selectedUser.id} />
+                            <div className="flex flex-wrap gap-2">
+                              <button type="button" className={btnPrimary} disabled={busy === selectedUser.id} onClick={() => {
+                                const v = Number(window.prompt("Nominal top-up (Rp)") ?? "");
+                                if (!v) return;
+                                run(selectedUser.id, () => supabase.rpc("admin_adjust_wallet", { _driver_id: selectedUser.id, _amount: Math.round(v), _note: "Top-up admin" }));
+                              }}>Top-up</button>
+                              <button type="button" className={btnOutline} disabled={busy === selectedUser.id} onClick={() => {
+                                const v = Number(window.prompt("Penyesuaian (Rp, pakai minus untuk mengurangi, mis. -5000)") ?? "");
+                                if (!v) return;
+                                const note = window.prompt("Keterangan") ?? "";
+                                run(selectedUser.id, () => supabase.rpc("admin_adjust_wallet", { _driver_id: selectedUser.id, _amount: Math.round(v), _note: note }));
+                              }}>Sesuaikan</button>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
-              );
-            })}
+              </div>
+            )}
           </div>
         )}
       </main>
