@@ -27,7 +27,7 @@ const FILTERS: Array<OrderStatus | "aktif" | "semua"> = ["menunggu_verifikasi", 
 function AdminPage() {
   const { isAdmin, ready } = useAuth();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"order" | "akun" | "tarif">("order");
+  const [tab, setTab] = useState<"order" | "akun" | "driver_approval" | "tarif">("order");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("menunggu_verifikasi");
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
@@ -71,6 +71,19 @@ function AdminPage() {
     },
   });
 
+  const driverRegistrations = useQuery({
+    queryKey: ["admin-driver-registrations"],
+    enabled: isAdmin && tab === "driver_approval",
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("driver_profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   useEffect(() => {
     if (!isAdmin) return;
     const ch = supabase
@@ -92,6 +105,7 @@ function AdminPage() {
     if (error) return setErr(error.message);
     qc.invalidateQueries({ queryKey: ["admin-orders"] });
     qc.invalidateQueries({ queryKey: ["admin-accounts"] });
+    qc.invalidateQueries({ queryKey: ["admin-driver-registrations"] });
     qc.invalidateQueries({ queryKey: ["app-settings"] });
     qc.invalidateQueries({ queryKey: ["wallet"] });
   }
@@ -115,6 +129,7 @@ function AdminPage() {
         <div className="flex gap-2">
           <button className={tabCls(tab === "order")} onClick={() => setTab("order")}>Pesanan</button>
           <button className={tabCls(tab === "akun")} onClick={() => setTab("akun")}>Akun & peran</button>
+          <button className={tabCls(tab === "driver_approval")} onClick={() => setTab("driver_approval")}>Pendaftaran Driver</button>
           <button className={tabCls(tab === "tarif")} onClick={() => setTab("tarif")}>Biaya aplikasi</button>
         </div>
         {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
@@ -198,6 +213,90 @@ function AdminPage() {
               </button>
             </div>
           </div>
+        )}
+
+        {tab === "driver_approval" && (
+          <section className="space-y-3">
+            <h2 className="text-sm font-bold text-foreground">Permohonan Menjadi Driver</h2>
+            {driverRegistrations.isLoading && (
+              <p className="text-sm text-muted-foreground">Memuat data pendaftaran...</p>
+            )}
+            {driverRegistrations.isError && (
+              <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                Gagal memuat pendaftaran driver: {driverRegistrations.error.message}
+              </p>
+            )}
+            {!driverRegistrations.isLoading && !driverRegistrations.isError && driverRegistrations.data?.length === 0 && (
+              <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+                Belum ada pendaftaran driver.
+              </p>
+            )}
+            <div className="space-y-3">
+              {driverRegistrations.data?.map((item) => (
+                <div key={item.id} className="space-y-3 rounded-xl border border-border bg-card p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 space-y-1">
+                      <h3 className="font-bold text-foreground">{item.full_name}</h3>
+                      <p className="break-words text-xs text-muted-foreground">WhatsApp: {item.phone}</p>
+                      <p className="break-words text-xs text-muted-foreground">NIK: {item.nik}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Kendaraan: {item.vehicle_type} ({item.vehicle_plate})
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Mendaftar: {new Date(item.created_at).toLocaleString("id-ID")}
+                      </p>
+                    </div>
+                    <span
+                      className={"rounded-full px-2.5 py-0.5 text-xs font-semibold " + (
+                        item.status === "approved"
+                          ? "bg-green-100 text-green-800"
+                          : item.status === "rejected"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-amber-100 text-amber-800"
+                      )}
+                    >
+                      {item.status.toUpperCase()}
+                    </span>
+                  </div>
+
+                  {item.status === "pending" && (
+                    <div className="flex flex-wrap gap-2 border-t border-border pt-3">
+                      <button
+                        disabled={busy !== null}
+                        className={btnPrimary}
+                        onClick={() =>
+                          run("approve-driver-" + item.id, async () => {
+                            const { error } = await supabase
+                              .from("driver_profiles")
+                              .update({ status: "approved" })
+                              .eq("id", item.id);
+                            return { error };
+                          })
+                        }
+                      >
+                        {busy === "approve-driver-" + item.id ? "Menyetujui..." : "Setujui Driver"}
+                      </button>
+                      <button
+                        disabled={busy !== null}
+                        className={btnDanger}
+                        onClick={() =>
+                          run("reject-driver-" + item.id, async () => {
+                            const { error } = await supabase
+                              .from("driver_profiles")
+                              .update({ status: "rejected" })
+                              .eq("id", item.id);
+                            return { error };
+                          })
+                        }
+                      >
+                        {busy === "reject-driver-" + item.id ? "Menolak..." : "Tolak"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         {tab === "akun" && (
