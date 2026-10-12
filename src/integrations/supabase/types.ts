@@ -57,6 +57,10 @@ export type Database = {
           id: string
           nik: string
           phone: string
+          photo_ktp: string | null
+          photo_selfie: string | null
+          photo_sim: string | null
+          photo_vehicle: string | null
           status: Database["public"]["Enums"]["driver_registration_status"]
           updated_at: string
           user_id: string
@@ -69,6 +73,10 @@ export type Database = {
           id?: string
           nik: string
           phone: string
+          photo_ktp?: string | null
+          photo_selfie?: string | null
+          photo_sim?: string | null
+          photo_vehicle?: string | null
           status?: Database["public"]["Enums"]["driver_registration_status"]
           updated_at?: string
           user_id: string
@@ -81,6 +89,10 @@ export type Database = {
           id?: string
           nik?: string
           phone?: string
+          photo_ktp?: string | null
+          photo_selfie?: string | null
+          photo_sim?: string | null
+          photo_vehicle?: string | null
           status?: Database["public"]["Enums"]["driver_registration_status"]
           updated_at?: string
           user_id?: string
