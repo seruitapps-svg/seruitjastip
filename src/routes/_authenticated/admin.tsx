@@ -259,6 +259,33 @@ function AdminPage() {
                     </span>
                   </div>
 
+                  <div className="grid grid-cols-2 gap-3 pt-2 sm:grid-cols-4">
+                    {[
+                      { label: "KTP", url: item.photo_ktp },
+                      { label: "SIM", url: item.photo_sim },
+                      { label: "Kendaraan", url: item.photo_vehicle },
+                      { label: "Swafoto Driver", url: item.photo_selfie },
+                    ].map((doc) => (
+                      <div key={doc.label} className="min-w-0 space-y-1">
+                        <span className="text-xs text-muted-foreground">{doc.label}</span>
+                        {doc.url ? (
+                          <a href={doc.url} target="_blank" rel="noreferrer" className="block">
+                            <img
+                              src={doc.url}
+                              alt={doc.label}
+                              loading="lazy"
+                              className="h-24 w-full rounded border border-border object-cover transition hover:opacity-80"
+                            />
+                          </a>
+                        ) : (
+                          <div className="flex h-24 items-center justify-center rounded bg-muted px-1 text-center text-xs text-muted-foreground">
+                            Foto tidak tersedia
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
                   {item.status === "pending" && (
                     <div className="flex flex-wrap gap-2 border-t border-border pt-3">
                       <button
