@@ -13,7 +13,7 @@ export function DriverInfoCard({ driverId, onChatClick }: DriverInfoCardProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("driver_profiles")
-        .select("full_name, phone, vehicle_type, vehicle_plate")
+        .select("full_name, phone, vehicle_type, vehicle_plate, photo_selfie")
         .eq("user_id", driverId)
         .maybeSingle();
       if (error) throw error;
@@ -30,9 +30,18 @@ export function DriverInfoCard({ driverId, onChatClick }: DriverInfoCardProps) {
     <section className="space-y-3 rounded-xl border border-border bg-card p-4" aria-label="Informasi driver">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
-            {driver.full_name?.charAt(0)?.toUpperCase() || "D"}
-          </div>
+          {driver.photo_selfie ? (
+            <img
+              src={driver.photo_selfie}
+              alt={`Foto ${driver.full_name || "driver"}`}
+              loading="lazy"
+              className="h-10 w-10 shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
+              {driver.full_name?.charAt(0)?.toUpperCase() || "D"}
+            </div>
+          )}
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold text-foreground">{driver.full_name}</h2>
             <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
