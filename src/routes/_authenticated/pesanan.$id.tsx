@@ -5,6 +5,7 @@ import { QrCode, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { RouteMap } from "@/components/order/RouteMap";
+import { DriverInfoCard } from "@/components/order/DriverInfoCard";
 import { StatusBadge, btnPrimary, btnDanger } from "@/components/order/OrderCard";
 import { useAuth } from "@/hooks/use-auth";
 import { formatRupiah } from "@/lib/config";
@@ -112,6 +113,9 @@ function OrderDetail() {
           <h1 className="text-xl font-extrabold text-foreground">Pesanan #{o.code}</h1>
           <StatusBadge status={o.status} />
         </div>
+        {o.driver_id && ["diambil", "dijemput", "diantar"].includes(o.status) && (
+          <DriverInfoCard driverId={o.driver_id} />
+        )}
         {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
 
         <div className="flex flex-wrap gap-2">
