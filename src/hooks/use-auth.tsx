@@ -8,8 +8,14 @@ export type Role = "superadmin" | "driver" | "user";
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
+  const [testRole, setTestRole] = useState<Role | null>(null);
 
   useEffect(() => {
+    const storedRole = window.localStorage.getItem("seruit_test_role") as Role | null;
+    if (storedRole === "superadmin" || storedRole === "driver" || storedRole === "user") {
+      setTestRole(storedRole);
+    }
+
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user ?? null);
       setReady(true);
@@ -33,12 +39,28 @@ export function useAuth() {
     },
   });
 
-  const roles = rolesQuery.data ?? [];
+  const actualRoles = rolesQuery.data ?? [];
+  const isActualAdmin = actualRoles.includes("superadmin");
+  const activeRole = isActualAdmin ? testRole : null;
+
+  const setSimulation = (role: Role | null) => {
+    if (role) {
+      window.localStorage.setItem("seruit_test_role", role);
+    } else {
+      window.localStorage.removeItem("seruit_test_role");
+    }
+    setTestRole(role);
+    window.location.reload();
+  };
+
   return {
     user,
     ready: ready && (!user || !rolesQuery.isLoading),
-    roles,
-    isAdmin: roles.includes("superadmin"),
-    isDriver: roles.includes("driver"),
+    roles: actualRoles,
+    isAdmin: isActualAdmin,
+    isDriver: activeRole ? activeRole === "driver" : actualRoles.includes("driver"),
+    isCustomerView: activeRole === "user",
+    testRole: isActualAdmin ? testRole : null,
+    setSimulation,
   };
 }
