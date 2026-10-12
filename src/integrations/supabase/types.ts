@@ -50,6 +50,45 @@ export type Database = {
         }
         Relationships: []
       }
+      driver_profiles: {
+        Row: {
+          created_at: string
+          full_name: string
+          id: string
+          nik: string
+          phone: string
+          status: Database["public"]["Enums"]["driver_registration_status"]
+          updated_at: string
+          user_id: string
+          vehicle_plate: string
+          vehicle_type: string
+        }
+        Insert: {
+          created_at?: string
+          full_name: string
+          id?: string
+          nik: string
+          phone: string
+          status?: Database["public"]["Enums"]["driver_registration_status"]
+          updated_at?: string
+          user_id: string
+          vehicle_plate: string
+          vehicle_type: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          id?: string
+          nik?: string
+          phone?: string
+          status?: Database["public"]["Enums"]["driver_registration_status"]
+          updated_at?: string
+          user_id?: string
+          vehicle_plate?: string
+          vehicle_type?: string
+        }
+        Relationships: []
+      }
       order_messages: {
         Row: {
           body: string
@@ -369,6 +408,7 @@ export type Database = {
     }
     Enums: {
       app_role: "superadmin" | "driver" | "user"
+      driver_registration_status: "pending" | "approved" | "rejected"
       order_status:
         | "menunggu_verifikasi"
         | "ditolak"
@@ -506,6 +546,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["superadmin", "driver", "user"],
+      driver_registration_status: ["pending", "approved", "rejected"],
       order_status: [
         "menunggu_verifikasi",
         "ditolak",
