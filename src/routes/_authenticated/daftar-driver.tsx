@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { uploadDriverPhoto } from "@/lib/image-compressor";
 
 export const Route = createFileRoute("/_authenticated/daftar-driver")({
   head: () => ({
@@ -53,6 +54,12 @@ function DaftarDriver() {
   const { user, ready, isDriver } = useAuth();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<DriverForm>(INITIAL_FORM);
+  const [files, setFiles] = useState<{
+    ktp: File | null;
+    sim: File | null;
+    vehicle: File | null;
+    selfie: File | null;
+  }>({ ktp: null, sim: null, vehicle: null, selfie: null });
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -77,35 +84,48 @@ function DaftarDriver() {
       setErrorMessage("Silakan masuk terlebih dahulu.");
       return;
     }
+    if (!files.ktp || !files.sim || !files.vehicle || !files.selfie) {
+      setErrorMessage("Semua 4 foto wajib diunggah: KTP, SIM, kendaraan, dan swafoto.");
+      return;
+    }
 
     setSaving(true);
     setErrorMessage("");
     setSuccessMessage("");
 
-    const { error } = await supabase.from("driver_profiles").insert({
-      user_id: user.id,
-      full_name: form.fullName.trim(),
-      phone: form.phone.trim(),
-      nik: form.nik.trim(),
-      vehicle_type: form.vehicleType,
-      vehicle_plate: form.vehiclePlate.trim().toUpperCase(),
-    });
+    try {
+      const [ktpUrl, simUrl, vehicleUrl, selfieUrl] = await Promise.all([
+        uploadDriverPhoto(user.id, "ktp", files.ktp),
+        uploadDriverPhoto(user.id, "sim", files.sim),
+        uploadDriverPhoto(user.id, "vehicle", files.vehicle),
+        uploadDriverPhoto(user.id, "selfie", files.selfie),
+      ]);
 
-    setSaving(false);
-    if (error) {
-      setErrorMessage(
-        error.code === "23505"
-          ? "Anda sudah memiliki pendaftaran driver."
-          : error.message || "Pendaftaran gagal dikirim. Silakan coba lagi.",
-      );
+      const { error } = await supabase.from("driver_profiles").insert({
+        user_id: user.id,
+        full_name: form.fullName.trim(),
+        phone: form.phone.trim(),
+        nik: form.nik.trim(),
+        vehicle_type: form.vehicleType,
+        vehicle_plate: form.vehiclePlate.trim().toUpperCase(),
+        photo_ktp: ktpUrl,
+        photo_sim: simUrl,
+        photo_vehicle: vehicleUrl,
+        photo_selfie: selfieUrl,
+      });
+
+      if (error) throw error;
+
+      setSuccessMessage("Pendaftaran dan foto berhasil dikirim!");
+      setForm(INITIAL_FORM);
+      setFiles({ ktp: null, sim: null, vehicle: null, selfie: null });
       await queryClient.invalidateQueries({ queryKey: ["my-driver-application", user.id] });
-      return;
+      await application.refetch();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Gagal mengunggah dokumen. Silakan coba lagi.");
+    } finally {
+      setSaving(false);
     }
-
-    setSuccessMessage("Pendaftaran berhasil dikirim.");
-    setForm(INITIAL_FORM);
-    await queryClient.invalidateQueries({ queryKey: ["my-driver-application", user.id] });
-    await application.refetch();
   }
 
   const inputClass =
@@ -230,6 +250,42 @@ function DaftarDriver() {
                 className={inputClass}
                 placeholder="Contoh: BE 1234 ABC"
               />
+            </div>
+
+            <div className="space-y-3 rounded-xl border border-border p-3">
+              <div>
+                <h2 className="text-sm font-bold text-foreground">Dokumen foto wajib</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Pilih foto yang jelas. Foto akan dikompresi sebelum diunggah.
+                </p>
+              </div>
+              {([
+                { key: "ktp", label: "Foto KTP" },
+                { key: "sim", label: "Foto SIM" },
+                { key: "vehicle", label: "Foto motor/kendaraan" },
+                { key: "selfie", label: "Swafoto driver" },
+              ] as const).map((item) => (
+                <div key={item.key}>
+                  <label htmlFor={`driver-photo-${item.key}`} className="text-sm font-semibold text-foreground">
+                    {item.label}
+                  </label>
+                  <input
+                    id={`driver-photo-${item.key}`}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    required
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] ?? null;
+                      setFiles((current) => ({ ...current, [item.key]: file }));
+                    }}
+                    className={inputClass}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {files[item.key]?.name ?? "Belum ada foto dipilih"}
+                  </p>
+                </div>
+              ))}
             </div>
 
             {errorMessage && (
