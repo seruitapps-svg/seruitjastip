@@ -1,6 +1,8 @@
-import { describe, expect, test } from "bun:test";
-import { calculateMonetization } from "./monetization";
-import { calculatePrice } from "./pricing";
+import { describe, test } from "node:test";
+import assert from "node:assert/strict";
+const expect = (value) => ({ toBe: (expected) => assert.equal(value, expected) });
+import { calculateMonetization } from "./monetization.ts";
+import { calculatePrice } from "./pricing.ts";
 
 describe("monetisasi dua sisi", () => {
   test("biaya layanan diambil dari tarif dasar tanpa menambah ongkir", () => {

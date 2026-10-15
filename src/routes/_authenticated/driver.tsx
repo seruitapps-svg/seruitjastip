@@ -64,7 +64,7 @@ function DriverPage() {
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "driver_wallets" }, () => {
         qc.invalidateQueries({ queryKey: ["wallet"] });
-        qc.invalidateQueries({ queryKey: ["driver-wallet-settings"] });
+        qc.invalidateQueries({ queryKey: ["driver-wallet-earnings"] });
         qc.invalidateQueries({ queryKey: ["wallet-page"] });
       })
       .subscribe();
@@ -82,7 +82,7 @@ function DriverPage() {
     qc.invalidateQueries({ queryKey: ["pool"] });
     qc.invalidateQueries({ queryKey: ["driver-jobs"] });
     qc.invalidateQueries({ queryKey: ["wallet"] });
-    qc.invalidateQueries({ queryKey: ["driver-wallet-settings"] });
+    qc.invalidateQueries({ queryKey: ["driver-wallet-earnings"] });
     qc.invalidateQueries({ queryKey: ["wallet-page"] });
     qc.invalidateQueries({ queryKey: ["admin-financial-overview"] });
     if (openAfter) navigate({ to: "/pesanan/$id", params: { id } });

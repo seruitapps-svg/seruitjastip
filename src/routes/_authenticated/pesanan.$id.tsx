@@ -98,7 +98,7 @@ function OrderDetail() {
     qc.invalidateQueries({ queryKey: ["order", id] });
     qc.invalidateQueries({ queryKey: ["order-history", id] });
     qc.invalidateQueries({ queryKey: ["wallet"] });
-    qc.invalidateQueries({ queryKey: ["driver-wallet-settings"] });
+    qc.invalidateQueries({ queryKey: ["driver-wallet-earnings"] });
     qc.invalidateQueries({ queryKey: ["wallet-page"] });
     qc.invalidateQueries({ queryKey: ["driver-jobs"] });
     qc.invalidateQueries({ queryKey: ["admin-financial-overview"] });
