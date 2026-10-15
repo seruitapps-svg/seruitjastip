@@ -50,6 +50,60 @@ export type Database = {
         }
         Relationships: []
       }
+      driver_profiles: {
+        Row: {
+          admin_note: string | null
+          created_at: string
+          full_name: string
+          id: string
+          nik: string
+          phone: string
+          photo_ktp: string | null
+          photo_selfie: string | null
+          photo_sim: string | null
+          photo_vehicle: string | null
+          status: Database["public"]["Enums"]["driver_registration_status"]
+          updated_at: string
+          user_id: string
+          vehicle_plate: string
+          vehicle_type: string
+        }
+        Insert: {
+          admin_note?: string | null
+          created_at?: string
+          full_name: string
+          id?: string
+          nik: string
+          phone: string
+          photo_ktp?: string | null
+          photo_selfie?: string | null
+          photo_sim?: string | null
+          photo_vehicle?: string | null
+          status?: Database["public"]["Enums"]["driver_registration_status"]
+          updated_at?: string
+          user_id: string
+          vehicle_plate: string
+          vehicle_type: string
+        }
+        Update: {
+          admin_note?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          nik?: string
+          phone?: string
+          photo_ktp?: string | null
+          photo_selfie?: string | null
+          photo_sim?: string | null
+          photo_vehicle?: string | null
+          status?: Database["public"]["Enums"]["driver_registration_status"]
+          updated_at?: string
+          user_id?: string
+          vehicle_plate?: string
+          vehicle_type?: string
+        }
+        Relationships: []
+      }
       driver_wallets: {
         Row: {
           balance: number
@@ -93,9 +147,12 @@ export type Database = {
           created_at: string
           driver_id: string
           id: string
+          processed_at: string | null
+          processed_by: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
+          transfer_proof_url: string | null
         }
         Insert: {
           admin_note?: string
@@ -106,9 +163,12 @@ export type Database = {
           created_at?: string
           driver_id: string
           id?: string
+          processed_at?: string | null
+          processed_by?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
+          transfer_proof_url?: string | null
         }
         Update: {
           admin_note?: string
@@ -119,60 +179,12 @@ export type Database = {
           created_at?: string
           driver_id?: string
           id?: string
+          processed_at?: string | null
+          processed_by?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
-        }
-        Relationships: []
-      }
-      driver_profiles: {
-        Row: {
-          created_at: string
-          full_name: string
-          id: string
-          nik: string
-          phone: string
-          photo_ktp: string | null
-          photo_selfie: string | null
-          photo_sim: string | null
-          photo_vehicle: string | null
-          status: Database["public"]["Enums"]["driver_registration_status"]
-          updated_at: string
-          user_id: string
-          vehicle_plate: string
-          vehicle_type: string
-        }
-        Insert: {
-          created_at?: string
-          full_name: string
-          id?: string
-          nik: string
-          phone: string
-          photo_ktp?: string | null
-          photo_selfie?: string | null
-          photo_sim?: string | null
-          photo_vehicle?: string | null
-          status?: Database["public"]["Enums"]["driver_registration_status"]
-          updated_at?: string
-          user_id: string
-          vehicle_plate: string
-          vehicle_type: string
-        }
-        Update: {
-          created_at?: string
-          full_name?: string
-          id?: string
-          nik?: string
-          phone?: string
-          photo_ktp?: string | null
-          photo_selfie?: string | null
-          photo_sim?: string | null
-          photo_vehicle?: string | null
-          status?: Database["public"]["Enums"]["driver_registration_status"]
-          updated_at?: string
-          user_id?: string
-          vehicle_plate?: string
-          vehicle_type?: string
+          transfer_proof_url?: string | null
         }
         Relationships: []
       }
@@ -255,20 +267,27 @@ export type Database = {
           app_fee: number
           base_fare: number
           code: string
+          commission_percent: number
+          consumer_service_fee: number
           created_at: string
+          deposit_deduction: number
           dest_address: string
           dest_lat: number
           dest_lng: number
           distance_fare: number
           distance_meters: number
+          driver_commission: number
           driver_id: string | null
+          driver_net_earnings: number
           duration_seconds: number
+          earnings_credited: boolean
           encoded_polyline: string
           fee_charged: boolean
           height_cm: number
           id: string
           item_detail: string
           length_cm: number
+          monetization_version: number
           notes: string
           origin_address: string
           origin_lat: number
@@ -280,6 +299,7 @@ export type Database = {
           sender_name: string
           sender_wa: string
           service: string
+          shipping_fare: number
           status: Database["public"]["Enums"]["order_status"]
           total: number
           updated_at: string
@@ -292,20 +312,27 @@ export type Database = {
           app_fee?: number
           base_fare: number
           code?: string
+          commission_percent?: number
+          consumer_service_fee?: number
           created_at?: string
+          deposit_deduction?: number
           dest_address: string
           dest_lat: number
           dest_lng: number
           distance_fare: number
           distance_meters: number
+          driver_commission?: number
           driver_id?: string | null
+          driver_net_earnings?: number
           duration_seconds: number
+          earnings_credited?: boolean
           encoded_polyline?: string
           fee_charged?: boolean
           height_cm: number
           id?: string
           item_detail: string
           length_cm: number
+          monetization_version?: number
           notes?: string
           origin_address: string
           origin_lat: number
@@ -317,6 +344,7 @@ export type Database = {
           sender_name: string
           sender_wa: string
           service: string
+          shipping_fare?: number
           status?: Database["public"]["Enums"]["order_status"]
           total: number
           updated_at?: string
@@ -329,20 +357,27 @@ export type Database = {
           app_fee?: number
           base_fare?: number
           code?: string
+          commission_percent?: number
+          consumer_service_fee?: number
           created_at?: string
+          deposit_deduction?: number
           dest_address?: string
           dest_lat?: number
           dest_lng?: number
           distance_fare?: number
           distance_meters?: number
+          driver_commission?: number
           driver_id?: string | null
+          driver_net_earnings?: number
           duration_seconds?: number
+          earnings_credited?: boolean
           encoded_polyline?: string
           fee_charged?: boolean
           height_cm?: number
           id?: string
           item_detail?: string
           length_cm?: number
+          monetization_version?: number
           notes?: string
           origin_address?: string
           origin_lat?: number
@@ -354,6 +389,7 @@ export type Database = {
           sender_name?: string
           sender_wa?: string
           service?: string
+          shipping_fare?: number
           status?: Database["public"]["Enums"]["order_status"]
           total?: number
           updated_at?: string
@@ -405,24 +441,6 @@ export type Database = {
         }
         Relationships: []
       }
-      user_wallets: {
-        Row: {
-          balance: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          balance?: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          balance?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       user_wallet_transactions: {
         Row: {
           amount: number
@@ -455,6 +473,24 @@ export type Database = {
           kind?: string
           note?: string
           topup_request_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_wallets: {
+        Row: {
+          balance: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -505,6 +541,7 @@ export type Database = {
         Row: {
           amount: number
           balance_after: number
+          balance_type: string
           created_at: string
           created_by: string | null
           driver_id: string
@@ -516,6 +553,7 @@ export type Database = {
         Insert: {
           amount: number
           balance_after: number
+          balance_type?: string
           created_at?: string
           created_by?: string | null
           driver_id: string
@@ -527,6 +565,7 @@ export type Database = {
         Update: {
           amount?: number
           balance_after?: number
+          balance_type?: string
           created_at?: string
           created_by?: string | null
           driver_id?: string
@@ -542,22 +581,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      admin_get_financial_overview: { Args: Record<PropertyKey, never>; Returns: Json }
       admin_adjust_wallet: {
         Args: { _amount: number; _driver_id: string; _note?: string }
         Returns: number
       }
-      admin_update_app_settings: {
-        Args: {
-          _announcement_active: boolean
-          _announcement_text: string
-          _announcement_type: string
-          _base_fare: number
-          _commission_percent: number
-          _oversize_fee: number
-          _per_km: number
-        }
+      admin_delete_order: { Args: { _order_id: string }; Returns: undefined }
+      admin_delete_user: {
+        Args: { _target_user_id: string }
         Returns: undefined
+      }
+      admin_get_financial_overview: { Args: never; Returns: Json }
+      admin_review_driver_withdrawal: {
+        Args: {
+          p_action: string
+          p_admin_note?: string
+          p_proof_url?: string
+          p_withdrawal_id: string
+        }
+        Returns: Json
       }
       admin_review_order: {
         Args: { _approve: boolean; _note?: string; _order_id: string }
@@ -576,6 +617,18 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_update_app_settings: {
+        Args: {
+          _announcement_active: boolean
+          _announcement_text: string
+          _announcement_type: string
+          _base_fare: number
+          _commission_percent: number
+          _oversize_fee: number
+          _per_km: number
+        }
+        Returns: undefined
+      }
       can_access_order: { Args: { _order_id: string }; Returns: boolean }
       cancel_order: {
         Args: { _note?: string; _order_id: string }
@@ -585,12 +638,13 @@ export type Database = {
         Args: { _order_id: string }
         Returns: Database["public"]["Enums"]["order_status"]
       }
-      driver_request_withdrawal: {
-        Args: { _amount: number }
-        Returns: string
-      }
+      driver_request_withdrawal: { Args: { _amount: number }; Returns: string }
       driver_set_bank_account: {
-        Args: { _account_name: string; _account_number: string; _bank_name: string }
+        Args: {
+          _account_name: string
+          _account_number: string
+          _bank_name: string
+        }
         Returns: undefined
       }
       driver_take_order: { Args: { _order_id: string }; Returns: undefined }
@@ -602,11 +656,11 @@ export type Database = {
         Returns: boolean
       }
       is_permanent_admin: { Args: { _user_id: string }; Returns: boolean }
+      order_app_fee: { Args: { _total: number }; Returns: number }
       request_wallet_topup: {
         Args: { _amount: number; _wallet_type: string }
         Returns: string
       }
-      order_app_fee: { Args: { _total: number }; Returns: number }
       wallet_apply: {
         Args: {
           _amount: number

@@ -75,13 +75,13 @@ export function AdminFinancialOverview() {
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
           <div className="mb-2 flex items-center justify-between gap-2">
             <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-700">
-              <TrendingUp className="h-4 w-4" /> Keuntungan Bersih Seruit
+              <TrendingUp className="h-4 w-4" /> Pendapatan Aplikasi Seruit
             </span>
             <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">Hak Aplikasi</span>
           </div>
           <div className="mb-3 text-2xl font-black text-emerald-950">{formatRupiah(fin.revenue.platform_commission)}</div>
           <p className="mb-4 text-xs leading-relaxed text-emerald-700">
-            ✅ Total potongan komisi dari <strong>{fin.revenue.completed_orders_count} pesanan selesai</strong>. Ini adalah akumulasi komisi aplikasi dari pesanan selesai.
+            Biaya layanan konsumen + komisi driver dari <strong>{fin.revenue.completed_orders_count} pesanan selesai</strong>.
           </p>
           <div className="space-y-1.5 border-t border-emerald-200/60 pt-3 text-xs text-emerald-900">
             <div className="flex justify-between gap-3"><span>Total Nilai Transaksi (GMV):</span><span className="font-semibold">{formatRupiah(fin.revenue.total_gmv)}</span></div>

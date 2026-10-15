@@ -555,7 +555,7 @@ function Index() {
 
             <div className="space-y-1 rounded-xl bg-muted p-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Tarif dasar</span>
+                <span className="text-muted-foreground">Biaya Layanan Aplikasi</span>
                 <span className="text-foreground">
                   {formatRupiah(summary.price.baseFare)}
                 </span>
@@ -579,6 +579,10 @@ function Index() {
                   </span>
                 </div>
               )}
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Ongkos Kirim</span>
+                <span className="text-foreground">{formatRupiah(summary.price.shippingFare)}</span>
+              </div>
               <div className="mt-1 flex justify-between border-t border-border pt-2 text-base font-bold">
                 <span className="text-foreground">Total estimasi</span>
                 <span className="text-primary">

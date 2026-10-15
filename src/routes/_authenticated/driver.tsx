@@ -43,10 +43,11 @@ function DriverPage() {
     queryKey: ["driver-jobs", user?.id],
     enabled: isDriver && !!user,
     queryFn: async () => {
+      if (!user) throw new Error("Silakan masuk kembali.");
       const { data, error } = await supabase
         .from("orders")
         .select("*")
-        .eq("driver_id", user!.id)
+        .eq("driver_id", user.id)
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -61,9 +62,11 @@ function DriverPage() {
         qc.invalidateQueries({ queryKey: ["pool"] });
         qc.invalidateQueries({ queryKey: ["driver-jobs"] });
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "driver_wallets" }, () =>
-        qc.invalidateQueries({ queryKey: ["wallet"] }),
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_wallets" }, () => {
+        qc.invalidateQueries({ queryKey: ["wallet"] });
+        qc.invalidateQueries({ queryKey: ["driver-wallet-earnings"] });
+        qc.invalidateQueries({ queryKey: ["wallet-page"] });
+      })
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
@@ -79,6 +82,9 @@ function DriverPage() {
     qc.invalidateQueries({ queryKey: ["pool"] });
     qc.invalidateQueries({ queryKey: ["driver-jobs"] });
     qc.invalidateQueries({ queryKey: ["wallet"] });
+    qc.invalidateQueries({ queryKey: ["driver-wallet-earnings"] });
+    qc.invalidateQueries({ queryKey: ["wallet-page"] });
+    qc.invalidateQueries({ queryKey: ["admin-financial-overview"] });
     if (openAfter) navigate({ to: "/pesanan/$id", params: { id } });
   }
 
@@ -108,6 +114,7 @@ function DriverPage() {
             <OrderCard
               key={o.id}
               order={o}
+              driverView
               actions={
                 <>
                   <button
@@ -132,6 +139,7 @@ function DriverPage() {
             <OrderCard
               key={o.id}
               order={o}
+              driverView
               actions={
                 <button
                   className={btnPrimary}
@@ -147,7 +155,7 @@ function DriverPage() {
         {done.length > 0 && (
           <section className="space-y-3">
             <h2 className="text-lg font-extrabold text-foreground">Selesai</h2>
-            {done.slice(0, 10).map((o) => <OrderCard key={o.id} order={o} />)}
+            {done.slice(0, 10).map((o) => <OrderCard key={o.id} order={o} driverView />)}
           </section>
         )}
       </main>

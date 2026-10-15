@@ -1,4 +1,5 @@
 import { PACKAGE_LIMITS, PRICING } from "./config";
+import { calculateMonetization } from "./monetization";
 
 export interface PriceInput {
   distanceMeters: number;
@@ -22,6 +23,8 @@ export interface PriceBreakdown {
   oversize: boolean;
   oversizeFee: number;
   total: number;
+  shippingFare: number;
+  consumerServiceFee: number;
   // Paket terlalu besar bahkan untuk motor — perlu konfirmasi admin
   needsAdminConfirm: boolean;
 }
@@ -54,7 +57,8 @@ export function calculatePrice(
   );
   const oversizeFee = oversize ? rates.oversizeFee : 0;
   const distanceFare = billedKm * rates.perKm;
-  const total = rates.baseFare + distanceFare + oversizeFee;
+  const shippingFare = distanceFare + oversizeFee;
+  const { total } = calculateMonetization(shippingFare, rates.baseFare, 0, "cod");
   const needsAdminConfirm =
     input.weightKg > PACKAGE_LIMITS.hardMaxWeightKg ||
     input.lengthCm > PACKAGE_LIMITS.hardMaxDimCm ||
@@ -69,6 +73,8 @@ export function calculatePrice(
     oversize,
     oversizeFee,
     total,
+    shippingFare,
+    consumerServiceFee: rates.baseFare,
     needsAdminConfirm,
   };
 }
