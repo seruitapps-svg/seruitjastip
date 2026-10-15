@@ -45,6 +45,9 @@ export function AppHeader() {
               <Link to="/pesanan" className={linkCls} activeProps={{ className: activeCls }}>
                 Pesanan
               </Link>
+              <Link to="/saldo" className={linkCls} activeProps={{ className: activeCls }}>
+                Saldo
+              </Link>
               {!isDriver && (
                 <Link to="/daftar-driver" className={linkCls} activeProps={{ className: activeCls }}>
                   Daftar Driver
