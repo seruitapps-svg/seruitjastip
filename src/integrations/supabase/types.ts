@@ -16,18 +16,36 @@ export type Database = {
     Tables: {
       app_settings: {
         Row: {
+          announcement_active: boolean
+          announcement_text: string | null
+          announcement_type: string
+          base_fare: number
           commission_percent: number
           id: number
+          oversize_fee: number
+          per_km: number
           updated_at: string
         }
         Insert: {
+          announcement_active?: boolean
+          announcement_text?: string | null
+          announcement_type?: string
+          base_fare?: number
           commission_percent?: number
           id?: number
+          oversize_fee?: number
+          per_km?: number
           updated_at?: string
         }
         Update: {
+          announcement_active?: boolean
+          announcement_text?: string | null
+          announcement_type?: string
+          base_fare?: number
           commission_percent?: number
           id?: number
+          oversize_fee?: number
+          per_km?: number
           updated_at?: string
         }
         Relationships: []
@@ -374,6 +392,18 @@ export type Database = {
       admin_adjust_wallet: {
         Args: { _amount: number; _driver_id: string; _note?: string }
         Returns: number
+      }
+      admin_update_app_settings: {
+        Args: {
+          _announcement_active: boolean
+          _announcement_text: string
+          _announcement_type: string
+          _base_fare: number
+          _commission_percent: number
+          _oversize_fee: number
+          _per_km: number
+        }
+        Returns: undefined
       }
       admin_review_order: {
         Args: { _approve: boolean; _note?: string; _order_id: string }
