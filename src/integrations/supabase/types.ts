@@ -542,6 +542,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_financial_overview: { Args: Record<PropertyKey, never>; Returns: Json }
       admin_adjust_wallet: {
         Args: { _amount: number; _driver_id: string; _note?: string }
         Returns: number
