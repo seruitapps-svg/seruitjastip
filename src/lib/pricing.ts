@@ -1,4 +1,5 @@
 import { PACKAGE_LIMITS, PRICING } from "./config";
+import { calculateMonetization } from "./monetization";
 
 export interface PriceInput {
   distanceMeters: number;
@@ -57,7 +58,7 @@ export function calculatePrice(
   const oversizeFee = oversize ? rates.oversizeFee : 0;
   const distanceFare = billedKm * rates.perKm;
   const shippingFare = distanceFare + oversizeFee;
-  const total = rates.baseFare + shippingFare;
+  const { total } = calculateMonetization(shippingFare, rates.baseFare, 0, "cod");
   const needsAdminConfirm =
     input.weightKg > PACKAGE_LIMITS.hardMaxWeightKg ||
     input.lengthCm > PACKAGE_LIMITS.hardMaxDimCm ||
