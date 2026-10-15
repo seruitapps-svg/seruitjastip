@@ -39,13 +39,29 @@ export const createOrder = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     // Harga dihitung ulang di server — angka dari browser tidak dipercaya
     const route = await fetchMotorRoute(data.origin, data.destination);
-    const price = calculatePrice({
-      distanceMeters: route.distanceMeters,
-      weightKg: data.weightKg,
-      lengthCm: data.lengthCm,
-      widthCm: data.widthCm,
-      heightCm: data.heightCm,
-    });
+    const { data: settings, error: settingsError } = await context.supabase
+      .from("app_settings")
+      .select("base_fare, per_km, oversize_fee")
+      .eq("id", 1)
+      .single();
+    if (settingsError) {
+      console.error(settingsError);
+      throw new Error("Gagal memuat pengaturan tarif.");
+    }
+    const price = calculatePrice(
+      {
+        distanceMeters: route.distanceMeters,
+        weightKg: data.weightKg,
+        lengthCm: data.lengthCm,
+        widthCm: data.widthCm,
+        heightCm: data.heightCm,
+      },
+      {
+        baseFare: Number(settings.base_fare),
+        perKm: Number(settings.per_km),
+        oversizeFee: Number(settings.oversize_fee),
+      },
+    );
     const { data: row, error } = await context.supabase
       .from("orders")
       .insert({
