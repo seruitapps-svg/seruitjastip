@@ -8,6 +8,7 @@ import { OrderCard, btnPrimary, btnDanger, btnOutline } from "@/components/order
 import { useAuth } from "@/hooks/use-auth";
 import { WalletPanel } from "@/components/wallet/WalletPanel";
 import { STATUS_LABEL, type OrderStatus } from "@/lib/order-status";
+import { formatRupiah } from "@/lib/config";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
