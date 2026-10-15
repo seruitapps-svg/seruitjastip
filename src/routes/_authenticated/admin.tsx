@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { WalletPanel } from "@/components/wallet/WalletPanel";
 import { STATUS_LABEL, type OrderStatus } from "@/lib/order-status";
 import { formatRupiah } from "@/lib/config";
+import { AdminFinancialOverview } from "@/components/admin/AdminFinancialOverview";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -255,6 +256,8 @@ function AdminPage() {
           </>}
         </div>
         {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
+
+        {category === "operasional" && <AdminFinancialOverview />}
 
         {subTab === "order" && (
           <>
