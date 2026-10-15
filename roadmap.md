@@ -1,5 +1,9 @@
 # Roadmap — Seruit (Jastip)
 
+- [ ] Ringkasan admin tertutup secara default dengan tombol buka/tutup
+- [ ] Monetisasi dua sisi, snapshot tarif, mutasi tunai/non-tunai dan refund
+- [ ] Rincian biaya konsumen/driver singkat serta pengujian aturan dan alur akun
+
 - [x] Koneksi Google Maps (connector)
 - [x] 3 layanan: Jasa Titip / Jasa Kirim / Belanja
 - [x] Form order: titik A & B (autocomplete + peta), detail barang, kontak, COD/Transfer
