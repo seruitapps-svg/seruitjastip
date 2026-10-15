@@ -7,6 +7,7 @@ import { OrderCard, btnPrimary, btnOutline } from "@/components/order/OrderCard"
 import { useAuth } from "@/hooks/use-auth";
 import { DRIVER_NEXT_LABEL } from "@/lib/order-status";
 import { WalletPanel } from "@/components/wallet/WalletPanel";
+import { DriverEarningsSettings } from "@/components/driver/DriverEarningsSettings";
 
 export const Route = createFileRoute("/_authenticated/driver")({
   head: () => ({
@@ -98,6 +99,7 @@ function DriverPage() {
     <div className="min-h-screen bg-background">
       <AppHeader />
       <main className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+        {user && <DriverEarningsSettings driverId={user.id} />}
         {user && <WalletPanel driverId={user.id} />}
         {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
         <section className="space-y-3">
