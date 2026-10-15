@@ -83,6 +83,48 @@ export type Database = {
         }
         Relationships: []
       }
+      driver_withdrawals: {
+        Row: {
+          admin_note: string
+          amount: number
+          bank_account_name: string
+          bank_account_number: string
+          bank_name: string
+          created_at: string
+          driver_id: string
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          admin_note?: string
+          amount: number
+          bank_account_name: string
+          bank_account_number: string
+          bank_name: string
+          created_at?: string
+          driver_id: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          admin_note?: string
+          amount?: number
+          bank_account_name?: string
+          bank_account_number?: string
+          bank_name?: string
+          created_at?: string
+          driver_id?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       driver_profiles: {
         Row: {
           created_at: string
