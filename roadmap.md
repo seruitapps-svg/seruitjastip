@@ -1,8 +1,8 @@
 # Roadmap — Seruit (Jastip)
 
-- [ ] Ringkasan admin tertutup secara default dengan tombol buka/tutup
-- [ ] Monetisasi dua sisi, snapshot tarif, mutasi tunai/non-tunai dan refund
-- [ ] Rincian biaya konsumen/driver singkat serta pengujian aturan dan alur akun
+- [x] Ringkasan admin tertutup secara default dengan tombol buka/tutup
+- [x] Monetisasi dua sisi, snapshot tarif, mutasi tunai/non-tunai dan refund
+- [x] Rincian biaya konsumen/driver singkat serta pengujian aturan dan alur akun
 
 - [x] Koneksi Google Maps (connector)
 - [x] 3 layanan: Jasa Titip / Jasa Kirim / Belanja
@@ -11,4 +11,4 @@
 - [x] Kirim order via wa.me ke admin 085783797770 lengkap dengan link rute A→B
 - [x] Verifikasi alur end-to-end di browser (lokal): OK — contoh 4,4 km → Rp 10.000, WA link terisi benar
 - [ ] Tampilan QRIS: masih placeholder — menunggu gambar QRIS asli dari user
-- [ ] Peta di localhost memang diblokir Google (kunci hanya untuk domain Lovable) — tampil normal di preview/publish
+- [x] Peta menggunakan kunci domain Lovable; pemblokiran localhost bukan pekerjaan yang tertunda

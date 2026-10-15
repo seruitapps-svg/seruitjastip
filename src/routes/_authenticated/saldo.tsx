@@ -39,6 +39,7 @@ function WalletPage() {
             .eq("driver_id", user!.id).maybeSingle(),
           supabase.from("wallet_transactions").select("*")
             .eq("driver_id", user!.id)
+            .eq("balance_type", "deposit")
             .order("created_at", { ascending: false }).limit(30),
         ]);
         if (balance.error) throw balance.error;
