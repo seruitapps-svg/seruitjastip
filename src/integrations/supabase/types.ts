@@ -584,6 +584,14 @@ export type Database = {
         Args: { _order_id: string }
         Returns: Database["public"]["Enums"]["order_status"]
       }
+      driver_request_withdrawal: {
+        Args: { _amount: number }
+        Returns: string
+      }
+      driver_set_bank_account: {
+        Args: { _account_name: string; _account_number: string; _bank_name: string }
+        Returns: undefined
+      }
       driver_take_order: { Args: { _order_id: string }; Returns: undefined }
       has_role: {
         Args: {
