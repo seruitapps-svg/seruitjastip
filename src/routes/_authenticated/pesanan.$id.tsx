@@ -10,6 +10,7 @@ import { StatusBadge, btnPrimary, btnDanger } from "@/components/order/OrderCard
 import { useAuth } from "@/hooks/use-auth";
 import { formatRupiah } from "@/lib/config";
 import { DRIVER_NEXT_LABEL, SERVICE_NAME, STATUS_LABEL } from "@/lib/order-status";
+import { DriverTransactionBreakdown } from "@/components/order/DriverTransactionBreakdown";
 
 export const Route = createFileRoute("/_authenticated/pesanan/$id")({
   head: () => ({
@@ -96,6 +97,11 @@ function OrderDetail() {
     if (error) return setErr(error.message);
     qc.invalidateQueries({ queryKey: ["order", id] });
     qc.invalidateQueries({ queryKey: ["order-history", id] });
+    qc.invalidateQueries({ queryKey: ["wallet"] });
+    qc.invalidateQueries({ queryKey: ["driver-wallet-settings"] });
+    qc.invalidateQueries({ queryKey: ["wallet-page"] });
+    qc.invalidateQueries({ queryKey: ["driver-jobs"] });
+    qc.invalidateQueries({ queryKey: ["admin-financial-overview"] });
   }
 
   const row = (k: string, v: string) => (
@@ -164,14 +170,14 @@ function OrderDetail() {
           {o.notes && row("Catatan", o.notes)}
           {row("Pembayaran", o.payment_method === "cod" ? "COD (tunai ke driver)" : "Transfer (QRIS)")}
           <div className="space-y-1 rounded-xl bg-muted p-3 text-sm">
-            {row("Tarif dasar", formatRupiah(o.base_fare))}
-            {row("Jarak", formatRupiah(o.distance_fare))}
-            {o.oversize_fee > 0 && row("Paket besar", formatRupiah(o.oversize_fee))}
+            {row("Ongkos Kirim", formatRupiah(o.shipping_fare))}
+            {row("Biaya Layanan Aplikasi", formatRupiah(o.consumer_service_fee))}
             <div className="flex justify-between border-t border-border pt-2 font-bold">
               <span className="text-foreground">Total</span>
               <span className="text-primary">{formatRupiah(o.total)}</span>
             </div>
           </div>
+          {isMyDriver && <DriverTransactionBreakdown order={o} />}
           {o.admin_note && row("Catatan admin", o.admin_note)}
         </div>
 
@@ -200,8 +206,8 @@ function OrderDetail() {
           </ol>
         </div>
 
-        {canChat ? (
-          <OrderChat orderId={o.id} myId={user!.id} />
+        {canChat && user ? (
+          <OrderChat orderId={o.id} myId={user.id} />
         ) : (
           <p className="text-center text-xs text-muted-foreground">Chat tersedia setelah Anda mengambil order ini.</p>
         )}

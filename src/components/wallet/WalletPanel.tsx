@@ -7,6 +7,7 @@ const KIND_LABEL: Record<string, string> = {
   penyesuaian: "Penyesuaian",
   potongan: "Potongan biaya aplikasi",
   refund: "Pengembalian",
+  penghasilan: "Penghasilan order",
 };
 
 export function useWallet(driverId?: string) {
@@ -14,17 +15,19 @@ export function useWallet(driverId?: string) {
     queryKey: ["wallet", driverId],
     enabled: !!driverId,
     queryFn: async () => {
+      if (!driverId) throw new Error("Driver tidak ditemukan.");
       const [w, t, s] = await Promise.all([
-        supabase.from("driver_wallets").select("balance").eq("driver_id", driverId!).maybeSingle(),
+        supabase.from("driver_wallets").select("balance").eq("driver_id", driverId).maybeSingle(),
         supabase
           .from("wallet_transactions")
           .select("*")
-          .eq("driver_id", driverId!)
+          .eq("driver_id", driverId)
           .order("created_at", { ascending: false })
           .limit(30),
         supabase.from("app_settings").select("commission_percent").eq("id", 1).maybeSingle(),
       ]);
       if (t.error) throw t.error;
+      if (w.error) throw w.error;
       return {
         balance: w.data?.balance ?? 0,
         txs: t.data,
@@ -40,10 +43,10 @@ export function WalletPanel({ driverId, showHistory = true }: { driverId: string
     <section className="space-y-3 rounded-2xl border border-border bg-card p-4">
       <div className="flex items-end justify-between gap-2">
         <div>
-          <div className="text-xs text-muted-foreground">Saldo aktif</div>
+          <div className="text-xs text-muted-foreground">Saldo deposit</div>
           <div className="text-2xl font-extrabold text-foreground">{formatRupiah(data?.balance ?? 0)}</div>
         </div>
-        <div className="text-right text-xs text-muted-foreground">Biaya aplikasi {data?.percent ?? 0}% per order</div>
+        <div className="text-right text-xs text-muted-foreground">Komisi driver {data?.percent ?? 0}% ongkir</div>
       </div>
       {showHistory && (
         <div className="space-y-1">
@@ -52,7 +55,7 @@ export function WalletPanel({ driverId, showHistory = true }: { driverId: string
           {data?.txs.map((t) => (
             <div key={t.id} className="flex items-center justify-between gap-2 border-t border-border py-1.5 text-xs">
               <div className="min-w-0">
-                <div className="font-semibold text-foreground">{KIND_LABEL[t.kind] ?? t.kind}</div>
+                    <div className="font-semibold text-foreground">{KIND_LABEL[t.kind] ?? t.kind} · {t.balance_type === "earnings" ? "Penghasilan" : "Deposit"}</div>
                 <div className="truncate text-muted-foreground">
                   {new Date(t.created_at).toLocaleString("id-ID")} {t.note && `· ${t.note}`}
                 </div>

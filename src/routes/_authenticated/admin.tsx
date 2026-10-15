@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { KeyRound, Trash2, X, ChevronRight } from "lucide-react";
+import { KeyRound, Trash2, X, ChevronRight, ChevronDown, Calculator } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { OrderCard, btnPrimary, btnDanger, btnOutline } from "@/components/order/OrderCard";
@@ -36,6 +37,7 @@ function AdminPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [financialOpen, setFinancialOpen] = useState(false);
 
   const orders = useQuery({
     queryKey: ["admin-orders", filter],
@@ -257,7 +259,14 @@ function AdminPage() {
         </div>
         {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
 
-        {category === "operasional" && <AdminFinancialOverview />}
+        {category === "operasional" && (
+          <section>
+            <Button variant="ghost" size="sm" aria-expanded={financialOpen} aria-controls="admin-financial-summary" onClick={() => setFinancialOpen((open) => !open)}>
+              <Calculator /> Ringkasan keuangan {financialOpen ? <ChevronDown /> : <ChevronRight />}
+            </Button>
+            {financialOpen && <div id="admin-financial-summary" className="mt-3"><AdminFinancialOverview /></div>}
+          </section>
+        )}
 
         {subTab === "order" && (
           <>
@@ -325,9 +334,8 @@ function AdminPage() {
             <h3 className="font-bold text-foreground">Pengaturan Tarif & Biaya Aplikasi</h3>
             {settings.isLoading && <p className="text-sm text-muted-foreground">Memuat pengaturan...</p>}
             {settings.isError && <p className="text-sm text-destructive">Gagal memuat pengaturan: {settings.error.message}</p>}
-            <p className="text-xs text-muted-foreground">Potongan komisi dihitung dari total ongkir dan dipotong dari saldo driver saat pesanan diambil.</p>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div><label className="text-xs font-semibold text-muted-foreground">Tarif Dasar (Rp)</label><input type="number" min={0} value={formTarif.base_fare} onChange={(e) => setFormTarif({ ...formTarif, base_fare: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-sm" /></div>
+              <div><label className="text-xs font-semibold text-muted-foreground">Biaya Layanan Konsumen / Tarif Dasar (Rp)</label><input type="number" min={0} value={formTarif.base_fare} onChange={(e) => setFormTarif({ ...formTarif, base_fare: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-sm" /></div>
               <div><label className="text-xs font-semibold text-muted-foreground">Tarif per Kilometer (Rp/km)</label><input type="number" min={0} value={formTarif.per_km} onChange={(e) => setFormTarif({ ...formTarif, per_km: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-sm" /></div>
               <div><label className="text-xs font-semibold text-muted-foreground">Biaya Paket Besar / Tambahan (Rp)</label><input type="number" min={0} value={formTarif.oversize_fee} onChange={(e) => setFormTarif({ ...formTarif, oversize_fee: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-sm" /></div>
               <div><label className="text-xs font-semibold text-muted-foreground">Potongan Komisi Driver (%)</label><input type="number" min={0} max={100} step="0.5" value={formTarif.commission_percent} onChange={(e) => setFormTarif({ ...formTarif, commission_percent: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-sm" /></div>

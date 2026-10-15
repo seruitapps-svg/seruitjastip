@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { formatRupiah } from "@/lib/config";
 import { SERVICE_NAME, STATUS_LABEL, STATUS_TONE, type OrderRow } from "@/lib/order-status";
+import { DriverTransactionBreakdown } from "./DriverTransactionBreakdown";
 
 export function StatusBadge({ status }: { status: OrderRow["status"] }) {
   return (
@@ -11,7 +12,7 @@ export function StatusBadge({ status }: { status: OrderRow["status"] }) {
   );
 }
 
-export function OrderCard({ order, actions }: { order: OrderRow; actions?: ReactNode }) {
+export function OrderCard({ order, actions, driverView = false }: { order: OrderRow; actions?: ReactNode; driverView?: boolean }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
       <div className="flex items-start justify-between gap-2">
@@ -31,6 +32,7 @@ export function OrderCard({ order, actions }: { order: OrderRow; actions?: React
         </span>
         <span className="font-bold text-primary">{formatRupiah(order.total)}</span>
       </div>
+      {driverView && <DriverTransactionBreakdown order={order} />}
       {actions && <div className="mt-3 flex flex-wrap gap-2">{actions}</div>}
     </div>
   );

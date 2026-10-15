@@ -11,6 +11,10 @@ export const Route = createFileRoute("/_authenticated/daftar-driver")({
     meta: [
       { title: "Daftar Driver — Seruit" },
       { name: "description", content: "Daftarkan diri Anda sebagai driver Seruit." },
+      { property: "og:title", content: "Daftar Driver — Seruit" },
+      { property: "og:description", content: "Daftarkan diri Anda sebagai driver Seruit." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: DaftarDriver,
@@ -32,7 +36,7 @@ const INITIAL_FORM: DriverForm = {
   vehiclePlate: "",
 };
 
-const STATUS_COPY: Record<string, { title: string; description: string; className: string }> = {
+const STATUS_COPY = {
   pending: {
     title: "Menunggu verifikasi",
     description: "Pendaftaran Anda sudah diterima. Tunggu admin memeriksa data Anda.",
@@ -155,7 +159,7 @@ function DaftarDriver() {
         ) : application.data ? (
           <div className="space-y-3 rounded-xl border border-border bg-card p-4">
             {(() => {
-              const status = STATUS_COPY[application.data.status] ?? STATUS_COPY.pending;
+              const status = STATUS_COPY[application.data.status];
               return (
                 <div className={`rounded-lg border p-4 ${status.className}`}>
                   <h2 className="font-bold">{status.title}</h2>

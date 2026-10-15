@@ -7,6 +7,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatRupiah } from "@/lib/config";
 
 export const Route = createFileRoute("/_authenticated/saldo")({
+  head: () => ({ meta: [
+    { title: "Saldo & Top-up — Seruit" },
+    { name: "description", content: "Kelola saldo dan permintaan top-up Seruit." },
+    { property: "og:title", content: "Saldo & Top-up — Seruit" },
+    { property: "og:description", content: "Kelola saldo dan permintaan top-up Seruit." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: WalletPage,
 });
 
