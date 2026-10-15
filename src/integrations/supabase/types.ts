@@ -267,20 +267,27 @@ export type Database = {
           app_fee: number
           base_fare: number
           code: string
+          commission_percent: number
+          consumer_service_fee: number
           created_at: string
+          deposit_deduction: number
           dest_address: string
           dest_lat: number
           dest_lng: number
           distance_fare: number
           distance_meters: number
+          driver_commission: number
           driver_id: string | null
+          driver_net_earnings: number
           duration_seconds: number
+          earnings_credited: boolean
           encoded_polyline: string
           fee_charged: boolean
           height_cm: number
           id: string
           item_detail: string
           length_cm: number
+          monetization_version: number
           notes: string
           origin_address: string
           origin_lat: number
@@ -292,6 +299,7 @@ export type Database = {
           sender_name: string
           sender_wa: string
           service: string
+          shipping_fare: number
           status: Database["public"]["Enums"]["order_status"]
           total: number
           updated_at: string
@@ -304,20 +312,27 @@ export type Database = {
           app_fee?: number
           base_fare: number
           code?: string
+          commission_percent?: number
+          consumer_service_fee?: number
           created_at?: string
+          deposit_deduction?: number
           dest_address: string
           dest_lat: number
           dest_lng: number
           distance_fare: number
           distance_meters: number
+          driver_commission?: number
           driver_id?: string | null
+          driver_net_earnings?: number
           duration_seconds: number
+          earnings_credited?: boolean
           encoded_polyline?: string
           fee_charged?: boolean
           height_cm: number
           id?: string
           item_detail: string
           length_cm: number
+          monetization_version?: number
           notes?: string
           origin_address: string
           origin_lat: number
@@ -329,6 +344,7 @@ export type Database = {
           sender_name: string
           sender_wa: string
           service: string
+          shipping_fare?: number
           status?: Database["public"]["Enums"]["order_status"]
           total: number
           updated_at?: string
@@ -341,20 +357,27 @@ export type Database = {
           app_fee?: number
           base_fare?: number
           code?: string
+          commission_percent?: number
+          consumer_service_fee?: number
           created_at?: string
+          deposit_deduction?: number
           dest_address?: string
           dest_lat?: number
           dest_lng?: number
           distance_fare?: number
           distance_meters?: number
+          driver_commission?: number
           driver_id?: string | null
+          driver_net_earnings?: number
           duration_seconds?: number
+          earnings_credited?: boolean
           encoded_polyline?: string
           fee_charged?: boolean
           height_cm?: number
           id?: string
           item_detail?: string
           length_cm?: number
+          monetization_version?: number
           notes?: string
           origin_address?: string
           origin_lat?: number
@@ -366,6 +389,7 @@ export type Database = {
           sender_name?: string
           sender_wa?: string
           service?: string
+          shipping_fare?: number
           status?: Database["public"]["Enums"]["order_status"]
           total?: number
           updated_at?: string
@@ -517,6 +541,7 @@ export type Database = {
         Row: {
           amount: number
           balance_after: number
+          balance_type: string
           created_at: string
           created_by: string | null
           driver_id: string
@@ -528,6 +553,7 @@ export type Database = {
         Insert: {
           amount: number
           balance_after: number
+          balance_type?: string
           created_at?: string
           created_by?: string | null
           driver_id: string
@@ -539,6 +565,7 @@ export type Database = {
         Update: {
           amount?: number
           balance_after?: number
+          balance_type?: string
           created_at?: string
           created_by?: string | null
           driver_id?: string
