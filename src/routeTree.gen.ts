@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDriverRouteImport } from './routes/_authenticated/driver'
+import { Route as AuthenticatedSaldoRouteImport } from './routes/_authenticated/saldo'
 import { Route as AuthenticatedPesananIndexRouteImport } from './routes/_authenticated/pesanan.index'
 import { Route as AuthenticatedPesananIdRouteImport } from './routes/_authenticated/pesanan.$id'
 
@@ -47,6 +48,11 @@ const AuthenticatedDriverRoute = AuthenticatedDriverRouteImport.update({
   path: '/driver',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSaldoRoute = AuthenticatedSaldoRouteImport.update({
+  id: '/saldo',
+  path: '/saldo',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPesananIndexRoute =
   AuthenticatedPesananIndexRouteImport.update({
     id: '/pesanan/',
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/driver': typeof AuthenticatedDriverRoute
+  '/saldo': typeof AuthenticatedSaldoRoute
   '/pesanan/$id': typeof AuthenticatedPesananIdRoute
   '/pesanan/': typeof AuthenticatedPesananIndexRoute
 }
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/driver': typeof AuthenticatedDriverRoute
+  '/saldo': typeof AuthenticatedSaldoRoute
   '/pesanan/$id': typeof AuthenticatedPesananIdRoute
   '/pesanan': typeof AuthenticatedPesananIndexRoute
 }
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/driver': typeof AuthenticatedDriverRoute
+  '/_authenticated/saldo': typeof AuthenticatedSaldoRoute
   '/_authenticated/pesanan/$id': typeof AuthenticatedPesananIdRoute
   '/_authenticated/pesanan/': typeof AuthenticatedPesananIndexRoute
 }
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/admin'
     | '/driver'
+    | '/saldo'
     | '/pesanan/$id'
     | '/pesanan/'
   fileRoutesByTo: FileRoutesByTo
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/_authenticated/admin'
     | '/_authenticated/driver'
+    | '/_authenticated/saldo'
     | '/_authenticated/pesanan/$id'
     | '/_authenticated/pesanan/'
   fileRoutesById: FileRoutesById
@@ -170,6 +181,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDriverRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/saldo': {
+      id: '/_authenticated/saldo'
+      path: '/saldo'
+      fullPath: '/saldo'
+      preLoaderRoute: typeof AuthenticatedSaldoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/pesanan/': {
       id: '/_authenticated/pesanan/'
       path: '/pesanan'
@@ -190,6 +208,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedDriverRoute: typeof AuthenticatedDriverRoute
+  AuthenticatedSaldoRoute: typeof AuthenticatedSaldoRoute
   AuthenticatedPesananIdRoute: typeof AuthenticatedPesananIdRoute
   AuthenticatedPesananIndexRoute: typeof AuthenticatedPesananIndexRoute
 }
@@ -197,6 +216,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedDriverRoute: AuthenticatedDriverRoute,
+  AuthenticatedSaldoRoute: AuthenticatedSaldoRoute,
   AuthenticatedPesananIdRoute: AuthenticatedPesananIdRoute,
   AuthenticatedPesananIndexRoute: AuthenticatedPesananIndexRoute,
 }
