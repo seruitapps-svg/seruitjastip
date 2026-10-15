@@ -29,7 +29,7 @@ function AdminPage() {
   const { isAdmin, ready } = useAuth();
   const qc = useQueryClient();
   const [category, setCategory] = useState<"operasional" | "pengguna" | "pengaturan">("operasional");
-  const [subTab, setSubTab] = useState<"order" | "driver_approval" | "akun" | "tarif" | "pengumuman">("order");
+  const [subTab, setSubTab] = useState<"order" | "driver_approval" | "akun" | "topup" | "tarif" | "pengumuman">("order");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("menunggu_verifikasi");
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
@@ -102,6 +102,20 @@ function AdminPage() {
         .from("driver_profiles")
         .select("*")
         .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const topupRequests = useQuery({
+    queryKey: ["admin-topup-requests"],
+    enabled: isAdmin && subTab === "topup",
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("wallet_topup_requests")
+        .select("*")
+        .eq("status", "pending")
+        .order("created_at", { ascending: true });
       if (error) throw error;
       return data;
     },
@@ -199,6 +213,9 @@ function AdminPage() {
     qc.invalidateQueries({ queryKey: ["public-app-settings"] });
     qc.invalidateQueries({ queryKey: ["public-announcement"] });
     qc.invalidateQueries({ queryKey: ["wallet"] });
+    qc.invalidateQueries({ queryKey: ["admin-topup-requests"] });
+    qc.invalidateQueries({ queryKey: ["my-topup-requests"] });
+    qc.invalidateQueries({ queryKey: ["wallet-page"] });
   }
 
   if (ready && !isAdmin)
@@ -227,7 +244,10 @@ function AdminPage() {
             <button className={tabCls(subTab === "order")} onClick={() => setSubTab("order")}>Pesanan Masuk</button>
             <button className={tabCls(subTab === "driver_approval")} onClick={() => setSubTab("driver_approval")}>Verifikasi Driver</button>
           </>}
-          {category === "pengguna" && <button className={tabCls(subTab === "akun")} onClick={() => setSubTab("akun")}>Daftar Akun & Saldo</button>}
+          {category === "pengguna" && <>
+            <button className={tabCls(subTab === "akun")} onClick={() => setSubTab("akun")}>Daftar Akun & Saldo</button>
+            <button className={tabCls(subTab === "topup")} onClick={() => setSubTab("topup")}>Permintaan Top-up</button>
+          </>}
           {category === "pengaturan" && <>
             <button className={tabCls(subTab === "tarif")} onClick={() => setSubTab("tarif")}>Tarif & Komisi</button>
             <button className={tabCls(subTab === "pengumuman")} onClick={() => setSubTab("pengumuman")}>Pengumuman Web</button>
@@ -324,6 +344,72 @@ function AdminPage() {
             </div>
             <button onClick={handleSaveSettings} disabled={busy === "saving-settings" || settings.isLoading} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50">{busy === "saving-settings" ? "Menyimpan..." : "Simpan Pengumuman"}</button>
           </div>
+        )}
+
+        {subTab === "topup" && (
+          <section className="space-y-3">
+            <div>
+              <h2 className="text-sm font-bold text-foreground">Permintaan Top-up Menunggu</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Setujui hanya setelah pembayaran benar-benar diterima. Persetujuan akan menambahkan saldo dan mencatat mutasi.
+              </p>
+            </div>
+            {topupRequests.isLoading && <p className="text-sm text-muted-foreground">Memuat permintaan top-up...</p>}
+            {topupRequests.isError && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">Gagal memuat permintaan: {topupRequests.error.message}</p>}
+            {!topupRequests.isLoading && !topupRequests.isError && topupRequests.data?.length === 0 && (
+              <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+                Tidak ada permintaan top-up yang menunggu.
+              </p>
+            )}
+            <div className="space-y-3">
+              {topupRequests.data?.map((request) => (
+                <div key={request.id} className="space-y-3 rounded-xl border border-border bg-card p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 space-y-1">
+                      <p className="font-bold text-foreground">{formatRupiah(request.amount)} · {request.wallet_type === "driver" ? "Saldo Driver" : "Saldo Konsumen"}</p>
+                      <p className="break-all text-xs text-muted-foreground">ID pengguna: {request.user_id}</p>
+                      <p className="text-xs text-muted-foreground">Diajukan: {new Date(request.created_at).toLocaleString("id-ID")}</p>
+                      <p className="text-xs text-muted-foreground">Metode: {request.provider === "manual" ? "Manual" : request.provider}</p>
+                    </div>
+                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">MENUNGGU</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 border-t border-border pt-3">
+                    <button
+                      type="button"
+                      disabled={busy !== null}
+                      className={btnPrimary}
+                      onClick={() => {
+                        if (!window.confirm("Pastikan pembayaran sudah diterima. Setujui dan tambahkan saldo?")) return;
+                        run("approve-topup-" + request.id, () => supabase.rpc("admin_review_wallet_topup", {
+                          _request_id: request.id,
+                          _approve: true,
+                          _note: "Pembayaran diterima",
+                        }));
+                      }}
+                    >
+                      {busy === "approve-topup-" + request.id ? "Memproses..." : "Setujui Top-up"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy !== null}
+                      className={btnDanger}
+                      onClick={() => {
+                        const note = window.prompt("Alasan penolakan", "Pembayaran belum valid") ?? "";
+                        if (!note.trim()) return;
+                        run("reject-topup-" + request.id, () => supabase.rpc("admin_review_wallet_topup", {
+                          _request_id: request.id,
+                          _approve: false,
+                          _note: note,
+                        }));
+                      }}
+                    >
+                      {busy === "reject-topup-" + request.id ? "Memproses..." : "Tolak"}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         {subTab === "driver_approval" && (
