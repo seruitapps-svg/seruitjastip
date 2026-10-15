@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedDaftarDriverRouteImport } from './routes/_authenticated/daftar-driver'
 import { Route as AuthenticatedDriverRouteImport } from './routes/_authenticated/driver'
 import { Route as AuthenticatedSaldoRouteImport } from './routes/_authenticated/saldo'
 import { Route as AuthenticatedPesananIndexRouteImport } from './routes/_authenticated/pesanan.index'
@@ -43,6 +44,12 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedDaftarDriverRoute =
+  AuthenticatedDaftarDriverRouteImport.update({
+    id: '/daftar-driver',
+    path: '/daftar-driver',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDriverRoute = AuthenticatedDriverRouteImport.update({
   id: '/driver',
   path: '/driver',
@@ -70,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/daftar-driver': typeof AuthenticatedDaftarDriverRoute
   '/driver': typeof AuthenticatedDriverRoute
   '/saldo': typeof AuthenticatedSaldoRoute
   '/pesanan/$id': typeof AuthenticatedPesananIdRoute
@@ -80,6 +88,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/daftar-driver': typeof AuthenticatedDaftarDriverRoute
   '/driver': typeof AuthenticatedDriverRoute
   '/saldo': typeof AuthenticatedSaldoRoute
   '/pesanan/$id': typeof AuthenticatedPesananIdRoute
@@ -92,6 +101,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/daftar-driver': typeof AuthenticatedDaftarDriverRoute
   '/_authenticated/driver': typeof AuthenticatedDriverRoute
   '/_authenticated/saldo': typeof AuthenticatedSaldoRoute
   '/_authenticated/pesanan/$id': typeof AuthenticatedPesananIdRoute
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/admin'
+    | '/daftar-driver'
     | '/driver'
     | '/saldo'
     | '/pesanan/$id'
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/admin'
+    | '/daftar-driver'
     | '/driver'
     | '/saldo'
     | '/pesanan/$id'
@@ -125,6 +137,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/_authenticated/admin'
+    | '/_authenticated/daftar-driver'
     | '/_authenticated/driver'
     | '/_authenticated/saldo'
     | '/_authenticated/pesanan/$id'
@@ -175,6 +188,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/daftar-driver': {
+      id: '/_authenticated/daftar-driver'
+      path: '/daftar-driver'
+      fullPath: '/daftar-driver'
+      preLoaderRoute: typeof AuthenticatedDaftarDriverRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/driver': {
       id: '/_authenticated/driver'
       path: '/driver'
@@ -208,6 +228,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedDaftarDriverRoute: typeof AuthenticatedDaftarDriverRoute
   AuthenticatedDriverRoute: typeof AuthenticatedDriverRoute
   AuthenticatedSaldoRoute: typeof AuthenticatedSaldoRoute
   AuthenticatedPesananIdRoute: typeof AuthenticatedPesananIdRoute
@@ -216,6 +237,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedDaftarDriverRoute: AuthenticatedDaftarDriverRoute,
   AuthenticatedDriverRoute: AuthenticatedDriverRoute,
   AuthenticatedSaldoRoute: AuthenticatedSaldoRoute,
   AuthenticatedPesananIdRoute: AuthenticatedPesananIdRoute,
