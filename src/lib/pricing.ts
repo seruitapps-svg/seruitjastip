@@ -8,6 +8,12 @@ export interface PriceInput {
   heightCm: number;
 }
 
+export interface PricingRates {
+  baseFare: number;
+  perKm: number;
+  oversizeFee: number;
+}
+
 export interface PriceBreakdown {
   distanceKm: number;
   billedKm: number;
@@ -34,7 +40,10 @@ export function isOversize(
   );
 }
 
-export function calculatePrice(input: PriceInput): PriceBreakdown {
+export function calculatePrice(
+  input: PriceInput,
+  rates: PricingRates = PRICING,
+): PriceBreakdown {
   const distanceKm = input.distanceMeters / 1000;
   const billedKm = Math.max(1, Math.ceil(distanceKm));
   const oversize = isOversize(
@@ -43,9 +52,9 @@ export function calculatePrice(input: PriceInput): PriceBreakdown {
     input.widthCm,
     input.heightCm,
   );
-  const oversizeFee = oversize ? PRICING.oversizeFee : 0;
-  const distanceFare = billedKm * PRICING.perKm;
-  const total = PRICING.baseFare + distanceFare + oversizeFee;
+  const oversizeFee = oversize ? rates.oversizeFee : 0;
+  const distanceFare = billedKm * rates.perKm;
+  const total = rates.baseFare + distanceFare + oversizeFee;
   const needsAdminConfirm =
     input.weightKg > PACKAGE_LIMITS.hardMaxWeightKg ||
     input.lengthCm > PACKAGE_LIMITS.hardMaxDimCm ||
@@ -55,7 +64,7 @@ export function calculatePrice(input: PriceInput): PriceBreakdown {
   return {
     distanceKm,
     billedKm,
-    baseFare: PRICING.baseFare,
+    baseFare: rates.baseFare,
     distanceFare,
     oversize,
     oversizeFee,
