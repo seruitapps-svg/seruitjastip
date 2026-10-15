@@ -4,6 +4,9 @@ import { createOrder } from "@/lib/orders.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { AppHeader } from "@/components/AppHeader";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import {
   Bike,
   Package,
@@ -83,6 +86,23 @@ function Index() {
   const [formError, setFormError] = useState("");
   const [calculating, setCalculating] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
+
+  const publicSettings = useQuery({
+    queryKey: ["public-app-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("app_settings")
+        .select("base_fare, per_km, oversize_fee")
+        .eq("id", 1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const livePricing = {
+    baseFare: Number(publicSettings.data?.base_fare ?? PRICING.baseFare),
+    perKm: Number(publicSettings.data?.per_km ?? PRICING.perKm),
+    oversizeFee: Number(publicSettings.data?.oversize_fee ?? PRICING.oversizeFee),
+  };
 
   const service = SERVICES.find((s) => s.id === serviceId)!;
   const originLabel =
@@ -180,7 +200,7 @@ function Index() {
         lengthCm: length,
         widthCm: width,
         heightCm: height,
-      });
+      }, livePricing);
       setSummary({
         order: {
           serviceId,
@@ -239,6 +259,7 @@ function Index() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
+      <AnnouncementBanner />
       <main className="mx-auto max-w-2xl px-4 pb-16">
         {/* Hero */}
         <section className="py-8 text-center">
@@ -252,8 +273,8 @@ function Index() {
             jarak & harga otomatis, pantau pesanan langsung di aplikasi.
           </p>
           <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-accent-foreground">
-            Tarif: {formatRupiah(PRICING.baseFare)} +{" "}
-            {formatRupiah(PRICING.perKm)}/km · Paket s.d.{" "}
+            Tarif: {formatRupiah(livePricing.baseFare)} +{" "}
+            {formatRupiah(livePricing.perKm)}/km · Paket s.d.{" "}
             {PACKAGE_LIMITS.maxWeightKg} kg / {PACKAGE_LIMITS.maxDimCm}×
             {PACKAGE_LIMITS.maxDimCm} cm
           </div>
@@ -373,7 +394,7 @@ function Index() {
           <p className="text-xs text-muted-foreground">
             Batas standar: {PACKAGE_LIMITS.maxWeightKg} kg &{" "}
             {PACKAGE_LIMITS.maxDimCm}×{PACKAGE_LIMITS.maxDimCm} cm. Di atas itu
-            kena biaya tambahan {formatRupiah(PRICING.oversizeFee)} (selama
+            kena biaya tambahan {formatRupiah(livePricing.oversizeFee)} (selama
             masih muat motor).
           </p>
 
@@ -542,7 +563,7 @@ function Index() {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">
                   Jarak ({summary.price.billedKm} km ×{" "}
-                  {formatRupiah(PRICING.perKm)})
+                  {formatRupiah(livePricing.perKm)})
                 </span>
                 <span className="text-foreground">
                   {formatRupiah(summary.price.distanceFare)}
