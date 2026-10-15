@@ -348,6 +348,102 @@ export type Database = {
         }
         Relationships: []
       }
+      user_wallets: {
+        Row: {
+          balance: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_wallet_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          note: string
+          topup_request_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: string
+          note?: string
+          topup_request_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          note?: string
+          topup_request_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wallet_topup_requests: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          note: string
+          provider: string
+          provider_ref: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          user_id: string
+          wallet_type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          note?: string
+          provider?: string
+          provider_ref?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id: string
+          wallet_type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          note?: string
+          provider?: string
+          provider_ref?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id?: string
+          wallet_type?: string
+        }
+        Relationships: []
+      }
       wallet_transactions: {
         Row: {
           amount: number
@@ -409,6 +505,10 @@ export type Database = {
         Args: { _approve: boolean; _note?: string; _order_id: string }
         Returns: undefined
       }
+      admin_review_wallet_topup: {
+        Args: { _approve: boolean; _note?: string; _request_id: string }
+        Returns: undefined
+      }
       admin_set_commission: { Args: { _percent: number }; Returns: undefined }
       admin_set_role: {
         Args: {
@@ -436,6 +536,10 @@ export type Database = {
         Returns: boolean
       }
       is_permanent_admin: { Args: { _user_id: string }; Returns: boolean }
+      request_wallet_topup: {
+        Args: { _amount: number; _wallet_type: string }
+        Returns: string
+      }
       order_app_fee: { Args: { _total: number }; Returns: number }
       wallet_apply: {
         Args: {
