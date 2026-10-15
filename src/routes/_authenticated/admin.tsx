@@ -28,7 +28,8 @@ const FILTERS: Array<OrderStatus | "aktif" | "semua"> = ["menunggu_verifikasi", 
 function AdminPage() {
   const { isAdmin, ready } = useAuth();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"order" | "akun" | "driver_approval" | "tarif">("order");
+  const [category, setCategory] = useState<"operasional" | "pengguna" | "pengaturan">("operasional");
+  const [subTab, setSubTab] = useState<"order" | "driver_approval" | "akun" | "tarif" | "pengumuman">("order");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("menunggu_verifikasi");
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
@@ -48,20 +49,40 @@ function AdminPage() {
   });
 
   const settings = useQuery({
-    queryKey: ["app-settings"],
+    queryKey: ["app-settings-full"],
     enabled: isAdmin,
     queryFn: async () => {
-      const { data, error } = await supabase.from("app_settings").select("commission_percent").eq("id", 1).single();
+      const { data, error } = await supabase.from("app_settings").select("*").eq("id", 1).single();
       if (error) throw error;
-      return Number(data.commission_percent);
+      return data;
     },
   });
-  const [pct, setPct] = useState("");
+  const [formTarif, setFormTarif] = useState({
+    commission_percent: 10,
+    base_fare: 3000,
+    per_km: 1000,
+    oversize_fee: 5000,
+    announcement_text: "",
+    announcement_active: false,
+    announcement_type: "info",
+  });
+  useEffect(() => {
+    if (!settings.data) return;
+    setFormTarif({
+      commission_percent: Number(settings.data.commission_percent ?? 10),
+      base_fare: Number(settings.data.base_fare ?? 3000),
+      per_km: Number(settings.data.per_km ?? 1000),
+      oversize_fee: Number(settings.data.oversize_fee ?? 5000),
+      announcement_text: settings.data.announcement_text ?? "",
+      announcement_active: Boolean(settings.data.announcement_active),
+      announcement_type: settings.data.announcement_type ?? "info",
+    });
+  }, [settings.data]);
   const [openWallet, setOpenWallet] = useState<string | null>(null);
 
   const accounts = useQuery({
     queryKey: ["admin-accounts"],
-    enabled: isAdmin && tab === "akun",
+    enabled: isAdmin && subTab === "akun",
     queryFn: async () => {
       const [p, r] = await Promise.all([
         supabase.from("profiles").select("*").order("created_at", { ascending: false }),
@@ -75,7 +96,7 @@ function AdminPage() {
 
   const driverRegistrations = useQuery({
     queryKey: ["admin-driver-registrations"],
-    enabled: isAdmin && tab === "driver_approval",
+    enabled: isAdmin && subTab === "driver_approval",
     queryFn: async () => {
       const { data, error } = await supabase
         .from("driver_profiles")
@@ -85,6 +106,29 @@ function AdminPage() {
       return data;
     },
   });
+
+  async function handleSaveSettings() {
+    setBusy("saving-settings");
+    const { error } = await supabase.rpc("admin_update_app_settings", {
+      _commission_percent: formTarif.commission_percent,
+      _base_fare: formTarif.base_fare,
+      _per_km: formTarif.per_km,
+      _oversize_fee: formTarif.oversize_fee,
+      _announcement_text: formTarif.announcement_text,
+      _announcement_active: formTarif.announcement_active,
+      _announcement_type: formTarif.announcement_type,
+    });
+    setBusy(null);
+    if (error) {
+      window.alert("Gagal menyimpan: " + error.message);
+    } else {
+      window.alert("Pengaturan berhasil disimpan!");
+      await qc.invalidateQueries({ queryKey: ["app-settings-full"] });
+      await qc.invalidateQueries({ queryKey: ["app-settings"] });
+      await qc.invalidateQueries({ queryKey: ["public-app-settings"] });
+      await qc.invalidateQueries({ queryKey: ["public-announcement"] });
+    }
+  }
 
   async function handleResetPassword(email: string | null) {
     if (!email) {
@@ -151,6 +195,9 @@ function AdminPage() {
     qc.invalidateQueries({ queryKey: ["admin-accounts"] });
     qc.invalidateQueries({ queryKey: ["admin-driver-registrations"] });
     qc.invalidateQueries({ queryKey: ["app-settings"] });
+    qc.invalidateQueries({ queryKey: ["app-settings-full"] });
+    qc.invalidateQueries({ queryKey: ["public-app-settings"] });
+    qc.invalidateQueries({ queryKey: ["public-announcement"] });
     qc.invalidateQueries({ queryKey: ["wallet"] });
   }
 
@@ -170,15 +217,25 @@ function AdminPage() {
       <AppHeader />
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-6">
         <h1 className="text-xl font-extrabold text-foreground">Dashboard Admin</h1>
-        <div className="flex gap-2">
-          <button className={tabCls(tab === "order")} onClick={() => setTab("order")}>Pesanan</button>
-          <button className={tabCls(tab === "akun")} onClick={() => setTab("akun")}>Akun & peran</button>
-          <button className={tabCls(tab === "driver_approval")} onClick={() => setTab("driver_approval")}>Pendaftaran Driver</button>
-          <button className={tabCls(tab === "tarif")} onClick={() => setTab("tarif")}>Biaya aplikasi</button>
+        <div className="flex flex-wrap gap-4 border-b border-border pb-1">
+          <button onClick={() => { setCategory("operasional"); setSubTab("order"); }} className={`pb-2 text-sm font-bold transition-colors ${category === "operasional" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}>📦 Operasional</button>
+          <button onClick={() => { setCategory("pengguna"); setSubTab("akun"); }} className={`pb-2 text-sm font-bold transition-colors ${category === "pengguna" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}>👥 Pengguna & Driver</button>
+          <button onClick={() => { setCategory("pengaturan"); setSubTab("tarif"); }} className={`pb-2 text-sm font-bold transition-colors ${category === "pengaturan" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}>⚙️ Pengaturan & Konten</button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {category === "operasional" && <>
+            <button className={tabCls(subTab === "order")} onClick={() => setSubTab("order")}>Pesanan Masuk</button>
+            <button className={tabCls(subTab === "driver_approval")} onClick={() => setSubTab("driver_approval")}>Verifikasi Driver</button>
+          </>}
+          {category === "pengguna" && <button className={tabCls(subTab === "akun")} onClick={() => setSubTab("akun")}>Daftar Akun & Saldo</button>}
+          {category === "pengaturan" && <>
+            <button className={tabCls(subTab === "tarif")} onClick={() => setSubTab("tarif")}>Tarif & Komisi</button>
+            <button className={tabCls(subTab === "pengumuman")} onClick={() => setSubTab("pengumuman")}>Pengumuman Web</button>
+          </>}
         </div>
         {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
 
-        {tab === "order" && (
+        {subTab === "order" && (
           <>
             <div className="flex flex-wrap gap-2">
               {FILTERS.map((f) => (
@@ -239,35 +296,37 @@ function AdminPage() {
           </>
         )}
 
-        {tab === "tarif" && (
-          <div className="space-y-3 rounded-xl border border-border bg-card p-4">
-            <div className="text-sm text-foreground">
-              Potongan saat ini: <b>{settings.data ?? "…"}%</b> dari total ongkir tiap order, dipotong dari saldo driver saat order diambil
-              (dikembalikan bila order dibatalkan).
+        {category === "pengaturan" && subTab === "tarif" && (
+          <div className="space-y-4 rounded-2xl border border-border bg-card p-5">
+            <h3 className="font-bold text-foreground">Pengaturan Tarif & Biaya Aplikasi</h3>
+            {settings.isLoading && <p className="text-sm text-muted-foreground">Memuat pengaturan...</p>}
+            {settings.isError && <p className="text-sm text-destructive">Gagal memuat pengaturan: {settings.error.message}</p>}
+            <p className="text-xs text-muted-foreground">Potongan komisi dihitung dari total ongkir dan dipotong dari saldo driver saat pesanan diambil.</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div><label className="text-xs font-semibold text-muted-foreground">Tarif Dasar (Rp)</label><input type="number" min={0} value={formTarif.base_fare} onChange={(e) => setFormTarif({ ...formTarif, base_fare: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-sm" /></div>
+              <div><label className="text-xs font-semibold text-muted-foreground">Tarif per Kilometer (Rp/km)</label><input type="number" min={0} value={formTarif.per_km} onChange={(e) => setFormTarif({ ...formTarif, per_km: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-sm" /></div>
+              <div><label className="text-xs font-semibold text-muted-foreground">Biaya Paket Besar / Tambahan (Rp)</label><input type="number" min={0} value={formTarif.oversize_fee} onChange={(e) => setFormTarif({ ...formTarif, oversize_fee: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-sm" /></div>
+              <div><label className="text-xs font-semibold text-muted-foreground">Potongan Komisi Driver (%)</label><input type="number" min={0} max={100} step="0.5" value={formTarif.commission_percent} onChange={(e) => setFormTarif({ ...formTarif, commission_percent: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-sm" /></div>
             </div>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step="0.5"
-                value={pct}
-                onChange={(e) => setPct(e.target.value)}
-                placeholder="mis. 10"
-                className="w-28 rounded-lg border border-input bg-background px-3 py-2 text-sm"
-              />
-              <button
-                className={btnPrimary}
-                disabled={busy === "pct" || pct === ""}
-                onClick={() => run("pct", () => supabase.rpc("admin_set_commission", { _percent: Number(pct) })).then(() => setPct(""))}
-              >
-                Simpan %
-              </button>
+            <button onClick={handleSaveSettings} disabled={busy === "saving-settings" || settings.isLoading} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50">{busy === "saving-settings" ? "Menyimpan..." : "Simpan Perubahan Tarif"}</button>
+          </div>
+        )}
+        {category === "pengaturan" && subTab === "pengumuman" && (
+          <div className="space-y-4 rounded-2xl border border-border bg-card p-5">
+            <h3 className="font-bold text-foreground">Pengumuman Front-End (Banner Atas)</h3>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <input type="checkbox" id="ann_active" checked={formTarif.announcement_active} onChange={(e) => setFormTarif({ ...formTarif, announcement_active: e.target.checked })} className="h-4 w-4 rounded border-input" />
+                <label htmlFor="ann_active" className="text-sm font-semibold text-foreground">Tampilkan pengumuman di halaman utama</label>
+              </div>
+              <div><label className="text-xs font-semibold text-muted-foreground">Tipe Pengumuman</label><select value={formTarif.announcement_type} onChange={(e) => setFormTarif({ ...formTarif, announcement_type: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-sm"><option value="info">Info Umum (Warna Biru)</option><option value="promo">Promo / Event (Warna Hijau)</option><option value="warning">Penting / Kendala Operasional (Warna Kuning/Oranye)</option></select></div>
+              <div><label className="text-xs font-semibold text-muted-foreground">Teks Pengumuman</label><textarea rows={3} value={formTarif.announcement_text} onChange={(e) => setFormTarif({ ...formTarif, announcement_text: e.target.value })} placeholder="Contoh: Operasional Seruit hari Minggu buka mulai jam 10:00 WIB. Dapatkan potongan ongkir!" className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-sm" /></div>
             </div>
+            <button onClick={handleSaveSettings} disabled={busy === "saving-settings" || settings.isLoading} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50">{busy === "saving-settings" ? "Menyimpan..." : "Simpan Pengumuman"}</button>
           </div>
         )}
 
-        {tab === "driver_approval" && (
+        {subTab === "driver_approval" && (
           <section className="space-y-3">
             <h2 className="text-sm font-bold text-foreground">Permohonan Menjadi Driver</h2>
             {driverRegistrations.isLoading && (
@@ -378,7 +437,7 @@ function AdminPage() {
           </section>
         )}
 
-        {tab === "akun" && (
+        {subTab === "akun" && (
           <div className="space-y-3">
             {accounts.isLoading && <p className="text-sm text-muted-foreground">Memuat akun...</p>}
             {accounts.isError && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">Gagal memuat akun: {accounts.error.message}</p>}
