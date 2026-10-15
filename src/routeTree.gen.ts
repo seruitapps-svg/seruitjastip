@@ -115,6 +115,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/admin'
     | '/driver'
+    | '/saldo'
     | '/pesanan/$id'
     | '/pesanan'
   id:
