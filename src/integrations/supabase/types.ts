@@ -53,17 +53,32 @@ export type Database = {
       driver_wallets: {
         Row: {
           balance: number
+          bank_account_name: string | null
+          bank_account_number: string | null
+          bank_name: string | null
+          bank_updated_at: string | null
           driver_id: string
+          earnings_balance: number
           updated_at: string
         }
         Insert: {
           balance?: number
+          bank_account_name?: string | null
+          bank_account_number?: string | null
+          bank_name?: string | null
+          bank_updated_at?: string | null
           driver_id: string
+          earnings_balance?: number
           updated_at?: string
         }
         Update: {
           balance?: number
+          bank_account_name?: string | null
+          bank_account_number?: string | null
+          bank_name?: string | null
+          bank_updated_at?: string | null
           driver_id?: string
+          earnings_balance?: number
           updated_at?: string
         }
         Relationships: []
