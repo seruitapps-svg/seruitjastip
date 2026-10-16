@@ -131,9 +131,44 @@ export function DriverJastipTrips({ driverId }: { driverId: string }) {
             {bs.length > 0 && (
               <ul className="mt-2 space-y-1 rounded-lg bg-muted p-2 text-xs">
                 {bs.map((b) => (
-                  <li key={b.id} className="flex justify-between gap-2">
-                    <span className="text-foreground">{b.contact_name} · {b.slots} {t.slot_type === "kursi" ? "kursi" : "paket"} · {b.contact_wa}{b.notes ? ` · ${b.notes}` : ""}</span>
-                    <span className="shrink-0 text-muted-foreground">{formatRupiah(b.total)} {b.payment_method === "cod" ? "COD" : "TF"}</span>
+                  <li key={b.id} className="space-y-1.5 rounded-lg border border-border bg-card p-2.5 text-xs">
+                    <div className="flex justify-between gap-2 font-bold text-foreground">
+                      <span>{b.contact_name} ({b.slots} paket) · {b.contact_wa}</span>
+                      <span className="shrink-0 text-primary">{formatRupiah(b.total)} ({b.payment_method === "cod" ? "COD" : "Saldo"})</span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 pt-1 text-[11px]">
+                      {b.pickup_lat && b.pickup_lng ? (
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${b.pickup_lat},${b.pickup_lng}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded bg-accent px-2 py-1 text-accent-foreground hover:underline"
+                        >
+                          📍 Ambil: {b.pickup_address}
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">📍 Jemput: {b.pickup_address || "-"}</span>
+                      )}
+
+                      {b.dropoff_lat && b.dropoff_lng ? (
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${b.dropoff_lat},${b.dropoff_lng}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded bg-accent px-2 py-1 text-accent-foreground hover:underline"
+                        >
+                          🏁 Antar: {b.dropoff_address}
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">🏁 Antar: {b.dropoff_address || "-"}</span>
+                      )}
+                    </div>
+
+                    <div className="flex justify-between gap-2 border-t border-border pt-1 text-[11px] text-muted-foreground">
+                      <span>Ongkir: {formatRupiah(b.package_subtotal)} | Komisi: −{formatRupiah(b.driver_commission)}</span>
+                      <span className="font-semibold text-emerald-600">Bersih Driver: {formatRupiah(b.driver_net)}</span>
+                    </div>
                   </li>
                 ))}
               </ul>
