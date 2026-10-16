@@ -38,7 +38,7 @@ function AdminPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
-  const [financialOpen, setFinancialOpen] = useState(false);
+  const [financialOpen, setFinancialOpen] = useState(true);
 
   const orders = useQuery({
     queryKey: ["admin-orders", filter],
@@ -244,6 +244,23 @@ function AdminPage() {
           <button onClick={() => { setCategory("pengguna"); setSubTab("akun"); }} className={`pb-2 text-sm font-bold transition-colors ${category === "pengguna" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}>👥 Pengguna & Driver</button>
           <button onClick={() => { setCategory("pengaturan"); setSubTab("tarif"); }} className={`pb-2 text-sm font-bold transition-colors ${category === "pengaturan" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}>⚙️ Pengaturan & Konten</button>
         </div>
+        {category === "operasional" && (
+          <section className="space-y-3 rounded-2xl border border-border bg-muted/20 p-3 sm:p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="flex items-center gap-2 text-base font-extrabold text-foreground">
+                  <Calculator className="h-5 w-5 text-primary" /> Ringkasan Keuangan
+                </h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">Pantau dana titipan, pendapatan aplikasi, dan keamanan kas.</p>
+              </div>
+              <Button variant="ghost" size="sm" aria-expanded={financialOpen} aria-controls="admin-financial-summary" onClick={() => setFinancialOpen((open) => !open)}>
+                {financialOpen ? "Ringkas" : "Tampilkan"} {financialOpen ? <ChevronDown /> : <ChevronRight />}
+              </Button>
+            </div>
+            {financialOpen && <div id="admin-financial-summary"><AdminFinancialOverview /></div>}
+          </section>
+        )}
+
         <div className="flex flex-wrap gap-2">
           {category === "operasional" && <>
             <button className={tabCls(subTab === "order")} onClick={() => setSubTab("order")}>Pesanan Masuk</button>
@@ -259,15 +276,6 @@ function AdminPage() {
           </>}
         </div>
         {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
-
-        {category === "operasional" && (
-          <section>
-            <Button variant="ghost" size="sm" aria-expanded={financialOpen} aria-controls="admin-financial-summary" onClick={() => setFinancialOpen((open) => !open)}>
-              <Calculator /> Ringkasan keuangan {financialOpen ? <ChevronDown /> : <ChevronRight />}
-            </Button>
-            {financialOpen && <div id="admin-financial-summary" className="mt-3"><AdminFinancialOverview /></div>}
-          </section>
-        )}
 
         {subTab === "order" && (
           <>
