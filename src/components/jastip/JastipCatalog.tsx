@@ -25,10 +25,21 @@ export function JastipCatalog() {
   const [slots, setSlots] = useState(1);
   const [name, setName] = useState("");
   const [wa, setWa] = useState("");
+  const [pickupAddr, setPickupAddr] = useState("");
+  const [dropoffAddr, setDropoffAddr] = useState("");
   const [notes, setNotes] = useState("");
   const [payment, setPayment] = useState<"cod" | "transfer">("cod");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const settings = useQuery({
+    queryKey: ["app-settings-jastip"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("app_settings").select("jastip_service_fee").eq("id", 1).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const q = useQuery({
     queryKey: ["jastip-catalog"],
@@ -40,10 +51,20 @@ export function JastipCatalog() {
   });
 
   async function book(tripId: string) {
+    if (!pickupAddr.trim() || !dropoffAddr.trim()) {
+      return setErr("Mohon isi Titik A (lokasi jemput/toko) dan Titik B (lokasi antar).");
+    }
     setBusy(true);
     setErr("");
     const { error } = await supabase.rpc("book_jastip_slot", {
-      _trip_id: tripId, _slots: slots, _payment: payment, _name: name, _wa: wa, _notes: notes,
+      _trip_id: tripId,
+      _slots: slots,
+      _payment: payment,
+      _name: name,
+      _wa: wa,
+      _notes: notes,
+      _pickup_address: pickupAddr,
+      _dropoff_address: dropoffAddr,
     });
     setBusy(false);
     if (error) return setErr(error.message);
@@ -107,6 +128,10 @@ export function JastipCatalog() {
                   <input className={inputCls} placeholder="Nama Anda" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} />
                   <input className={inputCls} placeholder="No. WA 08…" value={wa} onChange={(e) => setWa(e.target.value)} maxLength={16} />
                 </div>
+                <div className="space-y-1.5">
+                  <input className={inputCls} placeholder="Titik A: Alamat jemput / nama toko di asal" value={pickupAddr} onChange={(e) => setPickupAddr(e.target.value)} maxLength={500} />
+                  <input className={inputCls} placeholder="Titik B: Alamat tujuan / lokasi antar" value={dropoffAddr} onChange={(e) => setDropoffAddr(e.target.value)} maxLength={500} />
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <label className="text-xs text-muted-foreground">
                     Jumlah {t.slot_type === "kursi" ? "kursi" : "paket"}
@@ -120,11 +145,11 @@ export function JastipCatalog() {
                     </select>
                   </label>
                 </div>
-                <input className={inputCls} placeholder={t.slot_type === "kursi" ? "Titik jemput / catatan" : "Isi titipan / catatan"} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={300} />
+                <input className={inputCls} placeholder="Catatan titipan barang / deskripsi paket" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={300} />
                 {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{err}</p>}
                 <div className="flex gap-2">
                   <button disabled={busy} onClick={() => book(t.id)} className="flex-1 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground disabled:opacity-50">
-                    {busy ? "Memesan…" : `Pesan · ${formatRupiah(t.price_per_slot * (slots || 0))}`}
+                    {busy ? "Memesan…" : `Pesan · ${formatRupiah(t.price_per_slot * (slots || 0) + Number(settings.data?.jastip_service_fee ?? 2000))}`}
                   </button>
                   <button onClick={() => setOpenId(null)} className="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-foreground">Batal</button>
                 </div>
