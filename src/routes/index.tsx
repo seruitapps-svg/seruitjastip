@@ -284,8 +284,8 @@ function Index() {
         <div className="sticky top-[57px] z-20 -mx-4 bg-background/95 px-4 pt-4 pb-2 backdrop-blur">
           <div role="tablist" className="grid grid-cols-2 gap-1 rounded-2xl border border-border bg-muted p-1">
             {([
-              ["onbid", "On-Bid", "Instan, langsung jalan", Zap],
-              ["jastip", "Jastip Terjadwal", "Pilih jadwal trayek", CalendarClock],
+              ["onbid", "On-Bid", "Langsung jalan", Zap],
+              ["jastip", "Jastip", "Jadwal trayek", CalendarClock],
             ] as const).map(([id, name, sub, Icon]) => (
               <button
                 key={id}
@@ -311,12 +311,12 @@ function Index() {
           <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
             {mode === "onbid" ? "Order instan," : "Jastip terjadwal,"}
             <br />
-            <span className="text-primary">{mode === "onbid" ? "tarif langsung kelihatan." : "pesan slot sekarang."}</span>
+            <span className="text-primary">{mode === "onbid" ? "tarif langsung kelihatan." : "pesan tiket & titipan."}</span>
           </h1>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
             {mode === "onbid"
               ? "Kirim barang, jastip belanja, atau ojek — estimasi tarif instan, langsung dicarikan driver."
-              : "Pilih trayek & jadwal keberangkatan driver, pesan slot paket atau kursi."}
+              : "Pilih trayek & jadwal driver, pesan kuota paket atau kursi penumpang."}
           </p>
           {mode === "onbid" && (
             <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-accent-foreground">
