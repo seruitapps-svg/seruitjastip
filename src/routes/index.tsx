@@ -73,7 +73,7 @@ interface Summary {
 const waRegex = /^(\+62|62|0)8\d{6,11}$/;
 
 function Index() {
-  const [serviceId, setServiceId] = useState<ServiceId>("titip");
+  const [serviceId, setServiceId] = useState<ServiceId>("kirim");
   const [origin, setOrigin] = useState<SelectedPlace | null>(null);
   const [destination, setDestination] = useState<SelectedPlace | null>(null);
   const [itemDetail, setItemDetail] = useState("");
@@ -327,8 +327,8 @@ function Index() {
 
         {mode === "jastip" ? <JastipCatalog /> : (<>
         {/* Pilih layanan */}
-        <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {SERVICES.map((s) => {
+        <section className="grid grid-cols-3 gap-2">
+          {SERVICES.filter((s) => s.id !== "titip").map((s) => {
             const Icon = SERVICE_ICONS[s.id];
             const active = s.id === serviceId;
             return (
@@ -339,21 +339,14 @@ function Index() {
                   setServiceId(s.id);
                   setSummary(null);
                 }}
-                className={`rounded-xl border p-3 text-left transition-colors ${
+                className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-colors ${
                   active
-                    ? "border-primary bg-accent"
-                    : "border-border bg-card hover:bg-accent/50"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-card text-muted-foreground hover:border-border/80 hover:text-foreground"
                 }`}
               >
-                <Icon
-                  className={`h-5 w-5 ${active ? "text-primary" : "text-muted-foreground"}`}
-                />
-                <div className="mt-2 text-sm font-semibold text-foreground">
-                  {s.name}
-                </div>
-                <div className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
-                  {s.tagline}
-                </div>
+                <Icon className="h-5 w-5" />
+                <span className="text-xs font-bold leading-tight">{s.name}</span>
               </button>
             );
           })}
