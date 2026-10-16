@@ -21,8 +21,14 @@ export type Database = {
           announcement_type: string
           base_fare: number
           commission_percent: number
+          onbid_base_fee: number
+          onbid_per_km: number
+          onbid_service_fee: number
+          onbid_driver_cut_pct: number
           id: number
           jastip_commission_percent: number
+          jastip_driver_cut_pct: number
+          jastip_nebeng_fee: number
           jastip_package_fee: number
           jastip_service_fee: number
           jastip_max_price: number
@@ -39,8 +45,14 @@ export type Database = {
           announcement_type?: string
           base_fare?: number
           commission_percent?: number
+          onbid_base_fee?: number
+          onbid_per_km?: number
+          onbid_service_fee?: number
+          onbid_driver_cut_pct?: number
           id?: number
           jastip_commission_percent?: number
+          jastip_driver_cut_pct?: number
+          jastip_nebeng_fee?: number
           jastip_package_fee?: number
           jastip_service_fee?: number
           jastip_max_price?: number
@@ -57,8 +69,14 @@ export type Database = {
           announcement_type?: string
           base_fare?: number
           commission_percent?: number
+          onbid_base_fee?: number
+          onbid_per_km?: number
+          onbid_service_fee?: number
+          onbid_driver_cut_pct?: number
           id?: number
           jastip_commission_percent?: number
+          jastip_driver_cut_pct?: number
+          jastip_nebeng_fee?: number
           jastip_package_fee?: number
           jastip_service_fee?: number
           jastip_max_price?: number
@@ -234,6 +252,12 @@ export type Database = {
           commission_percent: number
           driver_commission: number
           driver_net: number
+          service_type: string
+          is_for_other: boolean
+          recipient_name: string | null
+          recipient_wa: string | null
+          shop_name: string | null
+          shop_wa: string | null
           payment_method: string
           price_per_slot: number
           slot_type: string
@@ -264,6 +288,12 @@ export type Database = {
           commission_percent?: number
           driver_commission?: number
           driver_net?: number
+          service_type?: string
+          is_for_other?: boolean
+          recipient_name?: string | null
+          recipient_wa?: string | null
+          shop_name?: string | null
+          shop_wa?: string | null
           payment_method: string
           price_per_slot: number
           slot_type: string
@@ -294,6 +324,12 @@ export type Database = {
           commission_percent?: number
           driver_commission?: number
           driver_net?: number
+          service_type?: string
+          is_for_other?: boolean
+          recipient_name?: string | null
+          recipient_wa?: string | null
+          shop_name?: string | null
+          shop_wa?: string | null
           payment_method?: string
           price_per_slot?: number
           slot_type?: string
@@ -328,6 +364,13 @@ export type Database = {
           slot_type: string
           status: string
           updated_at: string
+          origin_area: string
+          dest_area: string
+          booked_slots: number
+          enable_nebeng: boolean
+          nebeng_quota: number
+          nebeng_booked: number
+          nebeng_price: number
         }
         Insert: {
           booked?: number
@@ -343,6 +386,13 @@ export type Database = {
           slot_type: string
           status?: string
           updated_at?: string
+          origin_area?: string
+          dest_area?: string
+          booked_slots?: number
+          enable_nebeng?: boolean
+          nebeng_quota?: number
+          nebeng_booked?: number
+          nebeng_price?: number
         }
         Update: {
           booked?: number
@@ -358,6 +408,13 @@ export type Database = {
           slot_type?: string
           status?: string
           updated_at?: string
+          origin_area?: string
+          dest_area?: string
+          booked_slots?: number
+          enable_nebeng?: boolean
+          nebeng_quota?: number
+          nebeng_booked?: number
+          nebeng_price?: number
         }
         Relationships: []
       }
@@ -820,15 +877,19 @@ export type Database = {
           _dropoff_address?: string
           _dropoff_lat?: number
           _dropoff_lng?: number
-          _name: string
-          _notes: string
-          _payment: string
-          _pickup_address: string
+          _is_for_other?: boolean
+          _notes?: string
+          _payment?: string
+          _pickup_address?: string
           _pickup_lat?: number
           _pickup_lng?: number
-          _slots: number
+          _recipient_name?: string
+          _recipient_wa?: string
+          _service_type?: string
+          _shop_name?: string
+          _shop_wa?: string
+          _slots?: number
           _trip_id: string
-          _wa: string
         }
         Returns: string
       }
@@ -854,6 +915,9 @@ export type Database = {
           _price: number
           _quota: number
           _slot_type: string
+          _enable_nebeng?: boolean
+          _nebeng_quota?: number
+          _nebeng_price?: number
         }
         Returns: string
       }
@@ -892,15 +956,20 @@ export type Database = {
       jastip_catalog: {
         Args: never
         Returns: {
-          depart_at: string
-          dest_label: string
           id: string
-          notes: string
-          origin_label: string
-          price_per_slot: number
-          quota: number
-          remaining: number
+          origin_area: string
+          dest_area: string
+          depart_at: string
           slot_type: string
+          quota: number
+          booked_slots: number
+          price_per_slot: number
+          notes: string
+          status: string
+          enable_nebeng: boolean
+          nebeng_quota: number
+          nebeng_booked: number
+          nebeng_price: number
         }[]
       }
       order_app_fee: { Args: { _total: number }; Returns: number }
