@@ -55,7 +55,7 @@ export function JastipCatalog() {
   return (
     <section className="space-y-3">
       <div className="rounded-xl bg-accent px-3 py-2 text-xs text-accent-foreground">
-        Pilih jadwal trayek, pesan slot, langsung terkonfirmasi. Info driver muncul saat perjalanan dimulai.
+        Pilih jadwal trayek, pesan langsung terkonfirmasi. Info driver muncul saat perjalanan dimulai.
       </div>
       {q.isLoading && <p className="text-sm text-muted-foreground">Memuat jadwal…</p>}
       {q.isError && <p className="text-sm text-destructive">Gagal memuat jadwal.</p>}
@@ -82,7 +82,9 @@ export function JastipCatalog() {
               </div>
               <div className="shrink-0 text-right">
                 <div className="text-sm font-bold text-primary">{formatRupiah(t.price_per_slot)}</div>
-                <div className="text-[11px] text-muted-foreground">/slot</div>
+                <div className="text-[11px] text-muted-foreground">
+                  /{t.slot_type === "kursi" ? "kursi" : "paket"}
+                </div>
                 <div className="mt-1 rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-accent-foreground">
                   Sisa {t.remaining}/{t.quota}
                 </div>
@@ -93,7 +95,7 @@ export function JastipCatalog() {
                 onClick={() => { setOpenId(t.id); setSlots(1); setErr(""); }}
                 className="mt-3 w-full rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground"
               >
-                Pesan slot
+                Pesan sekarang
               </button>
             ) : !user ? (
               <Link to="/auth" search={{ redirect: "/" }} className="mt-3 block w-full rounded-lg bg-primary py-2 text-center text-xs font-bold text-primary-foreground">
@@ -107,7 +109,7 @@ export function JastipCatalog() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <label className="text-xs text-muted-foreground">
-                    Jumlah slot
+                    Jumlah {t.slot_type === "kursi" ? "kursi" : "paket"}
                     <input type="number" min={1} max={Math.min(10, t.remaining)} className={inputCls} value={slots} onChange={(e) => setSlots(Number(e.target.value))} />
                   </label>
                   <label className="text-xs text-muted-foreground">
