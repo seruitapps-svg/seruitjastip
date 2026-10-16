@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { QrCode, Send } from "lucide-react";
+import { MessageSquare, Phone, QrCode, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { RouteMap } from "@/components/order/RouteMap";
@@ -88,6 +88,10 @@ function OrderDetail() {
   const isOwner = o.user_id === user?.id;
   const isMyDriver = o.driver_id === user?.id;
   const canChat = isOwner || isMyDriver || isAdmin;
+  const orderWithShopContact = o as typeof o & { shop_wa?: string | null };
+  const emergencyPhone = isMyDriver ? (orderWithShopContact.shop_wa || (o.service === "kirim" ? o.recipient_wa : null)) : null;
+  const cleanPhone = (phone: string) => phone.replace(/\\D/g, "").replace(/^0/, "62");
+  const emergencyMessage = `Halo, saya kurir Seruit mengantarkan pesanan dari ${o.sender_name}. Saya sudah di lokasi.`;
 
   async function act(fn: () => PromiseLike<{ error: { message: string } | null }>) {
     setBusy(true);
@@ -207,7 +211,26 @@ function OrderDetail() {
         </div>
 
         {canChat && user ? (
-          <OrderChat orderId={o.id} myId={user.id} />
+          <>
+            <div className="flex flex-wrap gap-2">
+              <a href="#order-chat" className={btnPrimary}>
+                <span className="inline-flex items-center gap-2"><MessageSquare className="h-4 w-4" />Buka Chat Aplikasi</span>
+              </a>
+              {emergencyPhone && cleanPhone(emergencyPhone) && (
+                <a
+                  href={`https://wa.me/${cleanPhone(emergencyPhone)}?text=${encodeURIComponent(emergencyMessage)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-accent"
+                >
+                  <Phone className="h-4 w-4" />WhatsApp darurat
+                </a>
+              )}
+            </div>
+            <div id="order-chat">
+              <OrderChat orderId={o.id} myId={user.id} />
+            </div>
+          </>
         ) : (
           <p className="text-center text-xs text-muted-foreground">Chat tersedia setelah Anda mengambil order ini.</p>
         )}
