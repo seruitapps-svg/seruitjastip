@@ -235,6 +235,9 @@ export type Database = {
           code: string
           contact_name: string
           contact_wa: string
+          customer_name: string
+          customer_wa: string
+          total_price: number
           created_at: string
           depart_at: string
           dest_label: string
@@ -271,6 +274,9 @@ export type Database = {
           code?: string
           contact_name: string
           contact_wa: string
+          customer_name?: string
+          customer_wa?: string
+          total_price?: number
           created_at?: string
           depart_at: string
           dest_label: string
@@ -307,6 +313,9 @@ export type Database = {
           code?: string
           contact_name?: string
           contact_wa?: string
+          customer_name?: string
+          customer_wa?: string
+          total_price?: number
           created_at?: string
           depart_at?: string
           dest_label?: string
