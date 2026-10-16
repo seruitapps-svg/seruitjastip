@@ -31,6 +31,25 @@ function DriverPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
 
+  const driverProfile = useQuery({
+    queryKey: ["my-driver-profile", user?.id],
+    enabled: isDriver && !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("driver_profiles").select("accepts_ojek").eq("user_id", user!.id).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  async function toggleOjek(val: boolean) {
+    const { error } = await supabase.rpc("driver_toggle_ojek", { _enabled: val });
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    qc.invalidateQueries({ queryKey: ["my-driver-profile"] });
+  }
+
   const pool = useQuery({
     queryKey: ["pool"],
     enabled: isDriver,
@@ -101,6 +120,7 @@ function DriverPage() {
 
   const active = mine.data?.filter((o) => ["diambil", "dijemput", "diantar"].includes(o.status)) ?? [];
   const done = mine.data?.filter((o) => o.status === "selesai") ?? [];
+  const availableOrders = pool.data?.filter((o) => driverProfile.data?.accepts_ojek !== false || o.service !== "ojek") ?? [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -109,6 +129,21 @@ function DriverPage() {
         {user && <DriverEarningsSettings driverId={user.id} />}
         {user && <WalletPanel driverId={user.id} />}
         {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
+        <div className="flex items-center justify-between rounded-xl border border-border bg-card p-4">
+          <div>
+            <h3 className="text-sm font-bold text-foreground">Terima Order Ojek Penumpang</h3>
+            <p className="text-xs text-muted-foreground">Jika dimatikan, Anda hanya menerima order Kirim & Belanja</p>
+          </div>
+          <button
+            onClick={() => toggleOjek(!driverProfile.data?.accepts_ojek)}
+            disabled={driverProfile.isLoading}
+            className={`rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
+              driverProfile.data?.accepts_ojek ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {driverProfile.data?.accepts_ojek ? "Aktif" : "Nonaktif"}
+          </button>
+        </div>
         <section className="space-y-3">
           <h2 className="text-lg font-extrabold text-foreground">Sedang dikerjakan ({active.length})</h2>
           {active.map((o) => (
@@ -134,9 +169,9 @@ function DriverPage() {
           ))}
         </section>
         <section className="space-y-3">
-          <h2 className="text-lg font-extrabold text-foreground">Order tersedia ({pool.data?.length ?? 0})</h2>
-          {pool.data?.length === 0 && <p className="text-sm text-muted-foreground">Belum ada order baru.</p>}
-          {pool.data?.map((o) => (
+          <h2 className="text-lg font-extrabold text-foreground">Order tersedia ({availableOrders.length})</h2>
+          {availableOrders.length === 0 && <p className="text-sm text-muted-foreground">Belum ada order baru.</p>}
+          {availableOrders.map((o) => (
             <OrderCard
               key={o.id}
               order={o}
