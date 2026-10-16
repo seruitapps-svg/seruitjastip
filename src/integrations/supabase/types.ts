@@ -22,6 +22,10 @@ export type Database = {
           base_fare: number
           commission_percent: number
           id: number
+          jastip_max_price: number
+          jastip_min_price: number
+          ojek_base_fare: number
+          ojek_per_km: number
           oversize_fee: number
           per_km: number
           updated_at: string
@@ -33,6 +37,10 @@ export type Database = {
           base_fare?: number
           commission_percent?: number
           id?: number
+          jastip_max_price?: number
+          jastip_min_price?: number
+          ojek_base_fare?: number
+          ojek_per_km?: number
           oversize_fee?: number
           per_km?: number
           updated_at?: string
@@ -44,6 +52,10 @@ export type Database = {
           base_fare?: number
           commission_percent?: number
           id?: number
+          jastip_max_price?: number
+          jastip_min_price?: number
+          ojek_base_fare?: number
+          ojek_per_km?: number
           oversize_fee?: number
           per_km?: number
           updated_at?: string
@@ -188,6 +200,122 @@ export type Database = {
         }
         Relationships: []
       }
+      jastip_bookings: {
+        Row: {
+          code: string
+          contact_name: string
+          contact_wa: string
+          created_at: string
+          depart_at: string
+          dest_label: string
+          id: string
+          notes: string
+          origin_label: string
+          payment_method: string
+          price_per_slot: number
+          slot_type: string
+          slots: number
+          status: string
+          total: number
+          trip_id: string
+          user_id: string
+        }
+        Insert: {
+          code?: string
+          contact_name: string
+          contact_wa: string
+          created_at?: string
+          depart_at: string
+          dest_label: string
+          id?: string
+          notes?: string
+          origin_label: string
+          payment_method: string
+          price_per_slot: number
+          slot_type: string
+          slots: number
+          status?: string
+          total: number
+          trip_id: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          contact_name?: string
+          contact_wa?: string
+          created_at?: string
+          depart_at?: string
+          dest_label?: string
+          id?: string
+          notes?: string
+          origin_label?: string
+          payment_method?: string
+          price_per_slot?: number
+          slot_type?: string
+          slots?: number
+          status?: string
+          total?: number
+          trip_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jastip_bookings_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "jastip_trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jastip_trips: {
+        Row: {
+          booked: number
+          created_at: string
+          depart_at: string
+          dest_label: string
+          driver_id: string
+          id: string
+          notes: string
+          origin_label: string
+          price_per_slot: number
+          quota: number
+          slot_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          booked?: number
+          created_at?: string
+          depart_at: string
+          dest_label: string
+          driver_id: string
+          id?: string
+          notes?: string
+          origin_label: string
+          price_per_slot: number
+          quota: number
+          slot_type: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          booked?: number
+          created_at?: string
+          depart_at?: string
+          dest_label?: string
+          driver_id?: string
+          id?: string
+          notes?: string
+          origin_label?: string
+          price_per_slot?: number
+          quota?: number
+          slot_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_messages: {
         Row: {
           body: string
@@ -293,6 +421,7 @@ export type Database = {
           origin_lat: number
           origin_lng: number
           oversize_fee: number
+          passenger_count: number
           payment_method: string
           recipient_name: string
           recipient_wa: string
@@ -338,6 +467,7 @@ export type Database = {
           origin_lat: number
           origin_lng: number
           oversize_fee?: number
+          passenger_count?: number
           payment_method: string
           recipient_name?: string
           recipient_wa?: string
@@ -383,6 +513,7 @@ export type Database = {
           origin_lat?: number
           origin_lng?: number
           oversize_fee?: number
+          passenger_count?: number
           payment_method?: string
           recipient_name?: string
           recipient_wa?: string
@@ -629,7 +760,31 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_update_mode_settings: {
+        Args: {
+          _jastip_max_price: number
+          _jastip_min_price: number
+          _ojek_base_fare: number
+          _ojek_per_km: number
+        }
+        Returns: undefined
+      }
+      book_jastip_slot: {
+        Args: {
+          _name: string
+          _notes: string
+          _payment: string
+          _slots: number
+          _trip_id: string
+          _wa: string
+        }
+        Returns: string
+      }
       can_access_order: { Args: { _order_id: string }; Returns: boolean }
+      cancel_jastip_booking: {
+        Args: { _booking_id: string }
+        Returns: undefined
+      }
       cancel_order: {
         Args: { _note?: string; _order_id: string }
         Returns: undefined
@@ -638,6 +793,18 @@ export type Database = {
         Args: { _order_id: string }
         Returns: Database["public"]["Enums"]["order_status"]
       }
+      driver_create_trip: {
+        Args: {
+          _depart_at: string
+          _dest: string
+          _notes: string
+          _origin: string
+          _price: number
+          _quota: number
+          _slot_type: string
+        }
+        Returns: string
+      }
       driver_request_withdrawal: { Args: { _amount: number }; Returns: string }
       driver_set_bank_account: {
         Args: {
@@ -645,6 +812,10 @@ export type Database = {
           _account_number: string
           _bank_name: string
         }
+        Returns: undefined
+      }
+      driver_set_trip_status: {
+        Args: { _status: string; _trip_id: string }
         Returns: undefined
       }
       driver_take_order: { Args: { _order_id: string }; Returns: undefined }
@@ -656,6 +827,29 @@ export type Database = {
         Returns: boolean
       }
       is_permanent_admin: { Args: { _user_id: string }; Returns: boolean }
+      jastip_booking_driver: {
+        Args: { _booking_id: string }
+        Returns: {
+          full_name: string
+          phone: string
+          vehicle_plate: string
+          vehicle_type: string
+        }[]
+      }
+      jastip_catalog: {
+        Args: never
+        Returns: {
+          depart_at: string
+          dest_label: string
+          id: string
+          notes: string
+          origin_label: string
+          price_per_slot: number
+          quota: number
+          remaining: number
+          slot_type: string
+        }[]
+      }
       order_app_fee: { Args: { _total: number }; Returns: number }
       request_wallet_topup: {
         Args: { _amount: number; _wallet_type: string }
