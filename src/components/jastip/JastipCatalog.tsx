@@ -72,7 +72,8 @@ export function JastipCatalog() {
   const navigate = useNavigate();
   const [openId, setOpenId] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<ServiceType | null>(null);
-  const [slots, setSlots] = useState(1);
+  const [slotsInput, setSlotsInput] = useState("1");
+  const slots = Math.max(1, Number(slotsInput) || 1);
   const [notes, setNotes] = useState("");
   const [payment, setPayment] = useState<"cod" | "transfer">("cod");
   const [pickup, setPickup] = useState<SelectedPlace | null>(null);
@@ -132,7 +133,7 @@ export function JastipCatalog() {
   function openTrip(tripId: string) {
     setOpenId(tripId);
     setSelectedService(null);
-    setSlots(1);
+    setSlotsInput("1");
     setErr("");
   }
 
@@ -354,7 +355,7 @@ export function JastipCatalog() {
                     <div className="grid grid-cols-2 gap-2">
                       <label className="text-xs text-muted-foreground">
                         {selectedService === "nebeng" ? "Jumlah Kursi" : "Jumlah Paket"}
-                        <input type="number" min={1} max={Math.min(20, selectedRemaining)} className={inputCls} value={slots} onChange={(e) => setSlots(Math.max(1, Math.min(Math.min(20, selectedRemaining || 1), Number(e.target.value) || 1)))} />
+                        <input type="number" min={1} max={Math.min(20, selectedRemaining)} className={inputCls} value={slotsInput} onChange={(e) => setSlotsInput(e.target.value)} onBlur={() => setSlotsInput(String(Math.max(1, Math.min(20, selectedRemaining || 1, Number(slotsInput) || 1))))} />
                       </label>
                       <label className="text-xs text-muted-foreground">
                         Metode Pembayaran
