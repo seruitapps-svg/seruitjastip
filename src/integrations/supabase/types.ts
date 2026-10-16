@@ -224,7 +224,16 @@ export type Database = {
           notes: string
           origin_label: string
           pickup_address: string
+          pickup_lat: number | null
+          pickup_lng: number | null
           dropoff_address: string
+          dropoff_lat: number | null
+          dropoff_lng: number | null
+          package_subtotal: number
+          service_fee: number
+          commission_percent: number
+          driver_commission: number
+          driver_net: number
           payment_method: string
           price_per_slot: number
           slot_type: string
@@ -245,7 +254,16 @@ export type Database = {
           notes?: string
           origin_label: string
           pickup_address?: string
+          pickup_lat?: number | null
+          pickup_lng?: number | null
           dropoff_address?: string
+          dropoff_lat?: number | null
+          dropoff_lng?: number | null
+          package_subtotal?: number
+          service_fee?: number
+          commission_percent?: number
+          driver_commission?: number
+          driver_net?: number
           payment_method: string
           price_per_slot: number
           slot_type: string
@@ -266,7 +284,16 @@ export type Database = {
           notes?: string
           origin_label?: string
           pickup_address?: string
+          pickup_lat?: number | null
+          pickup_lng?: number | null
           dropoff_address?: string
+          dropoff_lat?: number | null
+          dropoff_lng?: number | null
+          package_subtotal?: number
+          service_fee?: number
+          commission_percent?: number
+          driver_commission?: number
+          driver_net?: number
           payment_method?: string
           price_per_slot?: number
           slot_type?: string
@@ -791,10 +818,14 @@ export type Database = {
       book_jastip_slot: {
         Args: {
           _dropoff_address?: string
+          _dropoff_lat?: number
+          _dropoff_lng?: number
           _name: string
           _notes: string
           _payment: string
-          _pickup_address?: string
+          _pickup_address: string
+          _pickup_lat?: number
+          _pickup_lng?: number
           _slots: number
           _trip_id: string
           _wa: string
