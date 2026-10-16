@@ -210,7 +210,7 @@ function Index() {
           destAddress: destination.address,
           destLat: destination.lat,
           destLng: destination.lng,
-          itemDetail: isOjek ? `Ojek penumpang${notes.trim() ? "" : ""}` : itemDetail.trim(),
+          itemDetail: isOjek ? "Ojek penumpang (1 orang)" : itemDetail.trim(),
           ...dims,
           senderName: senderName.trim(),
           senderWa: senderWa.trim(),
