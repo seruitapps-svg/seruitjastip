@@ -243,8 +243,9 @@ function AdminPage() {
           <button onClick={() => { setCategory("operasional"); setSubTab("order"); }} className={`pb-2 text-sm font-bold transition-colors ${category === "operasional" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}>📦 Operasional</button>
           <button onClick={() => { setCategory("pengguna"); setSubTab("akun"); }} className={`pb-2 text-sm font-bold transition-colors ${category === "pengguna" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}>👥 Pengguna & Driver</button>
           <button onClick={() => { setCategory("pengaturan"); setSubTab("tarif"); }} className={`pb-2 text-sm font-bold transition-colors ${category === "pengaturan" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}>⚙️ Pengaturan & Konten</button>
+          <button onClick={() => { setCategory("keuangan"); setSubTab("order"); }} className={`pb-2 text-sm font-bold transition-colors ${category === "keuangan" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}>💰 Ringkasan Keuangan</button>
         </div>
-        {category === "operasional" && (
+        {category === "keuangan" && (
           <section className="space-y-3 rounded-2xl border border-border bg-muted/20 p-3 sm:p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -260,7 +261,6 @@ function AdminPage() {
             {financialOpen && <div id="admin-financial-summary"><AdminFinancialOverview /></div>}
           </section>
         )}
-
         <div className="flex flex-wrap gap-2">
           {category === "operasional" && <>
             <button className={tabCls(subTab === "order")} onClick={() => setSubTab("order")}>Pesanan Masuk</button>
