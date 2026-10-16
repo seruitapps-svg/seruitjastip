@@ -13,7 +13,7 @@ const wa = z.string().trim().regex(/^(\+62|62|0)8\d{6,11}$/);
 
 const schema = z
   .object({
-    serviceId: z.enum(["titip", "kirim", "belanja"]),
+    serviceId: z.enum(["titip", "kirim", "belanja", "ojek"]),
     origin: point,
     destination: point,
     itemDetail: z.string().trim().min(3).max(500),

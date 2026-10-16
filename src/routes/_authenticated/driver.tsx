@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { DRIVER_NEXT_LABEL } from "@/lib/order-status";
 import { WalletPanel } from "@/components/wallet/WalletPanel";
 import { DriverEarningsSettings } from "@/components/driver/DriverEarningsSettings";
+import { DriverJastipTrips } from "@/components/jastip/DriverJastipTrips";
 
 export const Route = createFileRoute("/_authenticated/driver")({
   head: () => ({
@@ -152,6 +153,7 @@ function DriverPage() {
             />
           ))}
         </section>
+        {user && <DriverJastipTrips driverId={user.id} />}
         {done.length > 0 && (
           <section className="space-y-3">
             <h2 className="text-lg font-extrabold text-foreground">Selesai</h2>

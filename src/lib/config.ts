@@ -17,7 +17,7 @@ export const PACKAGE_LIMITS = {
 
 export const TALANGAN_MAX = 100000; // dana talangan driver untuk layanan Belanja
 
-export type ServiceId = "titip" | "kirim" | "belanja";
+export type ServiceId = "titip" | "kirim" | "belanja" | "ojek";
 
 export const SERVICES: Array<{
   id: ServiceId;
@@ -28,23 +28,29 @@ export const SERVICES: Array<{
   {
     id: "titip",
     name: "Jasa Titip",
-    tagline: "Ambil & antar barang Anda",
+    tagline: "Ambil & antar barang",
     description:
       "Driver mengambil barang dari titik asal dan mengantarkannya ke lokasi Anda.",
   },
   {
     id: "kirim",
-    name: "Jasa Kirim",
-    tagline: "Kirim barang ke orang lain",
+    name: "Kirim Barang",
+    tagline: "Kirim ke orang lain",
     description:
       "Driver mengambil barang dari Anda dan mengirimkannya ke penerima lain.",
   },
   {
     id: "belanja",
-    name: "Belanja",
-    tagline: "Kami belanjakan untuk Anda",
+    name: "Jastip Belanja",
+    tagline: "Kami belanjakan",
     description:
       "Driver membelikan belanjaan sesuai daftar Anda, lalu mengantar ke lokasi Anda. Dana talangan driver maks Rp 100.000.",
+  },
+  {
+    id: "ojek",
+    name: "Ojek",
+    tagline: "Antar penumpang",
+    description: "Driver menjemput Anda di titik A dan mengantar ke tujuan. 1 penumpang.",
   },
 ];
 

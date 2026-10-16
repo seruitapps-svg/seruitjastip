@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { OrderCard } from "@/components/order/OrderCard";
 import { useAuth } from "@/hooks/use-auth";
+import { MyJastipBookings } from "@/components/jastip/MyJastipBookings";
 
 export const Route = createFileRoute("/_authenticated/pesanan/")({
   head: () => ({
@@ -46,6 +47,8 @@ function MyOrders() {
             Belum ada pesanan. <Link to="/" className="text-primary">Buat pesanan</Link>
           </p>
         )}
+        {user && <MyJastipBookings userId={user.id} />}
+        {!!q.data?.length && <h2 className="pt-2 text-lg font-extrabold text-foreground">On-Bid</h2>}
         {q.data?.map((o) => <OrderCard key={o.id} order={o} />)}
       </main>
     </div>

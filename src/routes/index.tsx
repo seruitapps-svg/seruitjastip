@@ -3,10 +3,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { createOrder } from "@/lib/orders.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { AppHeader } from "@/components/AppHeader";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
+import { JastipCatalog } from "@/components/jastip/JastipCatalog";
 import {
   Bike,
   Package,
@@ -16,6 +17,8 @@ import {
   Banknote,
   QrCode,
   RotateCcw,
+  Zap,
+  CalendarClock,
 } from "lucide-react";
 import { PlaceAutocomplete, type SelectedPlace } from "@/components/order/PlaceAutocomplete";
 import { RouteMap } from "@/components/order/RouteMap";
@@ -57,6 +60,7 @@ const SERVICE_ICONS: Record<ServiceId, typeof Package> = {
   titip: Package,
   kirim: Send,
   belanja: ShoppingBag,
+  ojek: Bike,
 };
 
 interface Summary {
@@ -87,11 +91,21 @@ function Index() {
   const [calculating, setCalculating] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
 
+  const [mode, setMode] = useState<"onbid" | "jastip">("onbid");
+  useEffect(() => {
+    const m = localStorage.getItem("seruit-mode");
+    if (m === "onbid" || m === "jastip") setMode(m);
+  }, []);
+  function changeMode(m: "onbid" | "jastip") {
+    setMode(m);
+    localStorage.setItem("seruit-mode", m);
+  }
+
   const publicSettings = useQuery({
     queryKey: ["public-app-settings"],
     queryFn: async () => {
       const { data, error } = await supabase.from("app_settings")
-        .select("base_fare, per_km, oversize_fee")
+        .select("base_fare, per_km, oversize_fee, ojek_base_fare, ojek_per_km")
         .eq("id", 1)
         .maybeSingle();
       if (error) throw error;
@@ -103,6 +117,14 @@ function Index() {
     perKm: Number(publicSettings.data?.per_km ?? PRICING.perKm),
     oversizeFee: Number(publicSettings.data?.oversize_fee ?? PRICING.oversizeFee),
   };
+  const isOjek = serviceId === "ojek";
+  const activeRates = isOjek
+    ? {
+        baseFare: Number(publicSettings.data?.ojek_base_fare ?? 3000),
+        perKm: Number(publicSettings.data?.ojek_per_km ?? 1500),
+        oversizeFee: 0,
+      }
+    : livePricing;
 
   const service = SERVICES.find((s) => s.id === serviceId)!;
   const originLabel =
@@ -166,15 +188,15 @@ function Index() {
     if (!origin) return setFormError("Pilih lokasi titik A dari saran alamat.");
     if (!destination)
       return setFormError("Pilih lokasi titik B dari saran alamat.");
-    if (itemDetail.trim().length < 3)
+    if (!isOjek && itemDetail.trim().length < 3)
       return setFormError(
         serviceId === "belanja"
           ? "Isi daftar belanjaan Anda."
           : "Isi deskripsi barang.",
       );
-    if (![weight, length, width, height].every((n) => Number.isFinite(n) && n > 0))
+    if (!isOjek && ![weight, length, width, height].every((n) => Number.isFinite(n) && n > 0))
       return setFormError("Berat dan dimensi harus angka lebih dari 0.");
-    if (weight > PACKAGE_LIMITS.hardMaxWeightKg * 5)
+    if (!isOjek && weight > PACKAGE_LIMITS.hardMaxWeightKg * 5)
       return setFormError("Berat terlalu besar untuk layanan motor.");
     if (senderName.trim().length < 2) return setFormError("Isi nama Anda.");
     if (!waRegex.test(senderWa.trim()))
@@ -194,13 +216,13 @@ function Index() {
           destination: { lat: destination.lat, lng: destination.lng },
         },
       });
+      const dims = isOjek
+        ? { weightKg: 1, lengthCm: 1, widthCm: 1, heightCm: 1 }
+        : { weightKg: weight, lengthCm: length, widthCm: width, heightCm: height };
       const price = calculatePrice({
         distanceMeters: route.distanceMeters,
-        weightKg: weight,
-        lengthCm: length,
-        widthCm: width,
-        heightCm: height,
-      }, livePricing);
+        ...dims,
+      }, activeRates);
       setSummary({
         order: {
           serviceId,
@@ -210,11 +232,8 @@ function Index() {
           destAddress: destination.address,
           destLat: destination.lat,
           destLng: destination.lng,
-          itemDetail: itemDetail.trim(),
-          weightKg: weight,
-          lengthCm: length,
-          widthCm: width,
-          heightCm: height,
+          itemDetail: isOjek ? "Ojek penumpang (1 orang)" : itemDetail.trim(),
+          ...dims,
           senderName: senderName.trim(),
           senderWa: senderWa.trim(),
           recipientName: recipientName.trim(),
@@ -261,27 +280,54 @@ function Index() {
       <AppHeader />
       <AnnouncementBanner />
       <main className="mx-auto max-w-2xl px-4 pb-16">
+        {/* Switch mode */}
+        <div className="sticky top-[57px] z-20 -mx-4 bg-background/95 px-4 pt-4 pb-2 backdrop-blur">
+          <div role="tablist" className="grid grid-cols-2 gap-1 rounded-2xl border border-border bg-muted p-1">
+            {([
+              ["onbid", "On-Bid", "Instan, langsung jalan", Zap],
+              ["jastip", "Jastip Terjadwal", "Pilih jadwal trayek", CalendarClock],
+            ] as const).map(([id, name, sub, Icon]) => (
+              <button
+                key={id}
+                role="tab"
+                aria-selected={mode === id}
+                onClick={() => changeMode(id)}
+                className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-left transition-colors ${
+                  mode === id ? "bg-card shadow-sm" : "hover:bg-card/50"
+                }`}
+              >
+                <Icon className={`h-5 w-5 shrink-0 ${mode === id ? "text-primary" : "text-muted-foreground"}`} />
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-bold text-foreground">{name}</span>
+                  <span className="block truncate text-[11px] text-muted-foreground">{sub}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Hero */}
-        <section className="py-8 text-center">
+        <section className="py-6 text-center">
           <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-            Jastip tanpa ribet,
+            {mode === "onbid" ? "Order instan," : "Jastip terjadwal,"}
             <br />
-            <span className="text-primary">ongkir langsung kelihatan.</span>
+            <span className="text-primary">{mode === "onbid" ? "tarif langsung kelihatan." : "pesan slot sekarang."}</span>
           </h1>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-            Titip barang, kirim ke orang lain, atau minta dibelikan — hitung
-            jarak & harga otomatis, pantau pesanan langsung di aplikasi.
+            {mode === "onbid"
+              ? "Kirim barang, jastip belanja, atau ojek — estimasi tarif instan, langsung dicarikan driver."
+              : "Pilih trayek & jadwal keberangkatan driver, pesan slot paket atau kursi."}
           </p>
-          <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-accent-foreground">
-            Tarif: {formatRupiah(livePricing.baseFare)} +{" "}
-            {formatRupiah(livePricing.perKm)}/km · Paket s.d.{" "}
-            {PACKAGE_LIMITS.maxWeightKg} kg / {PACKAGE_LIMITS.maxDimCm}×
-            {PACKAGE_LIMITS.maxDimCm} cm
-          </div>
+          {mode === "onbid" && (
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-accent-foreground">
+              Tarif: {formatRupiah(activeRates.baseFare)} + {formatRupiah(activeRates.perKm)}/km
+            </div>
+          )}
         </section>
 
+        {mode === "jastip" ? <JastipCatalog /> : (<>
         {/* Pilih layanan */}
-        <section className="grid grid-cols-3 gap-2">
+        <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {SERVICES.map((s) => {
             const Icon = SERVICE_ICONS[s.id];
             const active = s.id === serviceId;
@@ -336,6 +382,7 @@ function Index() {
             <RouteMap origin={origin} destination={destination} />
           )}
 
+          {!isOjek && (<>
           <div>
             <label className={labelCls}>{itemLabel}</label>
             <textarea
@@ -397,6 +444,7 @@ function Index() {
             kena biaya tambahan {formatRupiah(livePricing.oversizeFee)} (selama
             masih muat motor).
           </p>
+          </>)}
 
           {serviceId === "kirim" && (
             <div className="grid grid-cols-1 gap-3 rounded-xl border border-dashed border-border p-3 sm:grid-cols-2">
@@ -563,7 +611,7 @@ function Index() {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">
                   Jarak ({summary.price.billedKm} km ×{" "}
-                  {formatRupiah(livePricing.perKm)})
+                  {formatRupiah(activeRates.perKm)})
                 </span>
                 <span className="text-foreground">
                   {formatRupiah(summary.price.distanceFare)}
@@ -590,7 +638,7 @@ function Index() {
                 </span>
               </div>
               <p className="pt-1 text-[11px] text-muted-foreground">
-                Harga final dikonfirmasi admin saat verifikasi.
+                Estimasi tarif instan berdasarkan rute tercepat.
               </p>
             </div>
 
@@ -644,7 +692,7 @@ function Index() {
               </Link>
             )}
             <p className="text-center text-xs text-muted-foreground">
-              Pesanan akan diverifikasi admin, lalu diteruskan ke driver. Pantau status & chat di halaman pesanan.
+              Pesanan langsung masuk ke driver terdekat. Pantau status & chat di halaman pesanan.
             </p>
 
             <button
@@ -657,9 +705,10 @@ function Index() {
             </button>
           </section>
         )}
+        </>)}
 
         <footer className="mt-10 text-center text-xs text-muted-foreground">
-          Seruit — jasa titip, kirim & belanja. Pesanan diverifikasi admin.
+          Seruit — On-Bid instan & Jastip terjadwal.
         </footer>
       </main>
     </div>

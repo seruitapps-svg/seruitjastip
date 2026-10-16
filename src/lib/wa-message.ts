@@ -2,7 +2,7 @@ import { ADMIN_WA_NUMBER, PRICING, SERVICES, formatRupiah } from "./config";
 import type { PriceBreakdown } from "./pricing";
 
 export interface OrderData {
-  serviceId: "titip" | "kirim" | "belanja";
+  serviceId: import("@/lib/config").ServiceId;
   originAddress: string;
   originLat: number;
   originLng: number;

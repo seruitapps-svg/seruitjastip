@@ -11,6 +11,7 @@ import { WalletPanel } from "@/components/wallet/WalletPanel";
 import { STATUS_LABEL, type OrderStatus } from "@/lib/order-status";
 import { formatRupiah } from "@/lib/config";
 import { AdminFinancialOverview } from "@/components/admin/AdminFinancialOverview";
+import { AdminModeSettings } from "@/components/admin/AdminModeSettings";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -343,6 +344,7 @@ function AdminPage() {
             <button onClick={handleSaveSettings} disabled={busy === "saving-settings" || settings.isLoading} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50">{busy === "saving-settings" ? "Menyimpan..." : "Simpan Perubahan Tarif"}</button>
           </div>
         )}
+        {category === "pengaturan" && subTab === "tarif" && <AdminModeSettings />}
         {category === "pengaturan" && subTab === "pengumuman" && (
           <div className="space-y-4 rounded-2xl border border-border bg-card p-5">
             <h3 className="font-bold text-foreground">Pengumuman Front-End (Banner Atas)</h3>

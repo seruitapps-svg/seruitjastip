@@ -29,6 +29,13 @@
       "when": 1792053275679,
       "tag": "0003_double_take_rate_settlement",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792119745870,
+      "tag": "0004_onbid_jastip_modes",
+      "breakpoints": true
     }
   ]
 }
