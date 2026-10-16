@@ -1,0 +1,79 @@
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { formatRupiah } from "@/lib/config";
+import { formatDepart, slotTypeLabel } from "./JastipCatalog";
+import { TRIP_STATUS_LABEL } from "./DriverJastipTrips";
+
+type Booking = { id: string; code: string; status: string; origin_label: string; dest_label: string; depart_at: string; slot_type: string; slots: number; total: number; payment_method: string };
+
+function DriverReveal({ bookingId }: { bookingId: string }) {
+  const q = useQuery({
+    queryKey: ["jastip-driver", bookingId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("jastip_booking_driver", { _booking_id: bookingId });
+      if (error) throw error;
+      return data?.[0] ?? null;
+    },
+  });
+  if (!q.data) return null;
+  return (
+    <div className="mt-2 rounded-lg bg-accent p-2 text-xs text-accent-foreground">
+      Driver: <b>{q.data.full_name}</b> · {q.data.vehicle_type} {q.data.vehicle_plate} ·{" "}
+      <a className="underline" href={`https://wa.me/${q.data.phone.replace(/^0/, "62").replace(/\D/g, "")}`} target="_blank" rel="noreferrer">{q.data.phone}</a>
+    </div>
+  );
+}
+
+export function MyJastipBookings({ userId }: { userId: string }) {
+  const qc = useQueryClient();
+  const [err, setErr] = useState("");
+  const q = useQuery({
+    queryKey: ["my-jastip", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("jastip_bookings").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as Booking[];
+    },
+  });
+
+  async function cancel(id: string) {
+    if (!window.confirm("Batalkan pemesanan slot ini?")) return;
+    const { error } = await supabase.rpc("cancel_jastip_booking", { _booking_id: id });
+    if (error) return setErr(error.message);
+    qc.invalidateQueries({ queryKey: ["my-jastip"] });
+    qc.invalidateQueries({ queryKey: ["jastip-catalog"] });
+  }
+
+  if (!q.data?.length) return null;
+  return (
+    <section className="space-y-3">
+      <h2 className="text-lg font-extrabold text-foreground">Jastip Terjadwal</h2>
+      {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
+      {q.data.map((b) => (
+        <div key={b.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="text-xs text-muted-foreground">#{b.code} · {slotTypeLabel(b.slot_type)} · {b.slots} slot</div>
+              <div className="mt-1 text-sm font-semibold text-foreground">{b.origin_label} → {b.dest_label}</div>
+              <div className="text-xs text-muted-foreground">Berangkat {formatDepart(b.depart_at)}</div>
+            </div>
+            <span className="rounded-full bg-accent px-2.5 py-0.5 text-[11px] font-semibold text-accent-foreground">{TRIP_STATUS_LABEL[b.status] ?? b.status}</span>
+          </div>
+          <div className="mt-2 flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">{b.payment_method === "cod" ? "COD" : "Transfer"}</span>
+            <span className="font-bold text-primary">{formatRupiah(b.total)}</span>
+          </div>
+          {(b.status === "berjalan" || b.status === "selesai") ? (
+            <DriverReveal bookingId={b.id} />
+          ) : b.status === "dipesan" ? (
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <span className="text-[11px] text-muted-foreground">Info driver muncul saat perjalanan dimulai.</span>
+              <button onClick={() => cancel(b.id)} className="rounded-lg bg-destructive/10 px-3 py-1.5 text-xs font-semibold text-destructive">Batalkan</button>
+            </div>
+          ) : null}
+        </div>
+      ))}
+    </section>
+  );
+}
