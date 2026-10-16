@@ -59,8 +59,8 @@ export function AdminModeSettings() {
       <div className="grid gap-4 sm:grid-cols-2">
         <div><label className="text-xs font-semibold text-muted-foreground">Ojek: Biaya Layanan (Rp)</label><input type="number" min={0} value={f.ojek_base_fare} onChange={num("ojek_base_fare")} className={inputCls} /></div>
         <div><label className="text-xs font-semibold text-muted-foreground">Ojek: Tarif per km (Rp)</label><input type="number" min={0} value={f.ojek_per_km} onChange={num("ojek_per_km")} className={inputCls} /></div>
-        <div><label className="text-xs font-semibold text-muted-foreground">Jastip: Harga minimal/slot (Rp)</label><input type="number" min={0} value={f.jastip_min_price} onChange={num("jastip_min_price")} className={inputCls} /></div>
-        <div><label className="text-xs font-semibold text-muted-foreground">Jastip: Harga maksimal/slot (Rp)</label><input type="number" min={0} value={f.jastip_max_price} onChange={num("jastip_max_price")} className={inputCls} /></div>
+        <div><label className="text-xs font-semibold text-muted-foreground">Jastip: Batas harga minimal (Rp)</label><input type="number" min={0} value={f.jastip_min_price} onChange={num("jastip_min_price")} className={inputCls} /></div>
+        <div><label className="text-xs font-semibold text-muted-foreground">Jastip: Batas harga maksimal (Rp)</label><input type="number" min={0} value={f.jastip_max_price} onChange={num("jastip_max_price")} className={inputCls} /></div>
       </div>
       {msg && <p className="text-sm text-muted-foreground">{msg}</p>}
       <button onClick={save} disabled={busy} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50">{busy ? "Menyimpan..." : "Simpan Tarif Mode"}</button>
