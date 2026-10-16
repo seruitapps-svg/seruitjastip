@@ -13,15 +13,16 @@ export const TRIP_STATUS_LABEL: Record<string, string> = {
 
 export function DriverJastipTrips({ driverId }: { driverId: string }) {
   const qc = useQueryClient();
-  const [form, setForm] = useState({ origin: "", dest: "", depart: "", slotType: "paket", quota: 4, price: 10000, notes: "" });
+  const [form, setForm] = useState({ origin: "", dest: "", depart: "", quota: 8, notes: "" });
   const [showForm, setShowForm] = useState(false);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
 
-  const limits = useQuery({
-    queryKey: ["jastip-limits"],
+  const settings = useQuery({
+    queryKey: ["app-settings-jastip"],
     queryFn: async () => {
-      const { data } = await supabase.from("app_settings").select("jastip_min_price, jastip_max_price").eq("id", 1).maybeSingle();
+      const { data, error } = await supabase.from("app_settings").select("jastip_package_fee").eq("id", 1).maybeSingle();
+      if (error) throw error;
       return data;
     },
   });
@@ -54,7 +55,7 @@ export function DriverJastipTrips({ driverId }: { driverId: string }) {
     setBusy("create");
     const { error } = await supabase.rpc("driver_create_trip", {
       _origin: form.origin, _dest: form.dest, _depart_at: new Date(form.depart).toISOString(),
-      _slot_type: form.slotType, _quota: form.quota, _price: form.price, _notes: form.notes,
+      _slot_type: "paket", _quota: form.quota, _price: Number(settings.data?.jastip_package_fee ?? 15000), _notes: form.notes,
     });
     setBusy(null);
     if (error) return setErr(error.message);
@@ -83,35 +84,30 @@ export function DriverJastipTrips({ driverId }: { driverId: string }) {
       {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
       {showForm && (
         <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
-          <div className="grid grid-cols-2 gap-2">
-            <input className={inputCls} placeholder="Asal (mis. Bandar Lampung)" value={form.origin} onChange={(e) => setForm({ ...form, origin: e.target.value })} />
-            <input className={inputCls} placeholder="Tujuan (mis. Metro)" value={form.dest} onChange={(e) => setForm({ ...form, dest: e.target.value })} />
+          <div className="rounded-lg bg-accent p-2.5 text-xs text-accent-foreground">
+            💡 <b>Sistem Multi-Paket:</b> Anda dapat membawa banyak paket pesanan sekaligus dalam satu perjalanan rute ini sesuai kapasitas kuota.
           </div>
-          <label className="block text-xs text-muted-foreground">Berangkat
+          <div className="grid grid-cols-2 gap-2">
+            <input className={inputCls} placeholder="Wilayah Asal (mis. Metro)" value={form.origin} onChange={(e) => setForm({ ...form, origin: e.target.value })} />
+            <input className={inputCls} placeholder="Wilayah Tujuan (mis. Sekampung)" value={form.dest} onChange={(e) => setForm({ ...form, dest: e.target.value })} />
+          </div>
+          <label className="block text-xs text-muted-foreground">Waktu Berangkat
             <input type="datetime-local" className={inputCls} value={form.depart} onChange={(e) => setForm({ ...form, depart: e.target.value })} />
           </label>
-          <div className="grid grid-cols-3 gap-2">
-            <label className="text-xs text-muted-foreground">Jenis muatan
-              <select className={inputCls} value={form.slotType} onChange={(e) => setForm({ ...form, slotType: e.target.value })}>
-                <option value="paket">Paket titipan</option>
-                <option value="kursi">Kursi penumpang</option>
-              </select>
-            </label>
-            <label className="text-xs text-muted-foreground">Kapasitas/Kuota
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs text-muted-foreground">Kapasitas Maksimal Paket
               <input type="number" min={1} max={50} className={inputCls} value={form.quota} onChange={(e) => setForm({ ...form, quota: Number(e.target.value) })} />
             </label>
-            <label className="text-xs text-muted-foreground">Harga per {form.slotType === "kursi" ? "kursi" : "paket"}
-              <input type="number" className={inputCls} value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} />
-            </label>
+            <div className="text-xs text-muted-foreground">
+              Tarif Titip (Ditetapkan Admin)
+              <div className="mt-1 rounded-lg border border-border bg-muted px-3 py-2 text-sm font-bold text-foreground">
+                {formatRupiah(settings.data?.jastip_package_fee ?? 15000)} / paket
+              </div>
+            </div>
           </div>
-          {limits.data && (
-            <p className="text-[11px] text-muted-foreground">
-              Batas harga: {formatRupiah(limits.data.jastip_min_price)} – {formatRupiah(limits.data.jastip_max_price)}
-            </p>
-          )}
-          <input className={inputCls} placeholder="Catatan (opsional)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} maxLength={300} />
+          <input className={inputCls} placeholder="Catatan rute (opsional)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} maxLength={300} />
           <button disabled={busy === "create"} onClick={create} className="w-full rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground disabled:opacity-50">
-            {busy === "create" ? "Menyimpan…" : "Terbitkan jadwal"}
+            {busy === "create" ? "Menyimpan…" : "Terbitkan Rute Jastip"}
           </button>
         </div>
       )}
