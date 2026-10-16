@@ -36,4 +36,5 @@ export const SERVICE_NAME: Record<string, string> = {
   titip: "Jasa Titip",
   kirim: "Jasa Kirim",
   belanja: "Belanja",
+  ojek: "Ojek Penumpang",
 };
