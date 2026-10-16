@@ -32,7 +32,7 @@ const FILTERS: Array<OrderStatus | "aktif" | "semua"> = ["menunggu_verifikasi", 
 function AdminPage() {
   const { isAdmin, ready } = useAuth();
   const qc = useQueryClient();
-  const [category, setCategory] = useState<"operasional" | "pengguna" | "pengaturan">("operasional");
+  const [category, setCategory] = useState<"operasional" | "pengguna" | "pengaturan" | "keuangan">("operasional");
   const [subTab, setSubTab] = useState<"order" | "driver_approval" | "akun" | "topup" | "tarif" | "pengumuman">("order");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("menunggu_verifikasi");
   const [busy, setBusy] = useState<string | null>(null);
@@ -239,12 +239,33 @@ function AdminPage() {
       <AppHeader />
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-6">
         <h1 className="text-xl font-extrabold text-foreground">Dashboard Admin</h1>
-        <div className="flex flex-wrap gap-4 border-b border-border pb-1">
-          <button onClick={() => { setCategory("operasional"); setSubTab("order"); }} className={`pb-2 text-sm font-bold transition-colors ${category === "operasional" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}>📦 Operasional</button>
-          <button onClick={() => { setCategory("pengguna"); setSubTab("akun"); }} className={`pb-2 text-sm font-bold transition-colors ${category === "pengguna" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}>👥 Pengguna & Driver</button>
-          <button onClick={() => { setCategory("pengaturan"); setSubTab("tarif"); }} className={`pb-2 text-sm font-bold transition-colors ${category === "pengaturan" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}>⚙️ Pengaturan & Konten</button>
-          <button onClick={() => { setCategory("keuangan"); setSubTab("order"); }} className={`pb-2 text-sm font-bold transition-colors ${category === "keuangan" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}>💰 Ringkasan Keuangan</button>
-        </div>
+        <nav aria-label="Kategori panel superadmin" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {[
+            { id: "operasional" as const, icon: "📦", title: "Operasional", detail: "Pesanan masuk dan verifikasi driver" },
+            { id: "pengguna" as const, icon: "👥", title: "Pengguna & Driver", detail: "Akun, saldo, dan permintaan top-up" },
+            { id: "pengaturan" as const, icon: "⚙️", title: "Pengaturan & Konten", detail: "Tarif, komisi, mode layanan, dan pengumuman" },
+            { id: "keuangan" as const, icon: "💰", title: "Ringkasan Keuangan", detail: "Dana titipan, pendapatan, dan keamanan kas" },
+          ].map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              aria-current={category === item.id ? "page" : undefined}
+              onClick={() => {
+                setCategory(item.id);
+                if (item.id === "operasional") setSubTab("order");
+                else if (item.id === "pengguna") setSubTab("akun");
+                else if (item.id === "pengaturan") setSubTab("tarif");
+              }}
+              className={`flex min-h-[76px] items-start gap-3 rounded-xl border p-3 text-left transition-colors ${category === item.id ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-card hover:bg-muted/40"}`}
+            >
+              <span className="text-xl" aria-hidden="true">{item.icon}</span>
+              <span className="min-w-0">
+                <span className={`block text-sm font-bold ${category === item.id ? "text-primary" : "text-foreground"}`}>{item.title}</span>
+                <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{item.detail}</span>
+              </span>
+            </button>
+          ))}
+        </nav>
         {category === "keuangan" && (
           <section className="space-y-3 rounded-2xl border border-border bg-muted/20 p-3 sm:p-4">
             <div className="flex items-center justify-between gap-3">
@@ -277,7 +298,7 @@ function AdminPage() {
         </div>
         {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
 
-        {subTab === "order" && (
+        {category === "operasional" && subTab === "order" && (
           <>
             <div className="flex flex-wrap gap-2">
               {FILTERS.map((f) => (
@@ -368,7 +389,7 @@ function AdminPage() {
           </div>
         )}
 
-        {subTab === "topup" && (
+        {category === "pengguna" && subTab === "topup" && (
           <section className="space-y-3">
             <div>
               <h2 className="text-sm font-bold text-foreground">Permintaan Top-up Menunggu</h2>
@@ -434,7 +455,7 @@ function AdminPage() {
           </section>
         )}
 
-        {subTab === "driver_approval" && (
+        {category === "operasional" && subTab === "driver_approval" && (
           <section className="space-y-3">
             <h2 className="text-sm font-bold text-foreground">Permohonan Menjadi Driver</h2>
             {driverRegistrations.isLoading && (
@@ -545,7 +566,7 @@ function AdminPage() {
           </section>
         )}
 
-        {subTab === "akun" && (
+        {category === "pengguna" && subTab === "akun" && (
           <div className="space-y-3">
             {accounts.isLoading && <p className="text-sm text-muted-foreground">Memuat akun...</p>}
             {accounts.isError && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">Gagal memuat akun: {accounts.error.message}</p>}
