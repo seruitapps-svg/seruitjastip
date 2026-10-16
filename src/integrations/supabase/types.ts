@@ -22,6 +22,9 @@ export type Database = {
           base_fare: number
           commission_percent: number
           id: number
+          jastip_commission_percent: number
+          jastip_package_fee: number
+          jastip_service_fee: number
           jastip_max_price: number
           jastip_min_price: number
           ojek_base_fare: number
@@ -37,6 +40,9 @@ export type Database = {
           base_fare?: number
           commission_percent?: number
           id?: number
+          jastip_commission_percent?: number
+          jastip_package_fee?: number
+          jastip_service_fee?: number
           jastip_max_price?: number
           jastip_min_price?: number
           ojek_base_fare?: number
@@ -52,6 +58,9 @@ export type Database = {
           base_fare?: number
           commission_percent?: number
           id?: number
+          jastip_commission_percent?: number
+          jastip_package_fee?: number
+          jastip_service_fee?: number
           jastip_max_price?: number
           jastip_min_price?: number
           ojek_base_fare?: number
@@ -74,6 +83,7 @@ export type Database = {
           photo_selfie: string | null
           photo_sim: string | null
           photo_vehicle: string | null
+          accepts_ojek: boolean
           status: Database["public"]["Enums"]["driver_registration_status"]
           updated_at: string
           user_id: string
@@ -91,6 +101,7 @@ export type Database = {
           photo_selfie?: string | null
           photo_sim?: string | null
           photo_vehicle?: string | null
+          accepts_ojek?: boolean
           status?: Database["public"]["Enums"]["driver_registration_status"]
           updated_at?: string
           user_id: string
@@ -108,6 +119,7 @@ export type Database = {
           photo_selfie?: string | null
           photo_sim?: string | null
           photo_vehicle?: string | null
+          accepts_ojek?: boolean
           status?: Database["public"]["Enums"]["driver_registration_status"]
           updated_at?: string
           user_id?: string
@@ -211,6 +223,8 @@ export type Database = {
           id: string
           notes: string
           origin_label: string
+          pickup_address: string
+          dropoff_address: string
           payment_method: string
           price_per_slot: number
           slot_type: string
@@ -230,6 +244,8 @@ export type Database = {
           id?: string
           notes?: string
           origin_label: string
+          pickup_address?: string
+          dropoff_address?: string
           payment_method: string
           price_per_slot: number
           slot_type: string
@@ -249,6 +265,8 @@ export type Database = {
           id?: string
           notes?: string
           origin_label?: string
+          pickup_address?: string
+          dropoff_address?: string
           payment_method?: string
           price_per_slot?: number
           slot_type?: string
@@ -762,8 +780,9 @@ export type Database = {
       }
       admin_update_mode_settings: {
         Args: {
-          _jastip_max_price: number
-          _jastip_min_price: number
+          _jastip_commission_percent: number
+          _jastip_package_fee: number
+          _jastip_service_fee: number
           _ojek_base_fare: number
           _ojek_per_km: number
         }
@@ -771,9 +790,11 @@ export type Database = {
       }
       book_jastip_slot: {
         Args: {
+          _dropoff_address?: string
           _name: string
           _notes: string
           _payment: string
+          _pickup_address?: string
           _slots: number
           _trip_id: string
           _wa: string
@@ -805,6 +826,7 @@ export type Database = {
         }
         Returns: string
       }
+      driver_toggle_ojek: { Args: { _enabled: boolean }; Returns: undefined }
       driver_request_withdrawal: { Args: { _amount: number }; Returns: string }
       driver_set_bank_account: {
         Args: {
