@@ -63,7 +63,7 @@ export function JastipCatalog() {
 
   const serviceFee = settings.data ?? 2000;
 
-  async function book(t: (typeof q.data extends (infer T)[] | undefined ? T : never)) {
+  async function book(t: any) {
     if (!pickup?.address || !dropoff?.address) {
       return setErr("Mohon pilih Titik A dan Titik B pada peta.");
     }
