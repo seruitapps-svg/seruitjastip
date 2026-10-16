@@ -14,12 +14,15 @@ type ServiceType = "kirim" | "belanja" | "nebeng";
 
 type CatalogTrip = {
   id: string;
-  origin_area: string;
-  dest_area: string;
+  origin_area?: string | null;
+  dest_area?: string | null;
+  origin_label?: string | null;
+  dest_label?: string | null;
   depart_at: string;
   slot_type: string;
   quota: number;
-  booked_slots: number;
+  booked?: number | null;
+  booked_slots?: number | null;
   price_per_slot: number;
   notes: string;
   status: string;
@@ -41,6 +44,26 @@ export function formatDepart(d: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function packageBookedCount(trip: CatalogTrip) {
+  return Math.max(Number(trip.booked_slots ?? 0), Number(trip.booked ?? 0));
+}
+
+function packageRemainingCount(trip: CatalogTrip) {
+  return Math.max(0, Number(trip.quota ?? 0) - packageBookedCount(trip));
+}
+
+function nebengRemainingCount(trip: CatalogTrip) {
+  return Math.max(0, Number(trip.nebeng_quota ?? 0) - Number(trip.nebeng_booked ?? 0));
+}
+
+function tripOrigin(trip: CatalogTrip) {
+  return trip.origin_area?.trim() || trip.origin_label?.trim() || "";
+}
+
+function tripDestination(trip: CatalogTrip) {
+  return trip.dest_area?.trim() || trip.dest_label?.trim() || "";
 }
 
 export function JastipCatalog() {
@@ -100,10 +123,10 @@ export function JastipCatalog() {
 
   const serviceFee = settings.data ?? 2500;
   const availableTrips = q.data?.filter((trip) => {
-    const packageAvailable = trip.quota - trip.booked_slots > 0;
-    const nebengAvailable =
-      trip.enable_nebeng && trip.nebeng_quota - trip.nebeng_booked > 0;
-    return packageAvailable || nebengAvailable;
+    const hasPackageCapacity = packageRemainingCount(trip) > 0;
+    const hasNebengCapacity = trip.enable_nebeng && nebengRemainingCount(trip) > 0;
+    const isBookableStatus = trip.status === "open";
+    return isBookableStatus && (hasPackageCapacity || hasNebengCapacity);
   });
 
   function openTrip(tripId: string) {
@@ -138,9 +161,7 @@ export function JastipCatalog() {
     }
 
     const remaining =
-      selectedService === "nebeng"
-        ? t.nebeng_quota - t.nebeng_booked
-        : t.quota - t.booked_slots;
+      selectedService === "nebeng" ? nebengRemainingCount(t) : packageRemainingCount(t);
     if (slots > remaining) {
       return setErr(`Kuota tersisa hanya ${remaining} ${selectedService === "nebeng" ? "kursi" : "paket"}.`);
     }
@@ -199,8 +220,8 @@ export function JastipCatalog() {
 
       {availableTrips?.map((t) => {
         const open = openId === t.id;
-        const packageRemaining = t.quota - t.booked_slots;
-        const nebengRemaining = t.nebeng_quota - t.nebeng_booked;
+        const packageRemaining = packageRemainingCount(t);
+        const nebengRemaining = nebengRemainingCount(t);
         const packageAvailable = packageRemaining > 0;
         const nebengAvailable = t.enable_nebeng && nebengRemaining > 0;
         const unitPrice = selectedService === "nebeng" ? t.nebeng_price : t.price_per_slot;
@@ -208,13 +229,15 @@ export function JastipCatalog() {
         const total = subtotal + serviceFee;
         const selectedRemaining =
           selectedService === "nebeng" ? nebengRemaining : packageRemaining;
+        const origin = tripOrigin(t);
+        const destination = tripDestination(t);
 
         return (
           <div key={t.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="text-base font-extrabold text-foreground">
-                  Trip {t.origin_area} - {t.dest_area}
+                  Trip {origin || "Rute belum terisi"} - {destination || "Tujuan belum terisi"}
                 </div>
                 <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                   <CalendarClock className="h-3.5 w-3.5 shrink-0" />
@@ -224,7 +247,7 @@ export function JastipCatalog() {
               </div>
               <div className="shrink-0 text-right">
                 <span className="inline-flex rounded-full bg-accent px-2 py-1 text-[11px] font-bold text-accent-foreground">
-                  {t.status === "open" ? "Jadwal tersedia" : t.status === "berjalan" ? "Sedang berjalan" : t.status}
+                  Jadwal tersedia
                 </span>
               </div>
             </div>
