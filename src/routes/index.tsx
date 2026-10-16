@@ -3,10 +3,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { createOrder } from "@/lib/orders.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { AppHeader } from "@/components/AppHeader";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
+import { JastipCatalog } from "@/components/jastip/JastipCatalog";
 import {
   Bike,
   Package,
@@ -16,6 +17,8 @@ import {
   Banknote,
   QrCode,
   RotateCcw,
+  Zap,
+  CalendarClock,
 } from "lucide-react";
 import { PlaceAutocomplete, type SelectedPlace } from "@/components/order/PlaceAutocomplete";
 import { RouteMap } from "@/components/order/RouteMap";
@@ -57,6 +60,7 @@ const SERVICE_ICONS: Record<ServiceId, typeof Package> = {
   titip: Package,
   kirim: Send,
   belanja: ShoppingBag,
+  ojek: Bike,
 };
 
 interface Summary {
@@ -87,11 +91,21 @@ function Index() {
   const [calculating, setCalculating] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
 
+  const [mode, setMode] = useState<"onbid" | "jastip">("onbid");
+  useEffect(() => {
+    const m = localStorage.getItem("seruit-mode");
+    if (m === "onbid" || m === "jastip") setMode(m);
+  }, []);
+  function changeMode(m: "onbid" | "jastip") {
+    setMode(m);
+    localStorage.setItem("seruit-mode", m);
+  }
+
   const publicSettings = useQuery({
     queryKey: ["public-app-settings"],
     queryFn: async () => {
       const { data, error } = await supabase.from("app_settings")
-        .select("base_fare, per_km, oversize_fee")
+        .select("base_fare, per_km, oversize_fee, ojek_base_fare, ojek_per_km")
         .eq("id", 1)
         .maybeSingle();
       if (error) throw error;
@@ -103,6 +117,14 @@ function Index() {
     perKm: Number(publicSettings.data?.per_km ?? PRICING.perKm),
     oversizeFee: Number(publicSettings.data?.oversize_fee ?? PRICING.oversizeFee),
   };
+  const isOjek = serviceId === "ojek";
+  const activeRates = isOjek
+    ? {
+        baseFare: Number(publicSettings.data?.ojek_base_fare ?? 3000),
+        perKm: Number(publicSettings.data?.ojek_per_km ?? 1500),
+        oversizeFee: 0,
+      }
+    : livePricing;
 
   const service = SERVICES.find((s) => s.id === serviceId)!;
   const originLabel =
