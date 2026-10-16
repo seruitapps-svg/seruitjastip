@@ -91,22 +91,22 @@ export function DriverJastipTrips({ driverId }: { driverId: string }) {
             <input type="datetime-local" className={inputCls} value={form.depart} onChange={(e) => setForm({ ...form, depart: e.target.value })} />
           </label>
           <div className="grid grid-cols-3 gap-2">
-            <label className="text-xs text-muted-foreground">Jenis slot
+            <label className="text-xs text-muted-foreground">Jenis muatan
               <select className={inputCls} value={form.slotType} onChange={(e) => setForm({ ...form, slotType: e.target.value })}>
-                <option value="paket">Paket</option>
-                <option value="kursi">Kursi</option>
+                <option value="paket">Paket titipan</option>
+                <option value="kursi">Kursi penumpang</option>
               </select>
             </label>
-            <label className="text-xs text-muted-foreground">Kuota
+            <label className="text-xs text-muted-foreground">Kapasitas/Kuota
               <input type="number" min={1} max={50} className={inputCls} value={form.quota} onChange={(e) => setForm({ ...form, quota: Number(e.target.value) })} />
             </label>
-            <label className="text-xs text-muted-foreground">Harga/slot
+            <label className="text-xs text-muted-foreground">Harga per {form.slotType === "kursi" ? "kursi" : "paket"}
               <input type="number" className={inputCls} value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} />
             </label>
           </div>
           {limits.data && (
             <p className="text-[11px] text-muted-foreground">
-              Harga per slot: {formatRupiah(limits.data.jastip_min_price)} – {formatRupiah(limits.data.jastip_max_price)}
+              Batas harga: {formatRupiah(limits.data.jastip_min_price)} – {formatRupiah(limits.data.jastip_max_price)}
             </p>
           )}
           <input className={inputCls} placeholder="Catatan (opsional)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} maxLength={300} />
@@ -124,7 +124,7 @@ export function DriverJastipTrips({ driverId }: { driverId: string }) {
               <div>
                 <div className="text-sm font-bold text-foreground">{t.origin_label} → {t.dest_label}</div>
                 <div className="text-xs text-muted-foreground">
-                  {formatDepart(t.depart_at)} · {slotTypeLabel(t.slot_type)} · {formatRupiah(t.price_per_slot)}/slot
+                  {formatDepart(t.depart_at)} · {slotTypeLabel(t.slot_type)} · {formatRupiah(t.price_per_slot)}/{t.slot_type === "kursi" ? "kursi" : "paket"}
                 </div>
               </div>
               <div className="text-right text-xs">
@@ -136,7 +136,7 @@ export function DriverJastipTrips({ driverId }: { driverId: string }) {
               <ul className="mt-2 space-y-1 rounded-lg bg-muted p-2 text-xs">
                 {bs.map((b) => (
                   <li key={b.id} className="flex justify-between gap-2">
-                    <span className="text-foreground">{b.contact_name} · {b.slots} slot · {b.contact_wa}{b.notes ? ` · ${b.notes}` : ""}</span>
+                    <span className="text-foreground">{b.contact_name} · {b.slots} {t.slot_type === "kursi" ? "kursi" : "paket"} · {b.contact_wa}{b.notes ? ` · ${b.notes}` : ""}</span>
                     <span className="shrink-0 text-muted-foreground">{formatRupiah(b.total)} {b.payment_method === "cod" ? "COD" : "TF"}</span>
                   </li>
                 ))}
