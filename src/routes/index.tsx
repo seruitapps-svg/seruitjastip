@@ -194,13 +194,13 @@ function Index() {
           destination: { lat: destination.lat, lng: destination.lng },
         },
       });
+      const dims = isOjek
+        ? { weightKg: 1, lengthCm: 1, widthCm: 1, heightCm: 1 }
+        : { weightKg: weight, lengthCm: length, widthCm: width, heightCm: height };
       const price = calculatePrice({
         distanceMeters: route.distanceMeters,
-        weightKg: weight,
-        lengthCm: length,
-        widthCm: width,
-        heightCm: height,
-      }, livePricing);
+        ...dims,
+      }, activeRates);
       setSummary({
         order: {
           serviceId,
@@ -210,11 +210,8 @@ function Index() {
           destAddress: destination.address,
           destLat: destination.lat,
           destLng: destination.lng,
-          itemDetail: itemDetail.trim(),
-          weightKg: weight,
-          lengthCm: length,
-          widthCm: width,
-          heightCm: height,
+          itemDetail: isOjek ? `Ojek penumpang${notes.trim() ? "" : ""}` : itemDetail.trim(),
+          ...dims,
           senderName: senderName.trim(),
           senderWa: senderWa.trim(),
           recipientName: recipientName.trim(),
