@@ -90,7 +90,7 @@ function OrderDetail() {
   const canChat = isOwner || isMyDriver || isAdmin;
   const orderWithShopContact = o as typeof o & { shop_wa?: string | null };
   const emergencyPhone = isMyDriver ? (orderWithShopContact.shop_wa || (o.service === "kirim" ? o.recipient_wa : null)) : null;
-  const cleanPhone = (phone: string) => phone.replace(/\\D/g, "").replace(/^0/, "62");
+  const cleanPhone = (phone: string) => phone.replace(/\D/g, "").replace(/^0/, "62");
   const emergencyMessage = `Halo, saya kurir Seruit mengantarkan pesanan dari ${o.sender_name}. Saya sudah di lokasi.`;
 
   async function act(fn: () => PromiseLike<{ error: { message: string } | null }>) {
