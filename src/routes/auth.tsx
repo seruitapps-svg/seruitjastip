@@ -95,26 +95,6 @@ function AuthPage() {
     }
   }
 
-  async function loginDemo(role: "driver" | "konsumen") {
-    setErr("");
-    setMsg("");
-    setBusy(true);
-    const targetEmail = role === "driver" ? "driver@seruit.test" : "konsumen@seruit.test";
-    const targetPass = role === "driver" ? "driver123" : "konsumen123";
-
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: targetEmail,
-        password: targetPass,
-      });
-      if (error) throw error;
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Gagal masuk akun uji coba.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function google() {
     setErr("");
     const res = await lovable.auth.signInWithOAuth("google", {
@@ -172,31 +152,6 @@ function AuthPage() {
           </button>
         </form>
 
-        {mode === "masuk" && (
-          <div className="mt-6 rounded-xl border border-dashed border-border bg-muted/30 p-3">
-            <p className="mb-2 text-center text-xs font-bold text-muted-foreground">
-              🧪 Mode Uji Coba (Testing Cepat)
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => loginDemo("driver")}
-                className="rounded-lg border border-border bg-card py-2 text-xs font-semibold text-foreground hover:bg-accent disabled:opacity-50"
-              >
-                🛵 Masuk sbg Driver
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => loginDemo("konsumen")}
-                className="rounded-lg border border-border bg-card py-2 text-xs font-semibold text-foreground hover:bg-accent disabled:opacity-50"
-              >
-                👤 Masuk sbg Konsumen
-              </button>
-            </div>
-          </div>
-        )}
 
         <div className="mt-4 flex justify-between text-xs">
           {mode === "masuk" ? (
