@@ -191,6 +191,25 @@ function AdminPage() {
     await qc.invalidateQueries({ queryKey: ["admin-orders"] });
   }
 
+  async function handleCleanTestData() {
+    const confirmed = window.confirm(
+      "PERINGATAN: Hapus seluruh data uji coba bertanda is_test = true? Tindakan ini permanen dan tidak dapat dibatalkan.",
+    );
+    if (!confirmed) return;
+
+    setBusy("clean-test-data");
+    const { error } = await supabase.rpc("admin_clean_test_data");
+    setBusy(null);
+
+    if (error) {
+      window.alert("Gagal membersihkan data uji coba: " + error.message);
+      return;
+    }
+
+    window.alert("Data uji coba berhasil dibersihkan.");
+    await qc.invalidateQueries();
+  }
+
   useEffect(() => {
     if (!isAdmin) return;
     const ch = supabase
@@ -279,7 +298,27 @@ function AdminPage() {
                 {financialOpen ? "Ringkas" : "Tampilkan"} {financialOpen ? <ChevronDown /> : <ChevronRight />}
               </Button>
             </div>
-            {financialOpen && <div id="admin-financial-summary"><AdminFinancialOverview /></div>}
+            {financialOpen && (
+              <div id="admin-financial-summary" className="space-y-4">
+                <AdminFinancialOverview />
+                <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 sm:p-4">
+                  <h3 className="text-sm font-bold text-foreground">Pembersihan Data Uji Coba</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    Menghapus transaksi uji coba yang sudah ditandai oleh database. Data transaksi nyata tidak ditargetkan oleh fungsi ini.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="mt-3 w-full sm:w-auto"
+                    disabled={busy !== null}
+                    onClick={handleCleanTestData}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {busy === "clean-test-data" ? "Membersihkan data..." : "Bersihkan Semua Data Uji Coba"}
+                  </Button>
+                </div>
+              </div>
+            )}
           </section>
         )}
         <div className="flex flex-wrap gap-2">
