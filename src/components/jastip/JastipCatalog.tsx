@@ -139,7 +139,7 @@ export function JastipCatalog() {
 
   function chooseService(service: ServiceType) {
     setSelectedService(service);
-    setSlots(1);
+    setSlotsInput("1");
     setErr("");
   }
 
@@ -188,10 +188,8 @@ export function JastipCatalog() {
       _dropoff_lat: dropoff.lat,
       _dropoff_lng: dropoff.lng,
       _is_for_other: isForOther,
-      _recipient_name: isForOther ? recipientName : null,
-      _recipient_wa: isForOther ? recipientWa : null,
-      _shop_name: selectedService === "belanja" ? shopName : null,
-      _shop_wa: selectedService === "belanja" ? shopWa : null,
+      ...(isForOther ? { _recipient_name: recipientName, _recipient_wa: recipientWa } : {}),
+      ...(selectedService === "belanja" ? { _shop_name: shopName, _shop_wa: shopWa } : {}),
     });
     setBusy(false);
     if (error) return setErr(error.message);

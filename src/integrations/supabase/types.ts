@@ -21,18 +21,13 @@ export type Database = {
           announcement_type: string
           base_fare: number
           commission_percent: number
-          onbid_base_fee: number
-          onbid_per_km: number
-          onbid_service_fee: number
-          onbid_driver_cut_pct: number
           id: number
           jastip_commission_percent: number
-          jastip_driver_cut_pct: number
-          jastip_nebeng_fee: number
-          jastip_package_fee: number
-          jastip_service_fee: number
           jastip_max_price: number
           jastip_min_price: number
+          jastip_nebeng_fee: number | null
+          jastip_package_fee: number
+          jastip_service_fee: number
           ojek_base_fare: number
           ojek_per_km: number
           oversize_fee: number
@@ -45,18 +40,13 @@ export type Database = {
           announcement_type?: string
           base_fare?: number
           commission_percent?: number
-          onbid_base_fee?: number
-          onbid_per_km?: number
-          onbid_service_fee?: number
-          onbid_driver_cut_pct?: number
           id?: number
           jastip_commission_percent?: number
-          jastip_driver_cut_pct?: number
-          jastip_nebeng_fee?: number
-          jastip_package_fee?: number
-          jastip_service_fee?: number
           jastip_max_price?: number
           jastip_min_price?: number
+          jastip_nebeng_fee?: number | null
+          jastip_package_fee?: number
+          jastip_service_fee?: number
           ojek_base_fare?: number
           ojek_per_km?: number
           oversize_fee?: number
@@ -69,18 +59,13 @@ export type Database = {
           announcement_type?: string
           base_fare?: number
           commission_percent?: number
-          onbid_base_fee?: number
-          onbid_per_km?: number
-          onbid_service_fee?: number
-          onbid_driver_cut_pct?: number
           id?: number
           jastip_commission_percent?: number
-          jastip_driver_cut_pct?: number
-          jastip_nebeng_fee?: number
-          jastip_package_fee?: number
-          jastip_service_fee?: number
           jastip_max_price?: number
           jastip_min_price?: number
+          jastip_nebeng_fee?: number | null
+          jastip_package_fee?: number
+          jastip_service_fee?: number
           ojek_base_fare?: number
           ojek_per_km?: number
           oversize_fee?: number
@@ -91,6 +76,7 @@ export type Database = {
       }
       driver_profiles: {
         Row: {
+          accepts_ojek: boolean
           admin_note: string | null
           created_at: string
           full_name: string
@@ -101,7 +87,6 @@ export type Database = {
           photo_selfie: string | null
           photo_sim: string | null
           photo_vehicle: string | null
-          accepts_ojek: boolean
           status: Database["public"]["Enums"]["driver_registration_status"]
           updated_at: string
           user_id: string
@@ -109,6 +94,7 @@ export type Database = {
           vehicle_type: string
         }
         Insert: {
+          accepts_ojek?: boolean
           admin_note?: string | null
           created_at?: string
           full_name: string
@@ -119,7 +105,6 @@ export type Database = {
           photo_selfie?: string | null
           photo_sim?: string | null
           photo_vehicle?: string | null
-          accepts_ojek?: boolean
           status?: Database["public"]["Enums"]["driver_registration_status"]
           updated_at?: string
           user_id: string
@@ -127,6 +112,7 @@ export type Database = {
           vehicle_type: string
         }
         Update: {
+          accepts_ojek?: boolean
           admin_note?: string | null
           created_at?: string
           full_name?: string
@@ -137,7 +123,6 @@ export type Database = {
           photo_selfie?: string | null
           photo_sim?: string | null
           photo_vehicle?: string | null
-          accepts_ojek?: boolean
           status?: Database["public"]["Enums"]["driver_registration_status"]
           updated_at?: string
           user_id?: string
@@ -233,36 +218,34 @@ export type Database = {
       jastip_bookings: {
         Row: {
           code: string
+          commission_percent: number
           contact_name: string
           contact_wa: string
-          customer_name: string
-          customer_wa: string
-          total_price: number
           created_at: string
           depart_at: string
           dest_label: string
-          id: string
-          notes: string
-          origin_label: string
-          pickup_address: string
-          pickup_lat: number | null
-          pickup_lng: number | null
+          driver_commission: number
+          driver_net: number
           dropoff_address: string
           dropoff_lat: number | null
           dropoff_lng: number | null
+          id: string
+          is_for_other: boolean | null
+          is_test: boolean | null
+          notes: string
+          origin_label: string
           package_subtotal: number
-          service_fee: number
-          commission_percent: number
-          driver_commission: number
-          driver_net: number
-          service_type: string
-          is_for_other: boolean
+          payment_method: string
+          pickup_address: string
+          pickup_lat: number | null
+          pickup_lng: number | null
+          price_per_slot: number
           recipient_name: string | null
           recipient_wa: string | null
+          service_fee: number
+          service_type: string | null
           shop_name: string | null
           shop_wa: string | null
-          payment_method: string
-          price_per_slot: number
           slot_type: string
           slots: number
           status: string
@@ -272,36 +255,34 @@ export type Database = {
         }
         Insert: {
           code?: string
+          commission_percent?: number
           contact_name: string
           contact_wa: string
-          customer_name?: string
-          customer_wa?: string
-          total_price?: number
           created_at?: string
           depart_at: string
           dest_label: string
-          id?: string
-          notes?: string
-          origin_label: string
-          pickup_address?: string
-          pickup_lat?: number | null
-          pickup_lng?: number | null
+          driver_commission?: number
+          driver_net?: number
           dropoff_address?: string
           dropoff_lat?: number | null
           dropoff_lng?: number | null
+          id?: string
+          is_for_other?: boolean | null
+          is_test?: boolean | null
+          notes?: string
+          origin_label: string
           package_subtotal?: number
-          service_fee?: number
-          commission_percent?: number
-          driver_commission?: number
-          driver_net?: number
-          service_type?: string
-          is_for_other?: boolean
+          payment_method: string
+          pickup_address?: string
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          price_per_slot: number
           recipient_name?: string | null
           recipient_wa?: string | null
+          service_fee?: number
+          service_type?: string | null
           shop_name?: string | null
           shop_wa?: string | null
-          payment_method: string
-          price_per_slot: number
           slot_type: string
           slots: number
           status?: string
@@ -311,36 +292,34 @@ export type Database = {
         }
         Update: {
           code?: string
+          commission_percent?: number
           contact_name?: string
           contact_wa?: string
-          customer_name?: string
-          customer_wa?: string
-          total_price?: number
           created_at?: string
           depart_at?: string
           dest_label?: string
-          id?: string
-          notes?: string
-          origin_label?: string
-          pickup_address?: string
-          pickup_lat?: number | null
-          pickup_lng?: number | null
+          driver_commission?: number
+          driver_net?: number
           dropoff_address?: string
           dropoff_lat?: number | null
           dropoff_lng?: number | null
+          id?: string
+          is_for_other?: boolean | null
+          is_test?: boolean | null
+          notes?: string
+          origin_label?: string
           package_subtotal?: number
-          service_fee?: number
-          commission_percent?: number
-          driver_commission?: number
-          driver_net?: number
-          service_type?: string
-          is_for_other?: boolean
+          payment_method?: string
+          pickup_address?: string
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          price_per_slot?: number
           recipient_name?: string | null
           recipient_wa?: string | null
+          service_fee?: number
+          service_type?: string | null
           shop_name?: string | null
           shop_wa?: string | null
-          payment_method?: string
-          price_per_slot?: number
           slot_type?: string
           slots?: number
           status?: string
@@ -365,7 +344,12 @@ export type Database = {
           depart_at: string
           dest_label: string
           driver_id: string
+          enable_nebeng: boolean | null
           id: string
+          is_test: boolean | null
+          nebeng_booked: number | null
+          nebeng_price: number | null
+          nebeng_quota: number | null
           notes: string
           origin_label: string
           price_per_slot: number
@@ -373,13 +357,6 @@ export type Database = {
           slot_type: string
           status: string
           updated_at: string
-          origin_area: string
-          dest_area: string
-          booked_slots: number
-          enable_nebeng: boolean
-          nebeng_quota: number
-          nebeng_booked: number
-          nebeng_price: number
         }
         Insert: {
           booked?: number
@@ -387,7 +364,12 @@ export type Database = {
           depart_at: string
           dest_label: string
           driver_id: string
+          enable_nebeng?: boolean | null
           id?: string
+          is_test?: boolean | null
+          nebeng_booked?: number | null
+          nebeng_price?: number | null
+          nebeng_quota?: number | null
           notes?: string
           origin_label: string
           price_per_slot: number
@@ -395,13 +377,6 @@ export type Database = {
           slot_type: string
           status?: string
           updated_at?: string
-          origin_area?: string
-          dest_area?: string
-          booked_slots?: number
-          enable_nebeng?: boolean
-          nebeng_quota?: number
-          nebeng_booked?: number
-          nebeng_price?: number
         }
         Update: {
           booked?: number
@@ -409,7 +384,12 @@ export type Database = {
           depart_at?: string
           dest_label?: string
           driver_id?: string
+          enable_nebeng?: boolean | null
           id?: string
+          is_test?: boolean | null
+          nebeng_booked?: number | null
+          nebeng_price?: number | null
+          nebeng_quota?: number | null
           notes?: string
           origin_label?: string
           price_per_slot?: number
@@ -417,13 +397,6 @@ export type Database = {
           slot_type?: string
           status?: string
           updated_at?: string
-          origin_area?: string
-          dest_area?: string
-          booked_slots?: number
-          enable_nebeng?: boolean
-          nebeng_quota?: number
-          nebeng_booked?: number
-          nebeng_price?: number
         }
         Relationships: []
       }
@@ -524,6 +497,7 @@ export type Database = {
           fee_charged: boolean
           height_cm: number
           id: string
+          is_test: boolean | null
           item_detail: string
           length_cm: number
           monetization_version: number
@@ -570,6 +544,7 @@ export type Database = {
           fee_charged?: boolean
           height_cm: number
           id?: string
+          is_test?: boolean | null
           item_detail: string
           length_cm: number
           monetization_version?: number
@@ -616,6 +591,7 @@ export type Database = {
           fee_charged?: boolean
           height_cm?: number
           id?: string
+          is_test?: boolean | null
           item_detail?: string
           length_cm?: number
           monetization_version?: number
@@ -827,6 +803,7 @@ export type Database = {
         Args: { _amount: number; _driver_id: string; _note?: string }
         Returns: number
       }
+      admin_clean_test_data: { Args: never; Returns: undefined }
       admin_delete_order: { Args: { _order_id: string }; Returns: undefined }
       admin_delete_user: {
         Args: { _target_user_id: string }
@@ -871,37 +848,78 @@ export type Database = {
         }
         Returns: undefined
       }
-      admin_update_mode_settings: {
-        Args: {
-          _jastip_commission_percent: number
-          _jastip_package_fee: number
-          _jastip_service_fee: number
-          _ojek_base_fare: number
-          _ojek_per_km: number
-        }
-        Returns: undefined
-      }
-      book_jastip_slot: {
-        Args: {
-          _dropoff_address?: string
-          _dropoff_lat?: number
-          _dropoff_lng?: number
-          _is_for_other?: boolean
-          _notes?: string
-          _payment?: string
-          _pickup_address?: string
-          _pickup_lat?: number
-          _pickup_lng?: number
-          _recipient_name?: string
-          _recipient_wa?: string
-          _service_type?: string
-          _shop_name?: string
-          _shop_wa?: string
-          _slots?: number
-          _trip_id: string
-        }
-        Returns: string
-      }
+      admin_update_mode_settings:
+        | {
+            Args: {
+              _jastip_max_price: number
+              _jastip_min_price: number
+              _ojek_base_fare: number
+              _ojek_per_km: number
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _jastip_commission_percent: number
+              _jastip_package_fee: number
+              _jastip_service_fee: number
+              _ojek_base_fare: number
+              _ojek_per_km: number
+            }
+            Returns: undefined
+          }
+      book_jastip_slot:
+        | {
+            Args: {
+              _dropoff_address?: string
+              _dropoff_lat?: number
+              _dropoff_lng?: number
+              _is_for_other?: boolean
+              _notes?: string
+              _payment?: string
+              _pickup_address?: string
+              _pickup_lat?: number
+              _pickup_lng?: number
+              _recipient_name?: string
+              _recipient_wa?: string
+              _service_type?: string
+              _shop_name?: string
+              _shop_wa?: string
+              _slots?: number
+              _trip_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _dropoff_address?: string
+              _name: string
+              _notes: string
+              _payment: string
+              _pickup_address?: string
+              _slots: number
+              _trip_id: string
+              _wa: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _dropoff_address?: string
+              _dropoff_lat?: number
+              _dropoff_lng?: number
+              _name: string
+              _notes: string
+              _payment: string
+              _pickup_address: string
+              _pickup_lat?: number
+              _pickup_lng?: number
+              _slots: number
+              _trip_id: string
+              _wa: string
+            }
+            Returns: string
+          }
       can_access_order: { Args: { _order_id: string }; Returns: boolean }
       cancel_jastip_booking: {
         Args: { _booking_id: string }
@@ -919,18 +937,17 @@ export type Database = {
         Args: {
           _depart_at: string
           _dest: string
-          _notes: string
-          _origin: string
-          _price: number
-          _quota: number
-          _slot_type: string
           _enable_nebeng?: boolean
-          _nebeng_quota?: number
           _nebeng_price?: number
+          _nebeng_quota?: number
+          _notes?: string
+          _origin: string
+          _price?: number
+          _quota?: number
+          _slot_type?: string
         }
         Returns: string
       }
-      driver_toggle_ojek: { Args: { _enabled: boolean }; Returns: undefined }
       driver_request_withdrawal: { Args: { _amount: number }; Returns: string }
       driver_set_bank_account: {
         Args: {
@@ -945,6 +962,7 @@ export type Database = {
         Returns: undefined
       }
       driver_take_order: { Args: { _order_id: string }; Returns: undefined }
+      driver_toggle_ojek: { Args: { _enabled: boolean }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -965,20 +983,20 @@ export type Database = {
       jastip_catalog: {
         Args: never
         Returns: {
-          id: string
-          origin_area: string
-          dest_area: string
-          depart_at: string
-          slot_type: string
-          quota: number
           booked_slots: number
-          price_per_slot: number
-          notes: string
-          status: string
+          depart_at: string
+          dest_area: string
           enable_nebeng: boolean
-          nebeng_quota: number
+          id: string
           nebeng_booked: number
           nebeng_price: number
+          nebeng_quota: number
+          notes: string
+          origin_area: string
+          price_per_slot: number
+          quota: number
+          slot_type: string
+          status: string
         }[]
       }
       order_app_fee: { Args: { _total: number }; Returns: number }
