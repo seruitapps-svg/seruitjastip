@@ -10,13 +10,13 @@ import { WalletPanel } from "@/components/wallet/WalletPanel";
 import { DriverEarningsSettings } from "@/components/driver/DriverEarningsSettings";
 import { DriverJastipTrips } from "@/components/jastip/DriverJastipTrips";
 import { formatRupiah } from "@/lib/config";
-import { Zap, Calendar, Wallet, Bike, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Zap, Calendar, Wallet, Bike, AlertCircle, ChevronDown, ChevronUp, Power, Coffee } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/driver")({
   head: () => ({
     meta: [
       { title: "Dashboard Driver — Seruit" },
-      { name: "description", content: "Panel kerja driver Seruit: order instan, jastip, dan dompet." },
+      { name: "description", content: "Panel kerja driver Seruit: order instan, jastip, dan status kerja." },
     ],
   }),
   component: DriverPage,
@@ -33,22 +33,44 @@ function DriverPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
 
-  // Profil driver & status ojek
+  // Profil driver (status online & accepts_ojek)
   const driverProfile = useQuery({
     queryKey: ["my-driver-profile", user?.id],
     enabled: isDriver && !!user,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("driver_profiles")
-        .select("accepts_ojek")
+        .select("accepts_ojek, is_online")
         .eq("user_id", user!.id)
         .maybeSingle();
       if (error) throw error;
-      return data;
+      return data as { accepts_ojek: boolean; is_online?: boolean } | null;
     },
   });
 
-  // Saldo driver ringkas untuk header
+  const isOnline = driverProfile.data?.is_online !== false;
+
+  async function toggleOnline(val: boolean) {
+    setErr("");
+    const { error } = await supabase.rpc("driver_toggle_online", { _enabled: val });
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    qc.invalidateQueries({ queryKey: ["my-driver-profile"] });
+  }
+
+  async function toggleOjek(val: boolean) {
+    setErr("");
+    const { error } = await supabase.rpc("driver_toggle_ojek", { _enabled: val });
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    qc.invalidateQueries({ queryKey: ["my-driver-profile"] });
+  }
+
+  // Ringkasan saldo cepat
   const driverWallet = useQuery({
     queryKey: ["driver-wallet-header", user?.id],
     enabled: isDriver && !!user,
@@ -62,15 +84,6 @@ function DriverPage() {
       return data;
     },
   });
-
-  async function toggleOjek(val: boolean) {
-    const { error } = await supabase.rpc("driver_toggle_ojek", { _enabled: val });
-    if (error) {
-      setErr(error.message);
-      return;
-    }
-    qc.invalidateQueries({ queryKey: ["my-driver-profile"] });
-  }
 
   // Pool order siap jalan
   const pool = useQuery({
@@ -117,6 +130,9 @@ function DriverPage() {
         qc.invalidateQueries({ queryKey: ["wallet"] });
         qc.invalidateQueries({ queryKey: ["driver-wallet-earnings"] });
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_profiles" }, () => {
+        qc.invalidateQueries({ queryKey: ["my-driver-profile"] });
+      })
       .subscribe();
 
     return () => {
@@ -147,7 +163,7 @@ function DriverPage() {
           <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground/60" />
           <h2 className="mt-4 text-base font-bold text-foreground">Halaman Khusus Driver</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Akun Anda belum terdaftar sebagai driver aktif. Hubungi admin untuk mengaktifkan akun.
+            Akun Anda belum terdaftar sebagai driver aktif.
           </p>
         </div>
       </div>
@@ -170,17 +186,36 @@ function DriverPage() {
           </div>
         )}
 
-        {/* 1. Bar Status & Saldo Cepat */}
+        {/* 1. Bar Status Kerja & Saldo Cepat */}
         <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
-              </span>
-              <span className="text-xs font-bold text-foreground">Driver Online</span>
-            </div>
+            {/* Toggle Siap Kerja / Istirahat */}
+            <button
+              onClick={() => toggleOnline(!isOnline)}
+              disabled={driverProfile.isLoading}
+              className={`flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+                isOnline
+                  ? "bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25 dark:text-emerald-400"
+                  : "bg-amber-500/15 text-amber-600 hover:bg-amber-500/25 dark:text-amber-400"
+              }`}
+            >
+              {isOnline ? (
+                <>
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                  </span>
+                  <span>Siap Kerja (Online)</span>
+                </>
+              ) : (
+                <>
+                  <Coffee className="h-3.5 w-3.5" />
+                  <span>Istirahat (Offline)</span>
+                </>
+              )}
+            </button>
 
+            {/* Toggle Ojek Penumpang */}
             <button
               onClick={() => toggleOjek(!driverProfile.data?.accepts_ojek)}
               disabled={driverProfile.isLoading}
@@ -195,6 +230,15 @@ function DriverPage() {
             </button>
           </div>
 
+          {/* Banner Peringatan jika Driver sedang Istirahat */}
+          {!isOnline && (
+            <div className="mt-3 flex items-center gap-2 rounded-xl bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-400">
+              <Coffee className="h-4 w-4 shrink-0" />
+              <span>Anda sedang istirahat. Klik tombol status di atas untuk mulai menerima order.</span>
+            </div>
+          )}
+
+          {/* Saldo Cepat */}
           <div className="mt-3 grid grid-cols-2 gap-3 text-left">
             <div
               onClick={() => setActiveTab("wallet")}
@@ -218,14 +262,12 @@ function DriverPage() {
           </div>
         </section>
 
-        {/* 2. Tugas Berjalan (Aktif) Prioritas Utama */}
+        {/* 2. Tugas Berjalan (Aktif) */}
         {active.length > 0 && (
           <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-primary">
-                Tugas Berjalan ({active.length})
-              </h2>
-            </div>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-primary">
+              Tugas Berjalan ({active.length})
+            </h2>
             {active.map((o) => (
               <div key={o.id} className="rounded-2xl border-2 border-primary/40 bg-card p-1 shadow-sm">
                 <OrderCard
@@ -287,7 +329,7 @@ function DriverPage() {
           </button>
         </div>
 
-        {/* TAB 1: Order Langsung (On-Bid Pool) */}
+        {/* TAB 1: Order Langsung */}
         {activeTab === "onbid" && (
           <div className="space-y-4">
             <section className="space-y-3">
@@ -309,12 +351,12 @@ function DriverPage() {
                     actions={
                       <button
                         className={btnPrimary}
-                        disabled={busy === o.id}
+                        disabled={busy === o.id || !isOnline}
                         onClick={() =>
                           run(o.id, async () => supabase.rpc("driver_take_order", { _order_id: o.id }), true)
                         }
                       >
-                        Ambil Order Ini
+                        {isOnline ? "Ambil Order Ini" : "Sedang Istirahat"}
                       </button>
                     }
                   />
@@ -322,7 +364,7 @@ function DriverPage() {
               )}
             </section>
 
-            {/* Riwayat Order Selesai (Bisa dilipat) */}
+            {/* Riwayat Selesai */}
             {done.length > 0 && (
               <section className="rounded-2xl border border-border bg-card p-3">
                 <button
@@ -344,14 +386,14 @@ function DriverPage() {
           </div>
         )}
 
-        {/* TAB 2: Jastip Rute Terjadwal */}
+        {/* TAB 2: Jastip Terjadwal */}
         {activeTab === "jastip" && user && (
           <div className="space-y-4">
             <DriverJastipTrips driverId={user.id} />
           </div>
         )}
 
-        {/* TAB 3: Dompet & Rekening */}
+        {/* TAB 3: Dompet */}
         {activeTab === "wallet" && user && (
           <div className="space-y-5">
             <DriverEarningsSettings driverId={user.id} />
