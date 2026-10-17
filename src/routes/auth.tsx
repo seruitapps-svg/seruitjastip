@@ -95,26 +95,6 @@ function AuthPage() {
     }
   }
 
-  async function loginDemo(role: "driver" | "konsumen") {
-    setErr("");
-    setMsg("");
-    setBusy(true);
-    const targetEmail = role === "driver" ? "driver@seruit.test" : "konsumen@seruit.test";
-    const targetPass = role === "driver" ? "driver123" : "konsumen123";
-
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: targetEmail,
-        password: targetPass,
-      });
-      if (error) throw error;
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Gagal masuk akun uji coba.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function google() {
     setErr("");
     const res = await lovable.auth.signInWithOAuth("google", {
