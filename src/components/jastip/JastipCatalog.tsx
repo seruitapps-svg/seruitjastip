@@ -188,10 +188,8 @@ export function JastipCatalog() {
       _dropoff_lat: dropoff.lat,
       _dropoff_lng: dropoff.lng,
       _is_for_other: isForOther,
-      _recipient_name: isForOther ? recipientName : undefined,
-      _recipient_wa: isForOther ? recipientWa : undefined,
-      _shop_name: selectedService === "belanja" ? shopName : undefined,
-      _shop_wa: selectedService === "belanja" ? shopWa : undefined,
+      ...(isForOther ? { _recipient_name: recipientName, _recipient_wa: recipientWa } : {}),
+      ...(selectedService === "belanja" ? { _shop_name: shopName, _shop_wa: shopWa } : {}),
     });
     setBusy(false);
     if (error) return setErr(error.message);
