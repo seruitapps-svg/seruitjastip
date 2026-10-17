@@ -60,24 +60,29 @@ function AuthPage() {
     setErr("");
     setMsg("");
     setBusy(true);
+
+    let loginEmail = email.trim().toLowerCase();
+    if (loginEmail === "driver") loginEmail = "driver@seruit.test";
+    if (loginEmail === "konsumen") loginEmail = "konsumen@seruit.test";
+
     try {
       if (mode === "masuk") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
         if (error) throw error;
       } else if (mode === "daftar") {
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: loginEmail,
           password,
           options: { emailRedirectTo: window.location.origin, data: { full_name: name } },
         });
         if (error) throw error;
         if (!data.session) {
           // Fallback bila sesi belum terbentuk: langsung coba masuk
-          const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+          const { error: signInErr } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
           if (signInErr) throw signInErr;
         }
       } else {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        const { error } = await supabase.auth.resetPasswordForEmail(loginEmail, {
           redirectTo: `${window.location.origin}/reset-password`,
         });
         if (error) throw error;
@@ -85,6 +90,26 @@ function AuthPage() {
       }
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Terjadi kesalahan.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function loginDemo(role: "driver" | "konsumen") {
+    setErr("");
+    setMsg("");
+    setBusy(true);
+    const targetEmail = role === "driver" ? "driver@seruit.test" : "konsumen@seruit.test";
+    const targetPass = role === "driver" ? "driver123" : "konsumen123";
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: targetEmail,
+        password: targetPass,
+      });
+      if (error) throw error;
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Gagal masuk akun uji coba.");
     } finally {
       setBusy(false);
     }
@@ -126,7 +151,17 @@ function AuthPage() {
           {mode === "daftar" && (
             <input className={inputCls} placeholder="Nama lengkap" value={name} onChange={(e) => setName(e.target.value)} required maxLength={60} />
           )}
-          <input className={inputCls} type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <label className="block text-xs font-semibold text-foreground">
+            Email atau Username
+            <input
+              className={`${inputCls} mt-1`}
+              type="text"
+              placeholder="driver / konsumen / email Anda"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </label>
           {mode !== "lupa" && (
             <input className={inputCls} type="password" placeholder="Kata sandi (min. 6 karakter)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
           )}
@@ -136,6 +171,32 @@ function AuthPage() {
             {busy ? "Memproses…" : mode === "masuk" ? "Masuk" : mode === "daftar" ? "Daftar" : "Kirim link reset"}
           </button>
         </form>
+
+        {mode === "masuk" && (
+          <div className="mt-6 rounded-xl border border-dashed border-border bg-muted/30 p-3">
+            <p className="mb-2 text-center text-xs font-bold text-muted-foreground">
+              🧪 Mode Uji Coba (Testing Cepat)
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => loginDemo("driver")}
+                className="rounded-lg border border-border bg-card py-2 text-xs font-semibold text-foreground hover:bg-accent disabled:opacity-50"
+              >
+                🛵 Masuk sbg Driver
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => loginDemo("konsumen")}
+                className="rounded-lg border border-border bg-card py-2 text-xs font-semibold text-foreground hover:bg-accent disabled:opacity-50"
+              >
+                👤 Masuk sbg Konsumen
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="mt-4 flex justify-between text-xs">
           {mode === "masuk" ? (
