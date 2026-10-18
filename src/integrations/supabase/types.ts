@@ -81,6 +81,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          is_online: boolean
           nik: string
           phone: string
           photo_ktp: string | null
@@ -99,6 +100,7 @@ export type Database = {
           created_at?: string
           full_name: string
           id?: string
+          is_online?: boolean
           nik: string
           phone: string
           photo_ktp?: string | null
@@ -117,6 +119,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          is_online?: boolean
           nik?: string
           phone?: string
           photo_ktp?: string | null
@@ -963,6 +966,7 @@ export type Database = {
       }
       driver_take_order: { Args: { _order_id: string }; Returns: undefined }
       driver_toggle_ojek: { Args: { _enabled: boolean }; Returns: undefined }
+      driver_toggle_online: { Args: { _enabled: boolean }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
