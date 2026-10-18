@@ -146,6 +146,41 @@ function Index() {
 
   // Form states
   const [origin, setOrigin] = useState<SelectedPlace | null>(null);
+  const [selectedRestoId, setSelectedRestoId] = useState<string | null>(null);
+
+  const pointRestos = useQuery({
+    queryKey: ["point-restos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("merchants")
+        .select("id, name, address, latitude, longitude, image_url")
+        .eq("type", "point_resto")
+        .eq("is_open", true)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: selectedService === "food",
+  });
+
+  function pickResto(resto: {
+    id: string;
+    name: string;
+    address: string;
+    latitude: number | null;
+    longitude: number | null;
+  }) {
+    setSelectedRestoId(resto.id);
+    if (resto.latitude != null && resto.longitude != null) {
+      setOrigin({
+        address: `${resto.name} — ${resto.address}`,
+        lat: resto.latitude,
+        lng: resto.longitude,
+      });
+    } else {
+      setOrigin(null);
+    }
+  }
   const [destination, setDestination] = useState<SelectedPlace | null>(null);
   const [itemDetail, setItemDetail] = useState("");
   const [weightKg, setWeightKg] = useState("1");
