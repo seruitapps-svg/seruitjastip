@@ -103,7 +103,7 @@ const ONBID_SERVICES: MenuCategory[] = [
     id: "pickup",
     name: "Pick Up",
     description: "Layanan angkut barang besar, kargo, atau pindahan rumah/toko.",
-    badge: "Cargo",
+    badge: "Kargo",
     icon: Truck,
     isActionable: true,
   },
@@ -119,7 +119,7 @@ const ONBID_SERVICES: MenuCategory[] = [
     id: "digistore",
     name: "Digistore",
     description: "Beli pulsa, paket kuota internet, voucher, dan token listrik PLN instan.",
-    badge: "Segera Hadir",
+    badge: "Next",
     icon: Smartphone,
     isActionable: false,
   },
@@ -449,16 +449,33 @@ function Index() {
           </div>
         </div>
 
-        {/* Hero Banner */}
+        {/* Hero Catchy dengan Aksen Hijau */}
         <section className="py-5 text-center">
-          <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
-            {mode === "onbid" ? "Mau diantar kemana hari ini?" : "Jastip Terjadwal Antar Wilayah"}
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+            {mode === "onbid" ? (
+              <>
+                Mau diantar kemana,
+                <br />
+                <span className="text-primary">hari ini?</span>
+              </>
+            ) : (
+              <>
+                Jastip terjadwal,
+                <br />
+                <span className="text-primary">pesan tiket & titipan.</span>
+              </>
+            )}
           </h1>
-          <p className="mx-auto mt-1 max-w-md text-xs text-muted-foreground sm:text-sm">
+          <p className="mx-auto mt-2 max-w-md text-xs sm:text-sm text-muted-foreground leading-relaxed">
             {mode === "onbid"
-              ? "Pilih layanan di bawah untuk langsung hitung estimasi ongkir otomatis."
-              : "Pesan titipan barang atau tiket penumpang pada jadwal driver yang tersedia."}
+              ? "Kirim paket, belanja, ojek, car, atau food — estimasi tarif instan, langsung dicarikan driver."
+              : "Pilih rute & jadwal driver yang siap jalan, pesan kuota paket atau kursi penumpang."}
           </p>
+          {mode === "onbid" && (
+            <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/25 px-3.5 py-1 text-xs font-semibold text-primary">
+              Tarif dasar: {formatRupiah(activeRates.baseFare)} + {formatRupiah(activeRates.perKm)}/km
+            </div>
+          )}
         </section>
 
         {mode === "jastip" ? (
@@ -480,9 +497,9 @@ function Index() {
                           className="group flex flex-col items-center text-center transition-transform active:scale-95"
                         >
                           <div className="relative flex h-12 w-12 sm:h-13 sm:w-13 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                            <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+                            <Icon className="h-7 w-7 sm:h-8 sm:w-8 transition-transform group-hover:scale-105" />
                             {srv.badge && (
-                              <span className="absolute -top-1 -right-1 rounded-full bg-primary px-1.5 py-0.2 text-[8px] sm:text-[9px] font-bold text-primary-foreground shadow-sm">
+                              <span className="absolute -top-1 -right-1 rounded-full bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.2 text-[8px] sm:text-[9px] font-semibold backdrop-blur-xs">
                                 {srv.badge}
                               </span>
                             )}
