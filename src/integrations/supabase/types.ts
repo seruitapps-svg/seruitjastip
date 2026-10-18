@@ -403,6 +403,54 @@ export type Database = {
         }
         Relationships: []
       }
+      merchants: {
+        Row: {
+          address: string
+          commission_percent: number
+          created_at: string
+          id: string
+          image_url: string | null
+          is_open: boolean
+          latitude: number | null
+          longitude: number | null
+          name: string
+          opening_hours: string | null
+          phone_wa: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          commission_percent?: number
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_open?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          opening_hours?: string | null
+          phone_wa?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          commission_percent?: number
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_open?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          opening_hours?: string | null
+          phone_wa?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_messages: {
         Row: {
           body: string
