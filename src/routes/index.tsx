@@ -40,11 +40,11 @@ import type { OrderData } from "@/lib/wa-message";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Mider — Jasa Titip, Kirim & Transportasi" },
+      { title: "Mider — Metro Jastip Order | Titip, Kirim & Transportasi" },
       {
         name: "description",
         content:
-          "Layanan On-Bid instan dan Jastip terjadwal. Kirim barang, belanja, ojek, car, dan pickup dengan tarif transparan.",
+          "Mider (Metro Jastip Order): layanan On-Bid instan dan Jastip terjadwal. Kirim barang, belanja, ojek, car, dan pickup dengan tarif transparan.",
       },
     ],
   }),
