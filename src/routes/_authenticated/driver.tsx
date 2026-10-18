@@ -15,8 +15,8 @@ import { Zap, Calendar, Wallet, Bike, AlertCircle, ChevronDown, ChevronUp, Power
 export const Route = createFileRoute("/_authenticated/driver")({
   head: () => ({
     meta: [
-      { title: "Dashboard Driver — Seruit" },
-      { name: "description", content: "Panel kerja driver Seruit: order instan, jastip, dan status kerja." },
+      { title: "Dashboard Driver — Mider" },
+      { name: "description", content: "Panel kerja driver Mider: order instan, jastip, dan status kerja." },
     ],
   }),
   component: DriverPage,

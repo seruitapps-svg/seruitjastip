@@ -78,13 +78,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Seruit — Jasa Titip, Kirim & Belanja" },
+      { title: "Mider — Jasa Titip, Kirim & Belanja" },
       {
         name: "description",
         content:
           "Pesan jasa titip, kirim barang, dan belanja dengan ongkir transparan. Hitung jarak & estimasi harga otomatis, order langsung via WhatsApp.",
       },
-      { property: "og:title", content: "Seruit — Jasa Titip, Kirim & Belanja" },
+      { property: "og:title", content: "Mider — Jasa Titip, Kirim & Belanja" },
       {
         property: "og:description",
         content:

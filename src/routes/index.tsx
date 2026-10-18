@@ -40,7 +40,7 @@ import type { OrderData } from "@/lib/wa-message";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Seruit — Jasa Titip, Kirim & Transportasi" },
+      { title: "Mider — Jasa Titip, Kirim & Transportasi" },
       {
         name: "description",
         content:
@@ -93,7 +93,7 @@ const ONBID_SERVICES: MenuCategory[] = [
   },
   {
     id: "car",
-    name: "Seruit Car",
+    name: "Mider Car",
     description: "Taksi mobil penumpang nyaman untuk perjalanan sendiri atau rombongan.",
     badge: "Mobil",
     icon: Car,
@@ -341,7 +341,7 @@ function Index() {
         isOjek
           ? "Ojek Motor (1 Penumpang)"
           : isCar
-          ? "Seruit Car (Taksi Penumpang Mobil)"
+          ? "Mider Car (Taksi Penumpang Mobil)"
           : itemDetail.trim();
 
       // Mapping fallback service id yang didukung createOrder
@@ -908,7 +908,7 @@ function Index() {
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                 <Smartphone className="h-7 w-7" />
               </div>
-              <h3 className="mt-3 text-base font-bold text-foreground">Seruit Digistore</h3>
+              <h3 className="mt-3 text-base font-bold text-foreground">Mider Digistore</h3>
               <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
                 Layanan pembelian pulsa, paket data, voucher game, dan token listrik PLN sedang dalam tahap integrasi PPOB dan akan segera aktif.
               </p>

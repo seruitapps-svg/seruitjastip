@@ -75,7 +75,7 @@ export function AdminFinancialOverview() {
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
           <div className="mb-2 flex items-center justify-between gap-2">
             <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-700">
-              <TrendingUp className="h-4 w-4" /> Pendapatan Aplikasi Seruit
+              <TrendingUp className="h-4 w-4" /> Pendapatan Aplikasi Mider
             </span>
             <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">Hak Aplikasi</span>
           </div>

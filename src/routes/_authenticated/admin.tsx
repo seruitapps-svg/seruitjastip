@@ -16,10 +16,10 @@ import { AdminModeSettings } from "@/components/admin/AdminModeSettings";
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
     meta: [
-      { title: "Dashboard Admin — Seruit" },
-      { name: "description", content: "Verifikasi pesanan dan kelola akun driver Seruit." },
-      { property: "og:title", content: "Dashboard Admin — Seruit" },
-      { property: "og:description", content: "Verifikasi pesanan Seruit." },
+      { title: "Dashboard Admin — Mider" },
+      { name: "description", content: "Verifikasi pesanan dan kelola akun driver Mider." },
+      { property: "og:title", content: "Dashboard Admin — Mider" },
+      { property: "og:description", content: "Verifikasi pesanan Mider." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -422,7 +422,7 @@ function AdminPage() {
                 <label htmlFor="ann_active" className="text-sm font-semibold text-foreground">Tampilkan pengumuman di halaman utama</label>
               </div>
               <div><label className="text-xs font-semibold text-muted-foreground">Tipe Pengumuman</label><select value={formTarif.announcement_type} onChange={(e) => setFormTarif({ ...formTarif, announcement_type: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-sm"><option value="info">Info Umum (Warna Biru)</option><option value="promo">Promo / Event (Warna Hijau)</option><option value="warning">Penting / Kendala Operasional (Warna Kuning/Oranye)</option></select></div>
-              <div><label className="text-xs font-semibold text-muted-foreground">Teks Pengumuman</label><textarea rows={3} value={formTarif.announcement_text} onChange={(e) => setFormTarif({ ...formTarif, announcement_text: e.target.value })} placeholder="Contoh: Operasional Seruit hari Minggu buka mulai jam 10:00 WIB. Dapatkan potongan ongkir!" className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-sm" /></div>
+              <div><label className="text-xs font-semibold text-muted-foreground">Teks Pengumuman</label><textarea rows={3} value={formTarif.announcement_text} onChange={(e) => setFormTarif({ ...formTarif, announcement_text: e.target.value })} placeholder="Contoh: Operasional Mider hari Minggu buka mulai jam 10:00 WIB. Dapatkan potongan ongkir!" className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-sm" /></div>
             </div>
             <button onClick={handleSaveSettings} disabled={busy === "saving-settings" || settings.isLoading} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50">{busy === "saving-settings" ? "Menyimpan..." : "Simpan Pengumuman"}</button>
           </div>

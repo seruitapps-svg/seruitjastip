@@ -9,10 +9,10 @@ import { uploadDriverPhoto } from "@/lib/image-compressor";
 export const Route = createFileRoute("/_authenticated/daftar-driver")({
   head: () => ({
     meta: [
-      { title: "Daftar Driver — Seruit" },
-      { name: "description", content: "Daftarkan diri Anda sebagai driver Seruit." },
-      { property: "og:title", content: "Daftar Driver — Seruit" },
-      { property: "og:description", content: "Daftarkan diri Anda sebagai driver Seruit." },
+      { title: "Daftar Driver — Mider" },
+      { name: "description", content: "Daftarkan diri Anda sebagai driver Mider." },
+      { property: "og:title", content: "Daftar Driver — Mider" },
+      { property: "og:description", content: "Daftarkan diri Anda sebagai driver Mider." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -142,7 +142,7 @@ function DaftarDriver() {
         <div>
           <h1 className="text-2xl font-extrabold text-foreground">Pendaftaran Driver</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Lengkapi data diri dan kendaraan untuk mendaftar sebagai driver Seruit.
+            Lengkapi data diri dan kendaraan untuk mendaftar sebagai driver Mider.
           </p>
         </div>
 

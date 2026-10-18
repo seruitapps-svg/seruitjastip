@@ -1,4 +1,4 @@
-// Konfigurasi bisnis Seruit
+// Konfigurasi bisnis Mider
 export const ADMIN_WA_NUMBER = "6285783797770";
 
 export const PRICING = {

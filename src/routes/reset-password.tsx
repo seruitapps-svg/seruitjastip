@@ -5,10 +5,10 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
-      { title: "Atur ulang kata sandi — Seruit" },
-      { name: "description", content: "Buat kata sandi baru untuk akun Seruit Anda." },
-      { property: "og:title", content: "Atur ulang kata sandi — Seruit" },
-      { property: "og:description", content: "Buat kata sandi baru untuk akun Seruit." },
+      { title: "Atur ulang kata sandi — Mider" },
+      { name: "description", content: "Buat kata sandi baru untuk akun Mider Anda." },
+      { property: "og:title", content: "Atur ulang kata sandi — Mider" },
+      { property: "og:description", content: "Buat kata sandi baru untuk akun Mider." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],

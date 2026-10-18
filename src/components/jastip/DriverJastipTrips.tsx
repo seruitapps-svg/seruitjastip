@@ -201,7 +201,7 @@ export function DriverJastipTrips({ driverId }: { driverId: string }) {
                     total_price?: number | null;
                   };
                   const wa = (b.shop_wa || b.recipient_wa || "").replace(/\D/g, "").replace(/^0/, "62");
-                  const message = `Halo, saya driver Seruit untuk pesanan ${b.code ?? ""}. Saya sedang menuju lokasi.`;
+                  const message = `Halo, saya driver Mider untuk pesanan ${b.code ?? ""}. Saya sedang menuju lokasi.`;
                   return (
                     <li key={b.id} className="space-y-1.5 rounded-lg border border-border bg-card p-2.5 text-xs">
                       <div className="flex flex-wrap justify-between gap-2 font-bold text-foreground">
