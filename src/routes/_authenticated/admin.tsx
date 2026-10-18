@@ -12,6 +12,7 @@ import { STATUS_LABEL, type OrderStatus } from "@/lib/order-status";
 import { formatRupiah } from "@/lib/config";
 import { AdminFinancialOverview } from "@/components/admin/AdminFinancialOverview";
 import { AdminModeSettings } from "@/components/admin/AdminModeSettings";
+import { AdminPointResto } from "@/components/admin/AdminPointResto";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -33,7 +34,7 @@ function AdminPage() {
   const { isAdmin, ready } = useAuth();
   const qc = useQueryClient();
   const [category, setCategory] = useState<"operasional" | "pengguna" | "pengaturan" | "keuangan">("operasional");
-  const [subTab, setSubTab] = useState<"order" | "driver_approval" | "akun" | "topup" | "tarif" | "pengumuman">("order");
+  const [subTab, setSubTab] = useState<"order" | "point_resto" | "driver_approval" | "akun" | "topup" | "tarif" | "pengumuman">("order");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("menunggu_verifikasi");
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
@@ -324,6 +325,7 @@ function AdminPage() {
         <div className="flex flex-wrap gap-2">
           {category === "operasional" && <>
             <button className={tabCls(subTab === "order")} onClick={() => setSubTab("order")}>Pesanan Masuk</button>
+            <button className={tabCls(subTab === "point_resto")} onClick={() => setSubTab("point_resto")}>Point Resto (Food)</button>
             <button className={tabCls(subTab === "driver_approval")} onClick={() => setSubTab("driver_approval")}>Verifikasi Driver</button>
           </>}
           {category === "pengguna" && <>
@@ -336,6 +338,12 @@ function AdminPage() {
           </>}
         </div>
         {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
+
+        {category === "operasional" && subTab === "point_resto" && (
+          <div className="mt-4">
+            <AdminPointResto />
+          </div>
+        )}
 
         {category === "operasional" && subTab === "order" && (
           <>
