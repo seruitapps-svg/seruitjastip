@@ -643,11 +643,62 @@ function Index() {
                     onSubmit={handleCalculate}
                     className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-sm"
                   >
+                    {selectedService === "food" && foodType === "point" && (
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-foreground">
+                          Pilih Resto / Warung
+                        </label>
+                        {pointRestos.isLoading ? (
+                          <p className="py-3 text-center text-xs text-muted-foreground">Memuat daftar resto…</p>
+                        ) : (pointRestos.data ?? []).length === 0 ? (
+                          <p className="rounded-lg border border-dashed border-border px-3 py-2.5 text-xs text-muted-foreground">
+                            Belum ada Point Resto. Ketik alamat resto manual di bawah.
+                          </p>
+                        ) : (
+                          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                            {(pointRestos.data ?? []).map((resto) => {
+                              const active = selectedRestoId === resto.id;
+                              return (
+                                <button
+                                  key={resto.id}
+                                  type="button"
+                                  onClick={() => pickResto(resto)}
+                                  className={`flex flex-col items-center gap-1.5 rounded-xl border p-2.5 text-center transition-all ${
+                                    active
+                                      ? "border-primary bg-primary/5 ring-2 ring-primary/30"
+                                      : "border-border bg-card hover:border-primary/40"
+                                  }`}
+                                >
+                                  {resto.image_url ? (
+                                    <img
+                                      src={resto.image_url}
+                                      alt={resto.name}
+                                      loading="lazy"
+                                      className="h-12 w-12 rounded-full border border-border object-cover"
+                                    />
+                                  ) : (
+                                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                                      <Store className="h-5 w-5" />
+                                    </span>
+                                  )}
+                                  <span className="line-clamp-2 text-[11px] font-semibold leading-tight text-foreground">
+                                    {resto.name}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <PlaceAutocomplete
                       label={originLabel}
                       placeholder="Ketik nama tempat/warung atau alamat penjemputan…"
                       value={origin}
-                      onChange={setOrigin}
+                      onChange={(place) => {
+                        setOrigin(place);
+                        if (!place) setSelectedRestoId(null);
+                      }}
                     />
                     <PlaceAutocomplete
                       label={destLabel}
