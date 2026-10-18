@@ -146,6 +146,41 @@ function Index() {
 
   // Form states
   const [origin, setOrigin] = useState<SelectedPlace | null>(null);
+  const [selectedRestoId, setSelectedRestoId] = useState<string | null>(null);
+
+  const pointRestos = useQuery({
+    queryKey: ["point-restos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("merchants")
+        .select("id, name, address, latitude, longitude, image_url")
+        .eq("type", "point_resto")
+        .eq("is_open", true)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: selectedService === "food",
+  });
+
+  function pickResto(resto: {
+    id: string;
+    name: string;
+    address: string;
+    latitude: number | null;
+    longitude: number | null;
+  }) {
+    setSelectedRestoId(resto.id);
+    if (resto.latitude != null && resto.longitude != null) {
+      setOrigin({
+        address: `${resto.name} — ${resto.address}`,
+        lat: resto.latitude,
+        lng: resto.longitude,
+      });
+    } else {
+      setOrigin(null);
+    }
+  }
   const [destination, setDestination] = useState<SelectedPlace | null>(null);
   const [itemDetail, setItemDetail] = useState("");
   const [weightKg, setWeightKg] = useState("1");
@@ -513,7 +548,7 @@ function Index() {
                 ) : (
                   <div className="mt-4 rounded-xl border border-dashed border-border p-3 text-center text-xs text-muted-foreground">
                     Sudah punya akun?{" "}
-                    <Link to="/masuk" className="font-semibold text-primary underline">
+                    <Link to="/auth" className="font-semibold text-primary underline">
                       Masuk sekarang
                     </Link>{" "}
                     agar tidak perlu mengetik data diri setiap kali order.
@@ -608,11 +643,62 @@ function Index() {
                     onSubmit={handleCalculate}
                     className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-sm"
                   >
+                    {selectedService === "food" && foodType === "point" && (
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-foreground">
+                          Pilih Resto / Warung
+                        </label>
+                        {pointRestos.isLoading ? (
+                          <p className="py-3 text-center text-xs text-muted-foreground">Memuat daftar resto…</p>
+                        ) : (pointRestos.data ?? []).length === 0 ? (
+                          <p className="rounded-lg border border-dashed border-border px-3 py-2.5 text-xs text-muted-foreground">
+                            Belum ada Point Resto. Ketik alamat resto manual di bawah.
+                          </p>
+                        ) : (
+                          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                            {(pointRestos.data ?? []).map((resto) => {
+                              const active = selectedRestoId === resto.id;
+                              return (
+                                <button
+                                  key={resto.id}
+                                  type="button"
+                                  onClick={() => pickResto(resto)}
+                                  className={`flex flex-col items-center gap-1.5 rounded-xl border p-2.5 text-center transition-all ${
+                                    active
+                                      ? "border-primary bg-primary/5 ring-2 ring-primary/30"
+                                      : "border-border bg-card hover:border-primary/40"
+                                  }`}
+                                >
+                                  {resto.image_url ? (
+                                    <img
+                                      src={resto.image_url}
+                                      alt={resto.name}
+                                      loading="lazy"
+                                      className="h-12 w-12 rounded-full border border-border object-cover"
+                                    />
+                                  ) : (
+                                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                                      <Store className="h-5 w-5" />
+                                    </span>
+                                  )}
+                                  <span className="line-clamp-2 text-[11px] font-semibold leading-tight text-foreground">
+                                    {resto.name}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <PlaceAutocomplete
                       label={originLabel}
                       placeholder="Ketik nama tempat/warung atau alamat penjemputan…"
                       value={origin}
-                      onChange={setOrigin}
+                      onChange={(place) => {
+                        setOrigin(place);
+                        if (!place) setSelectedRestoId(null);
+                      }}
                     />
                     <PlaceAutocomplete
                       label={destLabel}
@@ -874,7 +960,7 @@ function Index() {
                     <div className="space-y-1 rounded-xl bg-muted p-3 text-xs sm:text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Biaya Layanan Aplikasi</span>
-                        <span className="text-foreground">{formatRupiah(summary.price.serviceFee)}</span>
+                        <span className="text-foreground">{formatRupiah(summary.price.consumerServiceFee)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Ongkos Kirim</span>
