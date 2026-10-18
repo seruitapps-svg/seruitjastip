@@ -4,6 +4,7 @@ import { Store, Plus, Trash2, Power, Upload, Loader2, MapPin } from "lucide-reac
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { uploadCompressedMedia } from "@/lib/image-compressor";
+import { PlaceAutocomplete, type SelectedPlace } from "@/components/order/PlaceAutocomplete";
 
 export function AdminPointResto() {
   const qc = useQueryClient();
@@ -11,13 +12,8 @@ export function AdminPointResto() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
-
-  const [form, setForm] = useState({
-    name: "",
-    address: "",
-    phone_wa: "",
-    opening_hours: "09:00 - 21:00",
-  });
+  const [name, setName] = useState("");
+  const [location, setLocation] = useState<SelectedPlace | null>(null);
 
   const restos = useQuery({
     queryKey: ["admin-point-restos"],
@@ -34,8 +30,12 @@ export function AdminPointResto() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.name.trim() || !form.address.trim()) {
-      setErr("Nama resto dan alamat wajib diisi.");
+    if (!name.trim()) {
+      setErr("Nama resto wajib diisi.");
+      return;
+    }
+    if (!location) {
+      setErr("Pilih titik lokasi resto dari saran alamat agar koordinat peta tersimpan.");
       return;
     }
 
@@ -48,17 +48,17 @@ export function AdminPointResto() {
         imageUrl = await uploadCompressedMedia(
           "merchant-assets",
           "point_restos",
-          form.name,
+          name,
           photoFile,
           { maxWidth: 800, maxHeight: 800, quality: 0.75 },
         );
       }
 
       const { error } = await supabase.from("merchants").insert({
-        name: form.name.trim(),
-        address: form.address.trim(),
-        phone_wa: form.phone_wa.trim() || null,
-        opening_hours: form.opening_hours.trim(),
+        name: name.trim(),
+        address: location.address,
+        latitude: location.lat,
+        longitude: location.lng,
         type: "point_resto",
         image_url: imageUrl,
         is_open: true,
@@ -66,7 +66,8 @@ export function AdminPointResto() {
 
       if (error) throw error;
 
-      setForm({ name: "", address: "", phone_wa: "", opening_hours: "09:00 - 21:00" });
+      setName("");
+      setLocation(null);
       setPhotoFile(null);
       setShowForm(false);
       await qc.invalidateQueries({ queryKey: ["admin-point-restos"] });
@@ -102,7 +103,7 @@ export function AdminPointResto() {
         <div>
           <h2 className="text-lg font-bold text-foreground">Manajemen Point Resto</h2>
           <p className="text-xs text-muted-foreground">
-            Daftar warung & resto hits di Metro yang bisa langsung dipilih konsumen di menu Food.
+            Titipkan titik resto/warung di peta: cukup nama, foto/logo, dan titik koordinat dari Google Maps. Konsumen memilih logo resto ini saat memesan.
           </p>
         </div>
         <Button
@@ -116,65 +117,36 @@ export function AdminPointResto() {
 
       {showForm && (
         <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <h3 className="font-semibold text-foreground">Form Tambah Resto / Warung</h3>
+          <h3 className="font-semibold text-foreground">Form Tambah Point Resto</h3>
           {err && <div className="rounded-lg bg-destructive/10 p-2.5 text-xs text-destructive">{err}</div>}
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Nama Resto / Warung *</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Contoh: Bebek Goreng H. Slamet"
-                className="mt-1 w-full rounded-xl border border-input bg-background p-2.5 text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">No. WhatsApp Pemilik / Kasir</label>
-              <input
-                type="tel"
-                value={form.phone_wa}
-                onChange={(e) => setForm({ ...form, phone_wa: e.target.value })}
-                placeholder="08xxxxxxxxxx"
-                className="mt-1 w-full rounded-xl border border-input bg-background p-2.5 text-sm"
-              />
-            </div>
-          </div>
-
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Alamat / Lokasi *</label>
+            <label className="text-xs font-medium text-muted-foreground">Nama Resto / Warung *</label>
             <input
               type="text"
-              value={form.address}
-              onChange={(e) => setForm({ ...form, address: e.target.value })}
-              placeholder="Jl. AH Nasution No. 12, Metro Timur"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Contoh: Bebek Goreng H. Slamet"
               className="mt-1 w-full rounded-xl border border-input bg-background p-2.5 text-sm"
               required
             />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Jam Operasional</label>
-              <input
-                type="text"
-                value={form.opening_hours}
-                onChange={(e) => setForm({ ...form, opening_hours: e.target.value })}
-                placeholder="09:00 - 21:00"
-                className="mt-1 w-full rounded-xl border border-input bg-background p-2.5 text-sm"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Foto / Logo Resto (Auto-Kompres)</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
-                className="mt-1 w-full text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary"
-              />
-            </div>
+          <PlaceAutocomplete
+            label="Titik Lokasi Resto (dari Google Maps) *"
+            placeholder="Ketik nama resto/alamatnya, lalu pilih dari saran…"
+            value={location}
+            onChange={setLocation}
+          />
+
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Foto / Logo Resto (Auto-Kompres)</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
+              className="mt-1 w-full text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary"
+            />
           </div>
 
           <Button type="submit" disabled={busy} className="w-full font-medium sm:w-auto">
@@ -226,8 +198,11 @@ export function AdminPointResto() {
                   <p className="mt-0.5 flex line-clamp-1 items-center gap-1 text-xs text-muted-foreground">
                     <MapPin className="h-3 w-3 shrink-0" /> {resto.address}
                   </p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/80">Jam: {resto.opening_hours}</p>
-                  {resto.phone_wa && <p className="mt-1 text-[11px] text-muted-foreground">WA: {resto.phone_wa}</p>}
+                  {resto.latitude != null && resto.longitude != null && (
+                    <p className="mt-1 text-[11px] text-muted-foreground/80">
+                      Koordinat: {resto.latitude.toFixed(5)}, {resto.longitude.toFixed(5)}
+                    </p>
+                  )}
                 </div>
               </div>
 
