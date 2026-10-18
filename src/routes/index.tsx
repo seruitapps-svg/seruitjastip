@@ -63,7 +63,7 @@ export type ExtendedServiceId =
 interface MenuCategory {
   id: ExtendedServiceId;
   name: string;
-  tagline: string;
+  description: string;
   badge?: string;
   icon: typeof Bike;
   isActionable: boolean;
@@ -73,28 +73,28 @@ const ONBID_SERVICES: MenuCategory[] = [
   {
     id: "kirim",
     name: "Kirim Paket",
-    tagline: "Antar barang instan motor",
+    description: "Antar paket & dokumen instan via motor dengan tarif per km transparan.",
     icon: Send,
     isActionable: true,
   },
   {
     id: "belanja",
     name: "Jastip Belanja",
-    tagline: "Talangan s.d 100rb",
+    description: "Driver membelikan pesanan di toko/pasar dengan dana talangan maks Rp 100.000.",
     icon: ShoppingBag,
     isActionable: true,
   },
   {
     id: "ojek",
     name: "Ojek Motor",
-    tagline: "Antar 1 penumpang cepat",
+    description: "Antar jemput 1 penumpang cepat sampai tujuan.",
     icon: Bike,
     isActionable: true,
   },
   {
     id: "car",
     name: "Seruit Car",
-    tagline: "Taksi mobil penumpang",
+    description: "Taksi mobil penumpang yang nyaman untuk perjalanan santai atau bersama.",
     badge: "Mobil",
     icon: Car,
     isActionable: true,
@@ -102,7 +102,7 @@ const ONBID_SERVICES: MenuCategory[] = [
   {
     id: "pickup",
     name: "Pick Up",
-    tagline: "Angkut barang besar/pindahan",
+    description: "Layanan angkut muatan besar, pindahan rumah/kantor, dan kargo.",
     badge: "Cargo",
     icon: Truck,
     isActionable: true,
@@ -110,7 +110,7 @@ const ONBID_SERVICES: MenuCategory[] = [
   {
     id: "food",
     name: "Food & Drink",
-    tagline: "Point Resto & Mitra",
+    description: "Beli makanan & minuman dari warung/resto pilihan Anda atau mitra resmi.",
     badge: "Kuliner",
     icon: UtensilsCrossed,
     isActionable: true,
@@ -118,7 +118,7 @@ const ONBID_SERVICES: MenuCategory[] = [
   {
     id: "digistore",
     name: "Digistore",
-    tagline: "Pulsa, Paket Data & PLN",
+    description: "Pembelian pulsa, kuota data, voucher, dan token PLN instan.",
     badge: "Segera Hadir",
     icon: Smartphone,
     isActionable: false,
@@ -255,6 +255,8 @@ function Index() {
     setFormError("");
     window.scrollTo({ top: 180, behavior: "smooth" });
   }
+
+  const activeServiceObj = ONBID_SERVICES.find((s) => s.id === selectedService);
 
   // Label dinamis
   const originLabel =
@@ -466,11 +468,6 @@ function Index() {
             {/* GRID KATALOG MENU UTAMA ON-BID */}
             {!selectedService ? (
               <section className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-bold text-foreground">Pilih Layanan Siap Jalan</h2>
-                  <span className="text-xs text-muted-foreground">Order instan & cepat</span>
-                </div>
-
                 <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
                   {ONBID_SERVICES.map((srv) => {
                     const Icon = srv.icon;
@@ -491,9 +488,6 @@ function Index() {
                         </div>
                         <span className="mt-2 block text-xs font-bold text-foreground leading-tight">
                           {srv.name}
-                        </span>
-                        <span className="mt-0.5 block text-[10px] text-muted-foreground line-clamp-1">
-                          {srv.tagline}
                         </span>
                       </button>
                     );
@@ -528,33 +522,41 @@ function Index() {
               /* FORM ORDER YANG DIBUKA SETELAH MEMILIH MENU */
               <div className="space-y-4">
                 {/* Header Sub-Menu dengan tombol kembali */}
-                <div className="flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5 shadow-sm">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-start justify-between gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm">
+                  <div className="flex items-start gap-3">
                     <button
                       type="button"
                       onClick={() => {
                         setSelectedService(null);
                         setSummary(null);
                       }}
-                      className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors"
+                      title="Kembali ke menu"
                     >
-                      <ArrowLeft className="h-5 w-5" />
+                      <ArrowLeft className="h-4 w-4" />
                     </button>
                     <div>
-                      <div className="text-xs font-bold text-foreground">
-                        {ONBID_SERVICES.find((s) => s.id === selectedService)?.name}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-foreground">
+                          {activeServiceObj?.name}
+                        </span>
+                        {activeServiceObj?.badge && (
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary border border-primary/20">
+                            {activeServiceObj.badge}
+                          </span>
+                        )}
                       </div>
-                      <div className="text-[10px] text-muted-foreground">
-                        {ONBID_SERVICES.find((s) => s.id === selectedService)?.tagline}
-                      </div>
+                      <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
+                        {activeServiceObj?.description}
+                      </p>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setSelectedService(null)}
-                    className="text-xs font-semibold text-primary"
+                    className="shrink-0 text-xs font-semibold text-primary hover:underline"
                   >
-                    Ganti Layanan
+                    Ganti
                   </button>
                 </div>
 
