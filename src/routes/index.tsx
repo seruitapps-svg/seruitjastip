@@ -468,8 +468,8 @@ function Index() {
             {/* OPSI 3: UNIFIED CARD DOCK (SATU WADAH KARTU BERSAMA) */}
             {!selectedService ? (
               <section className="space-y-4">
-                <div className="rounded-3xl border border-border/80 bg-card p-5 shadow-sm">
-                  <div className="grid grid-cols-3 gap-y-6 gap-x-2 sm:grid-cols-4">
+                <div className="rounded-3xl border border-border/80 bg-card p-4 sm:p-5 shadow-sm">
+                  <div className="grid grid-cols-4 gap-y-5 gap-x-1 sm:gap-x-3">
                     {ONBID_SERVICES.map((srv) => {
                       const Icon = srv.icon;
                       return (
@@ -479,15 +479,15 @@ function Index() {
                           onClick={() => handleSelectMenu(srv)}
                           className="group flex flex-col items-center text-center transition-transform active:scale-95"
                         >
-                          <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                            <Icon className="h-6 w-6" />
+                          <div className="relative flex h-12 w-12 sm:h-13 sm:w-13 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                            <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
                             {srv.badge && (
-                              <span className="absolute -top-1 -right-1 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground shadow-sm">
+                              <span className="absolute -top-1 -right-1 rounded-full bg-primary px-1.5 py-0.2 text-[8px] sm:text-[9px] font-bold text-primary-foreground shadow-sm">
                                 {srv.badge}
                               </span>
                             )}
                           </div>
-                          <span className="mt-2 block max-w-[85px] text-xs font-semibold text-foreground leading-tight">
+                          <span className="mt-1.5 block w-full px-0.5 text-[11px] sm:text-xs font-semibold text-foreground leading-tight line-clamp-2">
                             {srv.name}
                           </span>
                         </button>
