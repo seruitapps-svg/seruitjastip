@@ -80,7 +80,7 @@ const ONBID_SERVICES: MenuCategory[] = [
   {
     id: "belanja",
     name: "Jastip Belanja",
-    description: "Driver membelikan pesanan di toko/pasar dengan dana talangan maks Rp 100.000.",
+    description: "Driver membelikan pesanan di toko/pasar dengan talangan s.d Rp 100.000.",
     icon: ShoppingBag,
     isActionable: true,
   },
@@ -94,7 +94,7 @@ const ONBID_SERVICES: MenuCategory[] = [
   {
     id: "car",
     name: "Seruit Car",
-    description: "Taksi mobil penumpang yang nyaman untuk perjalanan santai atau bersama.",
+    description: "Taksi mobil penumpang nyaman untuk perjalanan sendiri atau rombongan.",
     badge: "Mobil",
     icon: Car,
     isActionable: true,
@@ -102,7 +102,7 @@ const ONBID_SERVICES: MenuCategory[] = [
   {
     id: "pickup",
     name: "Pick Up",
-    description: "Layanan angkut muatan besar, pindahan rumah/kantor, dan kargo.",
+    description: "Layanan angkut barang besar, kargo, atau pindahan rumah/toko.",
     badge: "Cargo",
     icon: Truck,
     isActionable: true,
@@ -110,7 +110,7 @@ const ONBID_SERVICES: MenuCategory[] = [
   {
     id: "food",
     name: "Food & Drink",
-    description: "Beli makanan & minuman dari warung/resto pilihan Anda atau mitra resmi.",
+    description: "Pesan makanan & minuman dari warung pilihan Anda atau mitra resmi.",
     badge: "Kuliner",
     icon: UtensilsCrossed,
     isActionable: true,
@@ -118,7 +118,7 @@ const ONBID_SERVICES: MenuCategory[] = [
   {
     id: "digistore",
     name: "Digistore",
-    description: "Pembelian pulsa, kuota data, voucher, dan token PLN instan.",
+    description: "Beli pulsa, paket kuota internet, voucher, dan token listrik PLN instan.",
     badge: "Segera Hadir",
     icon: Smartphone,
     isActionable: false,
@@ -253,7 +253,7 @@ function Index() {
     setSelectedService(srv.id);
     setSummary(null);
     setFormError("");
-    window.scrollTo({ top: 180, behavior: "smooth" });
+    window.scrollTo({ top: 160, behavior: "smooth" });
   }
 
   const activeServiceObj = ONBID_SERVICES.find((s) => s.id === selectedService);
@@ -465,33 +465,35 @@ function Index() {
           <JastipCatalog />
         ) : (
           <>
-            {/* GRID KATALOG MENU UTAMA ON-BID */}
+            {/* OPSI 3: UNIFIED CARD DOCK (SATU WADAH KARTU BERSAMA) */}
             {!selectedService ? (
-              <section className="space-y-3">
-                <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
-                  {ONBID_SERVICES.map((srv) => {
-                    const Icon = srv.icon;
-                    return (
-                      <button
-                        key={srv.id}
-                        type="button"
-                        onClick={() => handleSelectMenu(srv)}
-                        className="group relative flex flex-col items-center justify-center rounded-2xl border border-border bg-card p-3 text-center transition-all hover:border-primary/50 hover:bg-accent/40 active:scale-95"
-                      >
-                        {srv.badge && (
-                          <span className="absolute -top-1.5 right-2 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary border border-primary/20">
-                            {srv.badge}
+              <section className="space-y-4">
+                <div className="rounded-3xl border border-border/80 bg-card p-5 shadow-sm">
+                  <div className="grid grid-cols-3 gap-y-6 gap-x-2 sm:grid-cols-4">
+                    {ONBID_SERVICES.map((srv) => {
+                      const Icon = srv.icon;
+                      return (
+                        <button
+                          key={srv.id}
+                          type="button"
+                          onClick={() => handleSelectMenu(srv)}
+                          className="group flex flex-col items-center text-center transition-transform active:scale-95"
+                        >
+                          <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                            <Icon className="h-6 w-6" />
+                            {srv.badge && (
+                              <span className="absolute -top-1 -right-1 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground shadow-sm">
+                                {srv.badge}
+                              </span>
+                            )}
+                          </div>
+                          <span className="mt-2 block max-w-[85px] text-xs font-semibold text-foreground leading-tight">
+                            {srv.name}
                           </span>
-                        )}
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                          <Icon className="h-6 w-6" />
-                        </div>
-                        <span className="mt-2 block text-xs font-bold text-foreground leading-tight">
-                          {srv.name}
-                        </span>
-                      </button>
-                    );
-                  })}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Banner Status Akun Login */}
