@@ -548,7 +548,7 @@ function Index() {
                 ) : (
                   <div className="mt-4 rounded-xl border border-dashed border-border p-3 text-center text-xs text-muted-foreground">
                     Sudah punya akun?{" "}
-                    <Link to="/masuk" className="font-semibold text-primary underline">
+                    <Link to="/auth" className="font-semibold text-primary underline">
                       Masuk sekarang
                     </Link>{" "}
                     agar tidak perlu mengetik data diri setiap kali order.
@@ -960,7 +960,7 @@ function Index() {
                     <div className="space-y-1 rounded-xl bg-muted p-3 text-xs sm:text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Biaya Layanan Aplikasi</span>
-                        <span className="text-foreground">{formatRupiah(summary.price.serviceFee)}</span>
+                        <span className="text-foreground">{formatRupiah(summary.price.consumerServiceFee)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Ongkos Kirim</span>
