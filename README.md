@@ -1,4 +1,4 @@
-# Seruit Jastip
+# Mider (Metro Jastip Order)
 
 Jika saya membuat web jastip yang bisa menghitung jarak dan harga antar point jika memakai gmap apakah perlu daftar api key sendiri?
 
