@@ -9,10 +9,10 @@ export const Route = createFileRoute("/auth")({
   validateSearch: z.object({ redirect: z.string().optional() }),
   head: () => ({
     meta: [
-      { title: "Masuk — Seruit" },
-      { name: "description", content: "Masuk atau daftar akun Seruit untuk memesan jastip." },
-      { property: "og:title", content: "Masuk — Seruit" },
-      { property: "og:description", content: "Masuk atau daftar akun Seruit." },
+      { title: "Masuk — Mider" },
+      { name: "description", content: "Masuk atau daftar akun Mider untuk memesan jastip." },
+      { property: "og:title", content: "Masuk — Mider" },
+      { property: "og:description", content: "Masuk atau daftar akun Mider." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],

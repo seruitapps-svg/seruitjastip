@@ -9,10 +9,10 @@ import { MyJastipBookings } from "@/components/jastip/MyJastipBookings";
 export const Route = createFileRoute("/_authenticated/pesanan/")({
   head: () => ({
     meta: [
-      { title: "Pesanan Saya — Seruit" },
-      { name: "description", content: "Riwayat dan status pesanan Seruit Anda." },
-      { property: "og:title", content: "Pesanan Saya — Seruit" },
-      { property: "og:description", content: "Riwayat dan status pesanan Seruit." },
+      { title: "Pesanan Saya — Mider" },
+      { name: "description", content: "Riwayat dan status pesanan Mider Anda." },
+      { property: "og:title", content: "Pesanan Saya — Mider" },
+      { property: "og:description", content: "Riwayat dan status pesanan Mider." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],

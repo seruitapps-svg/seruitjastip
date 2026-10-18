@@ -43,7 +43,7 @@ export function buildWaMessage(
 ): string {
   const service = SERVICES.find((s) => s.id === order.serviceId);
   const lines: string[] = [
-    "*ORDER BARU — SERUIT*",
+    "*ORDER BARU — MIDER*",
     "",
     `Layanan: ${service?.name ?? order.serviceId}`,
     "",

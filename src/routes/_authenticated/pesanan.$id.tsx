@@ -15,10 +15,10 @@ import { DriverTransactionBreakdown } from "@/components/order/DriverTransaction
 export const Route = createFileRoute("/_authenticated/pesanan/$id")({
   head: () => ({
     meta: [
-      { title: "Detail Pesanan — Seruit" },
-      { name: "description", content: "Status pengantaran dan chat pesanan Seruit." },
-      { property: "og:title", content: "Detail Pesanan — Seruit" },
-      { property: "og:description", content: "Status dan chat pesanan Seruit." },
+      { title: "Detail Pesanan — Mider" },
+      { name: "description", content: "Status pengantaran dan chat pesanan Mider." },
+      { property: "og:title", content: "Detail Pesanan — Mider" },
+      { property: "og:description", content: "Status dan chat pesanan Mider." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -91,7 +91,7 @@ function OrderDetail() {
   const orderWithShopContact = o as typeof o & { shop_wa?: string | null };
   const emergencyPhone = isMyDriver ? (orderWithShopContact.shop_wa || (o.service === "kirim" ? o.recipient_wa : null)) : null;
   const cleanPhone = (phone: string) => phone.replace(/\D/g, "").replace(/^0/, "62");
-  const emergencyMessage = `Halo, saya kurir Seruit mengantarkan pesanan dari ${o.sender_name}. Saya sudah di lokasi.`;
+  const emergencyMessage = `Halo, saya kurir Mider mengantarkan pesanan dari ${o.sender_name}. Saya sudah di lokasi.`;
 
   async function act(fn: () => PromiseLike<{ error: { message: string } | null }>) {
     setBusy(true);
