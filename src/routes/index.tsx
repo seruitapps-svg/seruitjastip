@@ -449,33 +449,16 @@ function Index() {
           </div>
         </div>
 
-        {/* Hero Catchy dengan Aksen Hijau */}
+        {/* Hero Banner */}
         <section className="py-5 text-center">
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            {mode === "onbid" ? (
-              <>
-                Mau diantar kemana,
-                <br />
-                <span className="text-primary">hari ini?</span>
-              </>
-            ) : (
-              <>
-                Jastip terjadwal,
-                <br />
-                <span className="text-primary">pesan tiket & titipan.</span>
-              </>
-            )}
+          <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+            {mode === "onbid" ? "Mau diantar kemana hari ini?" : "Jastip Terjadwal Antar Wilayah"}
           </h1>
-          <p className="mx-auto mt-2 max-w-md text-xs sm:text-sm text-muted-foreground leading-relaxed">
+          <p className="mx-auto mt-1 max-w-md text-xs text-muted-foreground sm:text-sm">
             {mode === "onbid"
-              ? "Kirim paket, belanja, ojek, car, atau food — estimasi tarif instan, langsung dicarikan driver."
-              : "Pilih rute & jadwal driver yang siap jalan, pesan kuota paket atau kursi penumpang."}
+              ? "Pilih layanan di bawah untuk langsung hitung estimasi ongkir otomatis."
+              : "Pesan titipan barang atau tiket penumpang pada jadwal driver yang tersedia."}
           </p>
-          {mode === "onbid" && (
-            <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/25 px-3.5 py-1 text-xs font-semibold text-primary">
-              Tarif dasar: {formatRupiah(activeRates.baseFare)} + {formatRupiah(activeRates.perKm)}/km
-            </div>
-          )}
         </section>
 
         {mode === "jastip" ? (
@@ -497,9 +480,9 @@ function Index() {
                           className="group flex flex-col items-center text-center transition-transform active:scale-95"
                         >
                           <div className="relative flex h-12 w-12 sm:h-13 sm:w-13 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                            <Icon className="h-7 w-7 sm:h-8 sm:w-8 transition-transform group-hover:scale-105" />
+                            <Icon className="h-6 w-6 sm:h-7 sm:w-7 transition-transform group-hover:scale-105" />
                             {srv.badge && (
-                              <span className="absolute -top-1 -right-1 rounded-full bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.2 text-[8px] sm:text-[9px] font-semibold backdrop-blur-xs">
+                              <span className="absolute -top-1 -right-1 rounded-full bg-primary px-1.5 py-0.2 text-[8px] sm:text-[9px] font-bold text-primary-foreground shadow-sm">
                                 {srv.badge}
                               </span>
                             )}
