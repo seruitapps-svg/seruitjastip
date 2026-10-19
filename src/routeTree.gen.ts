@@ -19,6 +19,7 @@ import { Route as AuthenticatedDriverRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedSaldoRouteImport } from './routes/_authenticated/saldo'
 import { Route as AuthenticatedPesananIndexRouteImport } from './routes/_authenticated/pesanan.index'
 import { Route as AuthenticatedPesananIdRouteImport } from './routes/_authenticated/pesanan.$id'
+import { Route as AuthenticatedMerchantRouteImport } from './routes/_authenticated/merchant'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -82,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/saldo': typeof AuthenticatedSaldoRoute
   '/pesanan/$id': typeof AuthenticatedPesananIdRoute
   '/pesanan/': typeof AuthenticatedPesananIndexRoute
+  '/merchant': typeof AuthenticatedMerchantRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -93,6 +95,7 @@ export interface FileRoutesByTo {
   '/saldo': typeof AuthenticatedSaldoRoute
   '/pesanan/$id': typeof AuthenticatedPesananIdRoute
   '/pesanan': typeof AuthenticatedPesananIndexRoute
+  '/merchant': typeof AuthenticatedMerchantRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -106,6 +109,7 @@ export interface FileRoutesById {
   '/_authenticated/saldo': typeof AuthenticatedSaldoRoute
   '/_authenticated/pesanan/$id': typeof AuthenticatedPesananIdRoute
   '/_authenticated/pesanan/': typeof AuthenticatedPesananIndexRoute
+  '/_authenticated/merchant': typeof AuthenticatedMerchantRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -119,6 +123,7 @@ export interface FileRouteTypes {
     | '/saldo'
     | '/pesanan/$id'
     | '/pesanan/'
+    | '/merchant'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -130,6 +135,7 @@ export interface FileRouteTypes {
     | '/saldo'
     | '/pesanan/$id'
     | '/pesanan'
+    | '/merchant'
   id:
     | '__root__'
     | '/'
@@ -142,6 +148,7 @@ export interface FileRouteTypes {
     | '/_authenticated/saldo'
     | '/_authenticated/pesanan/$id'
     | '/_authenticated/pesanan/'
+    | '/_authenticated/merchant'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -216,6 +223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPesananIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/merchant': {
+      id: '/_authenticated/merchant'
+      path: '/merchant'
+      fullPath: '/merchant'
+      preLoaderRoute: typeof AuthenticatedMerchantRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/pesanan/$id': {
       id: '/_authenticated/pesanan/$id'
       path: '/pesanan/$id'
@@ -233,6 +247,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSaldoRoute: typeof AuthenticatedSaldoRoute
   AuthenticatedPesananIdRoute: typeof AuthenticatedPesananIdRoute
   AuthenticatedPesananIndexRoute: typeof AuthenticatedPesananIndexRoute
+  AuthenticatedMerchantRoute: typeof AuthenticatedMerchantRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -242,6 +257,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSaldoRoute: AuthenticatedSaldoRoute,
   AuthenticatedPesananIdRoute: AuthenticatedPesananIdRoute,
   AuthenticatedPesananIndexRoute: AuthenticatedPesananIndexRoute,
+  AuthenticatedMerchantRoute: AuthenticatedMerchantRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
