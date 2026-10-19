@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppHeader } from "@/components/AppHeader";
 import { MerchantPortal } from "@/components/merchant/MerchantPortal";
+// Pemicu sinkronisasi Lovable (tidak mengubah perilaku aplikasi).
 
 export const Route = createFileRoute("/_authenticated/merchant")({
   head: () => ({ meta: [{ title: "Mitra Resto — Mider" }] }),
