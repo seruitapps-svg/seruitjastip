@@ -626,7 +626,19 @@ function Index() {
                       </button>
                     </div>
 
-                    {foodType === "mitra" && <OfficialMerchantCatalog />}
+                    {foodType === "mitra" && <OfficialMerchantCatalog onChoose={(merchant, product) => {
+                      setFoodType("point");
+                      setSelectedRestoId(merchant.id);
+                      setOrigin(merchant.latitude != null && merchant.longitude != null ? {
+                        address: `${merchant.name} — ${merchant.address}`,
+                        lat: merchant.latitude,
+                        lng: merchant.longitude,
+                      } : null);
+                      setItemDetail(`${merchant.name} — ${product.name} — Rp ${product.price.toLocaleString("id-ID")}`);
+                      setSummary(null);
+                      setFormError("");
+                      window.scrollTo({ top: 160, behavior: "smooth" });
+                    }} />}
                   </div>
                 )}
 
