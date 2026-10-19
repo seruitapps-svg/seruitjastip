@@ -406,20 +406,6 @@ function AdminPage() {
           </>
         )}
 
-        {category === "pengaturan" && subTab === "tarif" && (
-          <div className="space-y-4 rounded-2xl border border-border bg-card p-5">
-            <h3 className="font-bold text-foreground">Pengaturan Tarif & Biaya Aplikasi</h3>
-            {settings.isLoading && <p className="text-sm text-muted-foreground">Memuat pengaturan...</p>}
-            {settings.isError && <p className="text-sm text-destructive">Gagal memuat pengaturan: {settings.error.message}</p>}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div><label className="text-xs font-semibold text-muted-foreground">Biaya Layanan Konsumen / Tarif Dasar (Rp)</label><input type="number" min={0} value={formTarif.base_fare} onChange={(e) => setFormTarif({ ...formTarif, base_fare: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-sm" /></div>
-              <div><label className="text-xs font-semibold text-muted-foreground">Tarif per Kilometer (Rp/km)</label><input type="number" min={0} value={formTarif.per_km} onChange={(e) => setFormTarif({ ...formTarif, per_km: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-sm" /></div>
-              <div><label className="text-xs font-semibold text-muted-foreground">Biaya Paket Besar / Tambahan (Rp)</label><input type="number" min={0} value={formTarif.oversize_fee} onChange={(e) => setFormTarif({ ...formTarif, oversize_fee: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-sm" /></div>
-              <div><label className="text-xs font-semibold text-muted-foreground">Potongan Komisi Driver (%)</label><input type="number" min={0} max={100} step="0.5" value={formTarif.commission_percent} onChange={(e) => setFormTarif({ ...formTarif, commission_percent: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-sm" /></div>
-            </div>
-            <button onClick={handleSaveSettings} disabled={busy === "saving-settings" || settings.isLoading} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50">{busy === "saving-settings" ? "Menyimpan..." : "Simpan Perubahan Tarif"}</button>
-          </div>
-        )}
         {category === "pengaturan" && subTab === "tarif" && <AdminModeSettings />}
         {category === "pengaturan" && subTab === "pengumuman" && (
           <div className="space-y-4 rounded-2xl border border-border bg-card p-5">
