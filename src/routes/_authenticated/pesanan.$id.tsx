@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { formatRupiah } from "@/lib/config";
 import { DRIVER_NEXT_LABEL, SERVICE_NAME, STATUS_LABEL } from "@/lib/order-status";
 import { DriverTransactionBreakdown } from "@/components/order/DriverTransactionBreakdown";
+import { DriverItemCostCard } from "@/components/order/DriverItemCostCard";
 
 export const Route = createFileRoute("/_authenticated/pesanan/$id")({
   head: () => ({
@@ -176,11 +177,29 @@ function OrderDetail() {
           <div className="space-y-1 rounded-xl bg-muted p-3 text-sm">
             {row("Ongkos Kirim", formatRupiah(o.shipping_fare))}
             {row("Biaya Layanan Aplikasi", formatRupiah(o.consumer_service_fee))}
+            {(o.service === "belanja" || Number((o as any).item_cost ?? 0) > 0) && (
+              <div className="flex justify-between gap-4 text-sm">
+                <span className="text-muted-foreground">Belanjaan (Talangan Struk)</span>
+                <span className="max-w-[65%] text-right font-medium text-foreground">
+                  {Number((o as any).item_cost ?? 0) > 0 ? formatRupiah(Number((o as any).item_cost)) : "Menunggu struk driver"}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between border-t border-border pt-2 font-bold">
-              <span className="text-foreground">Total</span>
+              <span className="text-foreground">Total Tagihan</span>
               <span className="text-primary">{formatRupiah(o.total)}</span>
             </div>
+            {(o as any).item_receipt_url && (
+              <div className="pt-2 text-right">
+                <a href={(o as any).item_receipt_url} target="_blank" rel="noreferrer" className="text-xs font-semibold text-primary underline">
+                  Lihat Foto Struk Pembelian ↗
+                </a>
+              </div>
+            )}
           </div>
+          {isMyDriver && (o.service === "belanja" || String(o.service) === "point_food") && (
+            <DriverItemCostCard order={o} onSuccess={() => { qc.invalidateQueries({ queryKey: ["order", id] }); }} />
+          )}
           {isMyDriver && <DriverTransactionBreakdown order={o} />}
           {o.admin_note && row("Catatan admin", o.admin_note)}
         </div>
