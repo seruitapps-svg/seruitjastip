@@ -123,7 +123,8 @@ function OrderDetail() {
   );
 
   if (isNavigating && isMyDriver && ["diambil", "dijemput", "diantar"].includes(o.status)) {
-    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(o.origin_address)}&destination=${encodeURIComponent(o.dest_address)}&travelmode=driving`;
+    const navigationDestination = o.status === "diambil" ? o.origin_address : o.dest_address;
+    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(navigationDestination)}&travelmode=driving`;
     return (
       <div className="fixed inset-0 z-[100] flex h-[100dvh] flex-col overflow-hidden bg-background">
         <div className="relative min-h-0 flex-1">
