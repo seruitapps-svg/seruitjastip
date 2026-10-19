@@ -148,12 +148,12 @@ export function MerchantPortal() {
   </section>;
 }
 
-export function OfficialMerchantCatalog() {
+export function OfficialMerchantCatalog({ onChoose }: { onChoose: (merchant: { id: string; name: string; address: string; latitude: number | null; longitude: number | null }, product: { name: string; price: number }) => void }) {
   const catalog = useQuery({
     queryKey: ["official-merchant-catalog"],
     queryFn: async () => {
       const { data, error } = await (supabase as any).from("merchants")
-        .select("id,name,address,phone_wa,image_url,opening_hours")
+        .select("id,name,address,phone_wa,image_url,opening_hours,latitude,longitude")
         .eq("type", "official_mitra").eq("verification_status", "approved").eq("is_open", true)
         .order("name");
       if (error) throw error;
@@ -176,7 +176,7 @@ export function OfficialMerchantCatalog() {
     {catalog.data?.length === 0 && <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">Belum ada mitra resto resmi yang aktif.</p>}
     <div className="space-y-3">{catalog.data?.map(m => <article key={m.id} className="overflow-hidden rounded-2xl border border-border bg-card">
       <div className="flex gap-3 p-3">{m.image_url ? <img src={m.image_url} alt={m.name} className="h-20 w-20 rounded-xl object-cover"/> : <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-muted"><Store className="h-7 w-7 text-muted-foreground"/></div>}<div className="min-w-0"><h4 className="font-bold">{m.name}</h4><p className="text-xs text-muted-foreground">{m.address}</p><p className="mt-1 text-xs text-primary">{m.opening_hours || "Jam operasional belum dicantumkan"}</p></div></div>
-      <div className="border-t border-border p-3"><p className="mb-2 text-xs font-semibold">Menu tersedia</p>{(menu.data ?? []).filter(p=>p.merchant_id===m.id).length ? <div className="space-y-2">{(menu.data ?? []).filter(p=>p.merchant_id===m.id).map(p=><div key={p.id} className="flex justify-between gap-3 text-sm"><div><p className="font-medium">{p.name}</p>{p.description && <p className="text-xs text-muted-foreground">{p.description}</p>}</div><span className="whitespace-nowrap font-semibold">Rp {Number(p.price).toLocaleString("id-ID")}</span></div>)}</div> : <p className="text-xs text-muted-foreground">Menu sedang disiapkan.</p>}</div>
+      <div className="border-t border-border p-3"><p className="mb-2 text-xs font-semibold">Menu tersedia</p>{(menu.data ?? []).filter(p=>p.merchant_id===m.id).length ? <div className="space-y-2">{(menu.data ?? []).filter(p=>p.merchant_id===m.id).map(p=><div key={p.id} className="flex justify-between gap-3 text-sm"><div><p className="font-medium">{p.name}</p>{p.description && <p className="text-xs text-muted-foreground">{p.description}</p>}</div><div className="flex shrink-0 flex-col items-end gap-1"><span className="whitespace-nowrap font-semibold">Rp {Number(p.price).toLocaleString("id-ID")}</span><button type="button" onClick={() => onChoose({ id: m.id, name: m.name, address: m.address, latitude: m.latitude, longitude: m.longitude }, { name: p.name, price: Number(p.price) })} className="rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground">Pesan</button></div></div>)}</div> : <p className="text-xs text-muted-foreground">Menu sedang disiapkan.</p>}</div>
     </article>)}</div>
     <p className="text-center text-xs text-muted-foreground">Ingin bergabung? <a href="/merchant" className="font-semibold text-primary underline">Daftarkan restoran Anda</a></p>
   </section>;
