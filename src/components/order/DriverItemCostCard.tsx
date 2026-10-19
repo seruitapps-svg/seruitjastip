@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Receipt, Upload, Loader2, CheckCircle2, Image as ImageIcon } from "lucide-react";
+import { Receipt, Upload, Loader2, CheckCircle2, Image as ImageIcon, Camera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatRupiah } from "@/lib/config";
 import { uploadCompressedMedia } from "@/lib/image-compressor";
@@ -21,6 +21,10 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
 
   const isEditable = ["diambil", "dijemput"].includes(order.status);
 
+  // Deteksi jenis layanan
+  const isFood = order.service === "food" || order.service === "point_food";
+  const isBelanja = order.service === "belanja";
+
   async function handleSave(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
@@ -28,7 +32,13 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
 
     const parsed = Number.parseInt(amount.replace(/\D/g, ""), 10);
     if (!Number.isSafeInteger(parsed) || parsed < 0) {
-      setError("Masukkan nominal belanja yang valid (bisa 0 jika tidak ada).");
+      setError("Masukkan nominal yang valid (isi 0 jika tidak ada belanjaan).");
+      return;
+    }
+
+    // Pada Jastip Belanja: jika ada nominal belanja, struk wajib ada
+    if (isBelanja && parsed > 0 && !file && !currentReceipt) {
+      setError("Layanan Jastip Belanja wajib melampirkan foto struk kasir.");
       return;
     }
 
@@ -52,11 +62,11 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
       });
       if (rpcErr) throw rpcErr;
 
-      setSuccessMsg("Biaya talangan & struk berhasil disimpan.");
+      setSuccessMsg("Nominal talangan & data berhasil disimpan.");
       setFile(null);
       onSuccess();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan data belanjaan.");
+      setError(err instanceof Error ? err.message : "Gagal mengunggah foto struk atau menyimpan data.");
     } finally {
       setLoading(false);
     }
@@ -66,10 +76,15 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
     <section className="space-y-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
       <div className="flex items-center gap-2">
         <Receipt className="h-5 w-5 text-primary" />
-        <h3 className="text-sm font-bold text-foreground">Talangan Belanja / Point Resto</h3>
+        <h3 className="text-sm font-bold text-foreground">
+          {isFood ? "Harga Makanan (Point Resto)" : "Talangan Belanja"}
+        </h3>
       </div>
+
       <p className="text-xs text-muted-foreground">
-        Masukkan harga riil barang sesuai struk kasir. Uang talangan 100% diganti tanpa potongan komisi.
+        {isFood
+          ? "Masukkan harga makanan riil dari resto. Foto struk opsional jika resto/warung tidak menyediakan struk."
+          : "Masukkan harga belanjaan riil. Wajib sertakan foto struk kasir."}
       </p>
 
       {currentCost > 0 && (
@@ -78,16 +93,24 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
           <span className="font-bold text-foreground">{formatRupiah(currentCost)}</span>
         </div>
       )}
+
       {currentReceipt && (
-        <a href={currentReceipt} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary underline">
-          <ImageIcon className="h-3.5 w-3.5" /> Lihat Struk Kasir Terunggah
+        <a
+          href={currentReceipt}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1.5 text-xs text-primary underline"
+        >
+          <ImageIcon className="h-3.5 w-3.5" /> Lihat Foto Struk Terunggah
         </a>
       )}
 
       {isEditable ? (
         <form onSubmit={handleSave} className="space-y-3 pt-1">
           <div>
-            <label htmlFor={`item-cost-${order.id}`} className="text-xs font-semibold text-foreground">Nominal Riil Belanja (Rp)</label>
+            <label htmlFor={`item-cost-${order.id}`} className="text-xs font-semibold text-foreground">
+              Nominal {isFood ? "Harga Makanan" : "Belanja"} (Rp)
+            </label>
             <input
               id={`item-cost-${order.id}`}
               type="text"
@@ -99,27 +122,49 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
               disabled={loading}
             />
           </div>
+
           <div>
-            <label htmlFor={`item-receipt-${order.id}`} className="text-xs font-semibold text-foreground">Foto Struk / Nota (Opsional jika sama)</label>
+            <div className="flex items-center justify-between">
+              <label htmlFor={`item-receipt-${order.id}`} className="text-xs font-semibold text-foreground">
+                Foto Struk / Nota {isFood ? "(Opsional)" : "(Wajib)"}
+              </label>
+              <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                <Camera className="h-3 w-3" /> Kamera / Galeri
+              </span>
+            </div>
+
+            {/* Tanpa capture="environment" agar HP menampilkan pilihan Kamera atau Galeri */}
             <input
               id={`item-receipt-${order.id}`}
               type="file"
               accept="image/*"
-              capture="environment"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               className="mt-1 block w-full text-xs text-muted-foreground file:mr-2 file:rounded-md file:border-0 file:bg-primary file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-primary-foreground hover:file:bg-primary/90"
               disabled={loading}
             />
           </div>
+
           {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
-          {successMsg && <p role="status" className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600"><CheckCircle2 className="h-3.5 w-3.5" />{successMsg}</p>}
-          <button type="submit" disabled={loading} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
+          {successMsg && (
+            <p role="status" className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              {successMsg}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             {loading ? "Menyimpan..." : "Simpan Nominal & Struk"}
           </button>
         </form>
       ) : (
-        <p className="text-xs italic text-muted-foreground">Data belanja terkunci karena status pesanan sudah diantar/selesai.</p>
+        <p className="text-xs italic text-muted-foreground">
+          Data belanja terkunci karena status pesanan sudah diantar/selesai.
+        </p>
       )}
     </section>
   );
