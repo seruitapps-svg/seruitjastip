@@ -78,7 +78,7 @@ CREATE POLICY "merchant owners delete own products"
   USING (EXISTS (SELECT 1 FROM public.merchants m WHERE m.id = merchant_id AND m.owner_id = auth.uid() AND m.verification_status = 'approved'));
 
 -- Remove legacy permissive policies so they cannot bypass pending/owner checks.
-DO $
+DO $block$
 DECLARE policy_row record;
 BEGIN
   FOR policy_row IN
@@ -87,7 +87,7 @@ BEGIN
   LOOP
     EXECUTE format('DROP POLICY IF EXISTS %I ON public.merchants', policy_row.policyname);
   END LOOP;
-END $;
+END $block$;
 
 ALTER TABLE public.merchants ENABLE ROW LEVEL SECURITY;
 GRANT SELECT, INSERT, UPDATE ON public.merchants TO authenticated;
