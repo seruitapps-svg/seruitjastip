@@ -378,7 +378,7 @@ function Index() {
           : isCar
           ? "Mider Car (Taksi Penumpang Mobil)"
           : selectedService === "food"
-          ? `Resto: ${itemDetail.trim()}`
+          ? `Point Resto: ${itemDetail.trim()}`
           : itemDetail.trim();
 
       // Mapping fallback service id yang didukung createOrder
