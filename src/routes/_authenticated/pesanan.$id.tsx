@@ -12,6 +12,7 @@ import { formatRupiah } from "@/lib/config";
 import { DRIVER_NEXT_LABEL, SERVICE_NAME, STATUS_LABEL } from "@/lib/order-status";
 import { DriverTransactionBreakdown } from "@/components/order/DriverTransactionBreakdown";
 import { DriverItemCostCard } from "@/components/order/DriverItemCostCard";
+import { DriverLiveTracking } from "@/components/order/DriverLiveTracking";
 
 export const Route = createFileRoute("/_authenticated/pesanan/$id")({
   head: () => ({
@@ -177,7 +178,11 @@ function OrderDetail() {
         </div>
 
         <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
+          {isMyDriver && ["diambil", "dijemput", "diantar"].includes(o.status) && (
+            <DriverLiveTracking orderId={o.id} driverId={user!.id} active />
+          )}
           <RouteMap
+            orderId={o.id}
             origin={{ lat: o.origin_lat, lng: o.origin_lng }}
             destination={{ lat: o.dest_lat, lng: o.dest_lng }}
             encodedPolyline={o.encoded_polyline}
