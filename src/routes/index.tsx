@@ -8,7 +8,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { JastipCatalog } from "@/components/jastip/JastipCatalog";
-import { OfficialMerchantCatalog } from "@/components/merchant/MerchantPortal";
 import {
   Bike,
   Send,
@@ -626,19 +625,17 @@ function Index() {
                       </button>
                     </div>
 
-                    {foodType === "mitra" && <OfficialMerchantCatalog onChoose={(merchant, product) => {
-                      setFoodType("point");
-                      setSelectedRestoId(merchant.id);
-                      setOrigin(merchant.latitude != null && merchant.longitude != null ? {
-                        address: `${merchant.name} — ${merchant.address}`,
-                        lat: merchant.latitude,
-                        lng: merchant.longitude,
-                      } : null);
-                      setItemDetail(`${merchant.name} — ${product.name} — Rp ${product.price.toLocaleString("id-ID")}`);
-                      setSummary(null);
-                      setFormError("");
-                      window.scrollTo({ top: 160, behavior: "smooth" });
-                    }} />}
+                    {foodType === "mitra" && (
+                      <div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4 text-center">
+                        <Store className="mx-auto h-8 w-8 text-primary" />
+                        <h3 className="mt-2 text-sm font-bold text-foreground">
+                          Katalog Mitra Resto Segera Hadir
+                        </h3>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Fitur merchant &amp; menu mandiri sedang disiapkan. Sementara ini, Anda dapat menggunakan opsi <strong>Point Resto</strong> untuk memesan dari warung/resto mana saja.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
