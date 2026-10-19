@@ -14,7 +14,6 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
-import { Route as AuthenticatedMitraRouteImport } from './routes/_authenticated/mitra'
 import { Route as AuthenticatedDaftarDriverRouteImport } from './routes/_authenticated/daftar-driver'
 import { Route as AuthenticatedDriverRouteImport } from './routes/_authenticated/driver'
 import { Route as AuthenticatedSaldoRouteImport } from './routes/_authenticated/saldo'
@@ -43,11 +42,6 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedMitraRoute = AuthenticatedMitraRouteImport.update({
-  id: '/mitra',
-  path: '/mitra',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDaftarDriverRoute =
@@ -83,7 +77,6 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRoute
-  '/mitra': typeof AuthenticatedMitraRoute
   '/daftar-driver': typeof AuthenticatedDaftarDriverRoute
   '/driver': typeof AuthenticatedDriverRoute
   '/saldo': typeof AuthenticatedSaldoRoute
@@ -108,7 +101,6 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
-  '/_authenticated/mitra': typeof AuthenticatedMitraRoute
   '/_authenticated/daftar-driver': typeof AuthenticatedDaftarDriverRoute
   '/_authenticated/driver': typeof AuthenticatedDriverRoute
   '/_authenticated/saldo': typeof AuthenticatedSaldoRoute
@@ -122,7 +114,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/admin'
-    | '/mitra'
     | '/daftar-driver'
     | '/driver'
     | '/saldo'
@@ -146,7 +137,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/_authenticated/admin'
-    | '/_authenticated/mitra'
     | '/_authenticated/daftar-driver'
     | '/_authenticated/driver'
     | '/_authenticated/saldo'
@@ -190,13 +180,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/mitra': {
-      id: '/_authenticated/mitra'
-      path: '/mitra'
-      fullPath: '/mitra'
-      preLoaderRoute: typeof AuthenticatedMitraRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
@@ -245,7 +228,6 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
-  AuthenticatedMitraRoute: typeof AuthenticatedMitraRoute
   AuthenticatedDaftarDriverRoute: typeof AuthenticatedDaftarDriverRoute
   AuthenticatedDriverRoute: typeof AuthenticatedDriverRoute
   AuthenticatedSaldoRoute: typeof AuthenticatedSaldoRoute
@@ -255,7 +237,6 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
-  AuthenticatedMitraRoute: AuthenticatedMitraRoute,
   AuthenticatedDaftarDriverRoute: AuthenticatedDaftarDriverRoute,
   AuthenticatedDriverRoute: AuthenticatedDriverRoute,
   AuthenticatedSaldoRoute: AuthenticatedSaldoRoute,
