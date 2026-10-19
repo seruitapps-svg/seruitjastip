@@ -20,7 +20,7 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
   const [successMsg, setSuccessMsg] = useState("");
   const [noReceiptAvailable, setNoReceiptAvailable] = useState(false);
 
-  const isEditable = ["diambil", "dijemput"].includes(order.status);
+  const isEditable = ["diambil", "dijemput", "diantar"].includes(order.status);
   const detailText = (order.item_detail || "").toLowerCase();
   const isLikelyFood =
     order.service === "food" ||
@@ -184,7 +184,7 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
           </button>
         </form>
       ) : (
-        <p className="text-xs italic text-muted-foreground">Data belanja terkunci karena status pesanan sudah diantar/selesai.</p>
+        <p className="text-xs italic text-muted-foreground">Data belanja terkunci karena status pesanan sudah selesai.</p>
       )}
     </section>
   );
