@@ -59,14 +59,9 @@ export function AppHeader() {
                 </Link>
               )}
               {isAdmin && (
-                <>
-                  <Link to="/admin" className={linkCls} activeProps={{ className: activeCls }}>
-                    Admin
-                  </Link>
-                  <Link to="/mitra" className={linkCls} activeProps={{ className: activeCls }}>
-                    Preview Mitra
-                  </Link>
-                </>
+                <Link to="/admin" className={linkCls} activeProps={{ className: activeCls }}>
+                  Admin
+                </Link>
               )}
               <button onClick={signOut} className={linkCls} aria-label="Keluar">
                 <LogOut className="h-4 w-4" />
