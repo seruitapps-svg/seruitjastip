@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { MessageSquare, Phone, QrCode, Send } from "lucide-react";
+import { MessageSquare, Phone, QrCode, Send, Navigation, X, ReceiptText, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { RouteMap } from "@/components/order/RouteMap";
@@ -34,6 +34,8 @@ function OrderDetail() {
   const qc = useQueryClient();
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [showNavDetails, setShowNavDetails] = useState(false);
 
   const order = useQuery({
     queryKey: ["order", id],
@@ -120,6 +122,102 @@ function OrderDetail() {
     </div>
   );
 
+  if (isNavigating && isMyDriver && ["diambil", "dijemput", "diantar"].includes(o.status)) {
+    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(o.origin_address)}&destination=${encodeURIComponent(o.dest_address)}&travelmode=driving`;
+    return (
+      <div className="fixed inset-0 z-[100] flex h-[100dvh] flex-col overflow-hidden bg-background">
+        <div className="relative min-h-0 flex-1">
+          <RouteMap
+            orderId={o.id}
+            trackingActive
+            followDriver
+            origin={{ lat: o.origin_lat, lng: o.origin_lng }}
+            destination={{ lat: o.dest_lat, lng: o.dest_lng }}
+            encodedPolyline={o.encoded_polyline}
+            className="h-full w-full"
+          />
+          <div className="absolute left-3 right-3 top-3 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => setIsNavigating(false)}
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-background/95 px-3 py-2.5 text-sm font-bold text-foreground shadow-lg backdrop-blur"
+            >
+              <X className="h-4 w-4" /> Keluar navigasi
+            </button>
+            <span className="rounded-full bg-background/95 px-3 py-2 text-xs font-bold text-foreground shadow-lg backdrop-blur">
+              {STATUS_LABEL[o.status]}
+            </span>
+          </div>
+          <a
+            href={googleMapsUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="absolute right-3 top-16 inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-sm font-bold text-primary-foreground shadow-lg"
+          >
+            <ExternalLink className="h-4 w-4" /> Navigasi suara
+          </a>
+          {showNavDetails && (
+            <div className="absolute inset-x-3 bottom-3 max-h-[58%] overflow-y-auto rounded-2xl border border-border bg-background/95 p-4 shadow-2xl backdrop-blur">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-base font-extrabold text-foreground">Rincian Transaksi #{o.code}</h2>
+                <button type="button" onClick={() => setShowNavDetails(false)} aria-label="Tutup rincian transaksi" className="rounded-lg p-2 hover:bg-muted">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="space-y-3 text-sm">
+                {row("Status", STATUS_LABEL[o.status])}
+                {row("Layanan", SERVICE_NAME[o.service] ?? o.service)}
+                {row("Dari", o.origin_address)}
+                {row("Ke", o.dest_address)}
+                {row("Jarak", `${(o.distance_meters / 1000).toFixed(1)} km · ±${Math.round(o.duration_seconds / 60)} menit`)}
+                {row("Pemesan", `${o.sender_name} (${o.sender_wa})`)}
+                {o.service === "kirim" && row("Penerima", `${o.recipient_name} (${o.recipient_wa})`)}
+                {row("Ongkos Kirim", formatRupiah(o.shipping_fare))}
+                {row("Biaya Layanan", formatRupiah(o.consumer_service_fee))}
+                {(o.service === "belanja" || itemCost > 0) && row("Biaya belanja/talangan", itemCost > 0 ? formatRupiah(itemCost) : "Menunggu struk driver")}
+                <div className="flex justify-between gap-4 border-t border-border pt-3 font-extrabold">
+                  <span>Total Tagihan</span><span className="text-primary">{formatRupiah(finalTotal)}</span>
+                </div>
+                {o.notes && row("Catatan", o.notes)}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="shrink-0 border-t border-border bg-background p-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+          {isMyDriver && <DriverLiveTracking orderId={o.id} driverId={user!.id} active />}
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setShowNavDetails((value) => !value)}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-border px-3 py-3 text-sm font-bold text-foreground"
+            >
+              <ReceiptText className="h-4 w-4" /> Rincian Transaksi
+            </button>
+            {DRIVER_NEXT_LABEL[o.status] ? (
+              <button
+                type="button"
+                className={btnPrimary}
+                disabled={busy}
+                onClick={() => {
+                  if (o.status === "diantar" && (o.service === "belanja" || String(o.service) === "point_food") && itemCost === 0) {
+                    const proceed = window.confirm("Nominal belanjaan masih Rp 0. Tetap selesaikan pesanan tanpa talangan?");
+                    if (!proceed) return;
+                  }
+                  act(() => supabase.rpc("driver_advance_order", { _order_id: o.id }));
+                }}
+              >
+                {DRIVER_NEXT_LABEL[o.status]}
+              </button>
+            ) : (
+              <button type="button" onClick={() => setIsNavigating(false)} className={btnPrimary}>Kembali ke pesanan</button>
+            )}
+          </div>
+          {err && <p className="mt-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{err}</p>}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
@@ -134,6 +232,11 @@ function OrderDetail() {
         {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
 
         <div className="flex flex-wrap gap-2">
+          {isMyDriver && ["diambil", "dijemput", "diantar"].includes(o.status) && (
+            <button type="button" className={btnPrimary} onClick={() => { setShowNavDetails(false); setIsNavigating(true); }}>
+              <span className="inline-flex items-center gap-2"><Navigation className="h-4 w-4" /> Mulai Navigasi</span>
+            </button>
+          )}
           {isMyDriver && DRIVER_NEXT_LABEL[o.status] && (
             <button
               className={btnPrimary}
