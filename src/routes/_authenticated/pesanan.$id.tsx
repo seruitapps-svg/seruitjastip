@@ -236,7 +236,7 @@ function OrderDetail() {
               <QrCode className="h-10 w-10 text-muted-foreground" />
             </div>
             <p className="mt-2 text-xs text-muted-foreground">QRIS resmi segera hadir — admin akan kirim lewat chat.</p>
-            <p className="mt-1 text-lg font-bold text-primary">{formatRupiah(o.total)}</p>
+            <p className="mt-1 text-lg font-bold text-primary">{formatRupiah(finalTotal)}</p>
           </div>
         )}
 
