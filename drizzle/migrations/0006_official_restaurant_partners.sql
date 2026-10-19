@@ -77,6 +77,18 @@ CREATE POLICY "merchant owners delete own products"
   ON public.merchant_products FOR DELETE TO authenticated
   USING (EXISTS (SELECT 1 FROM public.merchants m WHERE m.id = merchant_id AND m.owner_id = auth.uid() AND m.verification_status = 'approved'));
 
+-- Remove legacy permissive policies so they cannot bypass pending/owner checks.
+DO $
+DECLARE policy_row record;
+BEGIN
+  FOR policy_row IN
+    SELECT policyname FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'merchants'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.merchants', policy_row.policyname);
+  END LOOP;
+END $;
+
 ALTER TABLE public.merchants ENABLE ROW LEVEL SECURITY;
 GRANT SELECT, INSERT, UPDATE ON public.merchants TO authenticated;
 GRANT SELECT ON public.merchants TO anon;
@@ -85,9 +97,9 @@ DROP POLICY IF EXISTS "official merchants public catalog" ON public.merchants;
 CREATE POLICY "official merchants public catalog"
   ON public.merchants FOR SELECT TO anon, authenticated
   USING (
-    (type = 'official_mitra' AND verification_status = 'approved' AND is_open = true)
+    (type = 'point_resto' AND is_open = true)
+    OR (type = 'official_mitra' AND verification_status = 'approved' AND is_open = true)
     OR (owner_id = auth.uid())
-    OR (type = 'point_resto' AND public.has_role(auth.uid(), 'superadmin'))
     OR public.has_role(auth.uid(), 'superadmin')
   );
 
