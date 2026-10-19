@@ -93,6 +93,9 @@ function OrderDetail() {
   const emergencyPhone = isMyDriver ? (orderWithShopContact.shop_wa || (o.service === "kirim" ? o.recipient_wa : null)) : null;
   const cleanPhone = (phone: string) => phone.replace(/\D/g, "").replace(/^0/, "62");
   const emergencyMessage = `Halo, saya kurir Mider mengantarkan pesanan dari ${o.sender_name}. Saya sudah di lokasi.`;
+  const itemCost = Number((o as any).item_cost ?? 0);
+  const calculatedTotal = (o.shipping_fare || 0) + (o.consumer_service_fee || 0) + itemCost;
+  const finalTotal = Math.max(o.total || 0, calculatedTotal);
 
   async function act(fn: () => PromiseLike<{ error: { message: string } | null }>) {
     setBusy(true);
@@ -131,7 +134,23 @@ function OrderDetail() {
 
         <div className="flex flex-wrap gap-2">
           {isMyDriver && DRIVER_NEXT_LABEL[o.status] && (
-            <button className={btnPrimary} disabled={busy} onClick={() => act(() => supabase.rpc("driver_advance_order", { _order_id: o.id }))}>
+            <button
+              className={btnPrimary}
+              disabled={busy}
+              onClick={() => {
+                if (
+                  o.status === "diantar" &&
+                  (o.service === "belanja" || String(o.service) === "point_food") &&
+                  itemCost === 0
+                ) {
+                  const proceed = window.confirm(
+                    "Perhatian: Nominal belanjaan masih Rp 0. Jika ada talangan belanjaan/makanan, harap simpan nominal terlebih dahulu agar masuk ke tagihan konsumen. Tetap selesaikan tanpa talangan?"
+                  );
+                  if (!proceed) return;
+                }
+                act(() => supabase.rpc("driver_advance_order", { _order_id: o.id }));
+              }}
+            >
               {DRIVER_NEXT_LABEL[o.status]}
             </button>
           )}
@@ -187,7 +206,7 @@ function OrderDetail() {
             )}
             <div className="flex justify-between border-t border-border pt-2 font-bold">
               <span className="text-foreground">Total Tagihan</span>
-              <span className="text-primary">{formatRupiah(o.total)}</span>
+              <span className="text-primary">{formatRupiah(finalTotal)}</span>
             </div>
             {(o as any).item_receipt_url && (
               <div className="pt-2 text-right">
@@ -198,7 +217,13 @@ function OrderDetail() {
             )}
           </div>
           {isMyDriver && (o.service === "belanja" || String(o.service) === "point_food") && (
-            <DriverItemCostCard order={o} onSuccess={() => { qc.invalidateQueries({ queryKey: ["order", id] }); }} />
+            <DriverItemCostCard
+              order={o}
+              onSuccess={() => {
+                qc.invalidateQueries({ queryKey: ["order", id] });
+                qc.invalidateQueries({ queryKey: ["messages", id] });
+              }}
+            />
           )}
           {isMyDriver && <DriverTransactionBreakdown order={o} />}
           {o.admin_note && row("Catatan admin", o.admin_note)}
