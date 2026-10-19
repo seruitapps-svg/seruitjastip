@@ -13,10 +13,11 @@ interface Props {
   destination: Point | null;
   encodedPolyline?: string;
   orderId?: string;
+  trackingActive?: boolean;
   className?: string;
 }
 
-export function RouteMap({ origin, destination, encodedPolyline, orderId, className }: Props) {
+export function RouteMap({ origin, destination, encodedPolyline, orderId, trackingActive = true, className }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
@@ -54,11 +55,12 @@ export function RouteMap({ origin, destination, encodedPolyline, orderId, classN
 
   // Dengarkan posisi driver terbaru untuk pesanan ini.
   useEffect(() => {
-    if (!orderId) {
+    if (!orderId || !trackingActive) {
       setDriverPosition(null);
       return;
     }
     let cancelled = false;
+    setDriverPosition(null);
     supabase
       .from("driver_locations")
       .select("latitude, longitude")
@@ -82,7 +84,7 @@ export function RouteMap({ origin, destination, encodedPolyline, orderId, classN
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [orderId]);
+  }, [orderId, trackingActive]);
 
   // Perbarui marker & polyline saat titik berubah
   useEffect(() => {
