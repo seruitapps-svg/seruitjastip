@@ -13,6 +13,7 @@ import { formatRupiah } from "@/lib/config";
 import { AdminFinancialOverview } from "@/components/admin/AdminFinancialOverview";
 import { AdminModeSettings } from "@/components/admin/AdminModeSettings";
 import { AdminPointResto } from "@/components/admin/AdminPointResto";
+import { AdminRestoMitra } from "@/components/admin/AdminRestoMitra";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -34,7 +35,7 @@ function AdminPage() {
   const { isAdmin, ready } = useAuth();
   const qc = useQueryClient();
   const [category, setCategory] = useState<"operasional" | "pengguna" | "pengaturan" | "keuangan">("operasional");
-  const [subTab, setSubTab] = useState<"order" | "point_resto" | "driver_approval" | "akun" | "topup" | "tarif" | "pengumuman">("order");
+  const [subTab, setSubTab] = useState<"order" | "point_resto" | "resto_mitra" | "driver_approval" | "akun" | "topup" | "tarif" | "pengumuman">("order");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("menunggu_verifikasi");
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
@@ -326,6 +327,7 @@ function AdminPage() {
           {category === "operasional" && <>
             <button className={tabCls(subTab === "order")} onClick={() => setSubTab("order")}>Pesanan Masuk</button>
             <button className={tabCls(subTab === "point_resto")} onClick={() => setSubTab("point_resto")}>Point Resto (Food)</button>
+            <button className={tabCls(subTab === "resto_mitra")} onClick={() => setSubTab("resto_mitra")}>Resto Mitra</button>
             <button className={tabCls(subTab === "driver_approval")} onClick={() => setSubTab("driver_approval")}>Verifikasi Driver</button>
           </>}
           {category === "pengguna" && <>
@@ -343,6 +345,12 @@ function AdminPage() {
         {category === "operasional" && subTab === "point_resto" && (
           <div className="mt-4">
             <AdminPointResto />
+          </div>
+        )}
+
+        {category === "operasional" && subTab === "resto_mitra" && (
+          <div className="mt-4">
+            <AdminRestoMitra />
           </div>
         )}
 
