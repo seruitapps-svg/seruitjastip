@@ -183,6 +183,7 @@ function OrderDetail() {
           )}
           <RouteMap
             orderId={o.id}
+            trackingActive={["diambil", "dijemput", "diantar"].includes(o.status)}
             origin={{ lat: o.origin_lat, lng: o.origin_lng }}
             destination={{ lat: o.dest_lat, lng: o.dest_lng }}
             encodedPolyline={o.encoded_polyline}
