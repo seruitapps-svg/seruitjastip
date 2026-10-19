@@ -14,10 +14,11 @@ interface Props {
   encodedPolyline?: string;
   orderId?: string;
   trackingActive?: boolean;
+  followDriver?: boolean;
   className?: string;
 }
 
-export function RouteMap({ origin, destination, encodedPolyline, orderId, trackingActive = true, className }: Props) {
+export function RouteMap({ origin, destination, encodedPolyline, orderId, trackingActive = true, followDriver = false, className }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
@@ -148,6 +149,10 @@ export function RouteMap({ origin, destination, encodedPolyline, orderId, tracki
     const map = mapRef.current;
     if (!mapReady || !map || !window.google?.maps) return;
     const maps = window.google.maps;
+
+    if (followDriver && driverPosition) {
+      map.panTo(driverPosition);
+    }
 
     if (!driverPosition) {
       if (driverMarkerRef.current) driverMarkerRef.current.setMap(null);
