@@ -18,12 +18,18 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [noReceiptAvailable, setNoReceiptAvailable] = useState(false);
 
   const isEditable = ["diambil", "dijemput"].includes(order.status);
-
-  // Deteksi jenis layanan
-  const isFood = order.service === "food" || order.service === "point_food";
-  const isBelanja = order.service === "belanja";
+  const detailText = (order.item_detail || "").toLowerCase();
+  const isLikelyFood =
+    order.service === "food" ||
+    order.service === "point_food" ||
+    detailText.includes("point resto") ||
+    detailText.includes("porsi") ||
+    detailText.includes("resto") ||
+    detailText.includes("makan") ||
+    detailText.includes("minum");
 
   async function handleSave(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -32,13 +38,12 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
 
     const parsed = Number.parseInt(amount.replace(/\D/g, ""), 10);
     if (!Number.isSafeInteger(parsed) || parsed < 0) {
-      setError("Masukkan nominal yang valid (isi 0 jika tidak ada belanjaan).");
+      setError("Masukkan nominal yang valid (isi 0 jika tidak ada talangan).");
       return;
     }
 
-    // Pada Jastip Belanja: jika ada nominal belanja, struk wajib ada
-    if (isBelanja && parsed > 0 && !file && !currentReceipt) {
-      setError("Layanan Jastip Belanja wajib melampirkan foto struk kasir.");
+    if (!isLikelyFood && !noReceiptAvailable && parsed > 0 && !file && !currentReceipt) {
+      setError("Lampirkan foto struk kasir, atau centang pilihan 'Warung/toko tidak menyediakan struk'.");
       return;
     }
 
@@ -46,13 +51,31 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
     try {
       let receiptUrl = currentReceipt;
       if (file) {
-        receiptUrl = await uploadCompressedMedia(
-          "payment-proofs",
-          `receipts/${order.id}`,
-          "struk",
-          file,
-          { maxWidth: 1024, quality: 0.75 },
-        );
+        try {
+          receiptUrl = await uploadCompressedMedia(
+            "payment-proofs",
+            `receipts/${order.id}`,
+            "struk",
+            file,
+            { maxWidth: 1024, quality: 0.75 },
+          );
+        } catch (uploadErr: unknown) {
+          console.warn("Kompresi gagal, mencoba upload file asli:", uploadErr);
+          const ext = file.name.split(".").pop() || "jpg";
+          const fallbackPath = `receipts/${order.id}/struk_raw_${Date.now()}.${ext}`;
+          const { error: rawErr } = await supabase.storage
+            .from("payment-proofs")
+            .upload(fallbackPath, file, { contentType: file.type || "application/octet-stream", upsert: true });
+
+          if (rawErr) {
+            throw new Error(`Gagal upload foto ke storage: ${rawErr.message}. Pastikan bucket payment-proofs sudah dibuat di Supabase.`);
+          }
+
+          const { data: publicUrlData } = supabase.storage
+            .from("payment-proofs")
+            .getPublicUrl(fallbackPath);
+          receiptUrl = publicUrlData.publicUrl;
+        }
       }
 
       const { error: rpcErr } = await (supabase.rpc as any)("driver_set_order_item_cost", {
@@ -62,11 +85,11 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
       });
       if (rpcErr) throw rpcErr;
 
-      setSuccessMsg("Nominal talangan & data berhasil disimpan.");
+      setSuccessMsg("Nominal & data berhasil disimpan.");
       setFile(null);
       onSuccess();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal mengunggah foto struk atau menyimpan data.");
+      setError(err instanceof Error ? err.message : "Gagal menyimpan data belanjaan.");
     } finally {
       setLoading(false);
     }
@@ -77,14 +100,14 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
       <div className="flex items-center gap-2">
         <Receipt className="h-5 w-5 text-primary" />
         <h3 className="text-sm font-bold text-foreground">
-          {isFood ? "Harga Makanan (Point Resto)" : "Talangan Belanja"}
+          {isLikelyFood ? "Harga Makanan (Point Resto)" : "Talangan Belanja"}
         </h3>
       </div>
 
       <p className="text-xs text-muted-foreground">
-        {isFood
-          ? "Masukkan harga makanan riil dari resto. Foto struk opsional jika resto/warung tidak menyediakan struk."
-          : "Masukkan harga belanjaan riil. Wajib sertakan foto struk kasir."}
+        {isLikelyFood
+          ? "Masukkan harga makanan riil dari warung/resto. Foto struk bersifat opsional."
+          : "Masukkan harga barang belanjaan riil sesuai struk kasir."}
       </p>
 
       {currentCost > 0 && (
@@ -95,12 +118,7 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
       )}
 
       {currentReceipt && (
-        <a
-          href={currentReceipt}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs text-primary underline"
-        >
+        <a href={currentReceipt} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary underline">
           <ImageIcon className="h-3.5 w-3.5" /> Lihat Foto Struk Terunggah
         </a>
       )}
@@ -109,7 +127,7 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
         <form onSubmit={handleSave} className="space-y-3 pt-1">
           <div>
             <label htmlFor={`item-cost-${order.id}`} className="text-xs font-semibold text-foreground">
-              Nominal {isFood ? "Harga Makanan" : "Belanja"} (Rp)
+              Nominal {isLikelyFood ? "Harga Makanan" : "Belanja"} (Rp)
             </label>
             <input
               id={`item-cost-${order.id}`}
@@ -126,14 +144,12 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
           <div>
             <div className="flex items-center justify-between">
               <label htmlFor={`item-receipt-${order.id}`} className="text-xs font-semibold text-foreground">
-                Foto Struk / Nota {isFood ? "(Opsional)" : "(Wajib)"}
+                Foto Struk Kasir {isLikelyFood || noReceiptAvailable ? "(Opsional)" : "(Wajib)"}
               </label>
               <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
                 <Camera className="h-3 w-3" /> Kamera / Galeri
               </span>
             </div>
-
-            {/* Tanpa capture="environment" agar HP menampilkan pilihan Kamera atau Galeri */}
             <input
               id={`item-receipt-${order.id}`}
               type="file"
@@ -144,27 +160,31 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
             />
           </div>
 
+          <label className="flex cursor-pointer items-center gap-2 pt-1 text-xs text-foreground">
+            <input
+              type="checkbox"
+              checked={noReceiptAvailable}
+              onChange={(e) => setNoReceiptAvailable(e.target.checked)}
+              className="rounded border-border text-primary focus:ring-primary"
+              disabled={loading}
+            />
+            <span>Warung / toko tidak menyediakan struk cetak</span>
+          </label>
+
           {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
           {successMsg && (
             <p role="status" className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              {successMsg}
+              <CheckCircle2 className="h-3.5 w-3.5" />{successMsg}
             </p>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-          >
+          <button type="submit" disabled={loading} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             {loading ? "Menyimpan..." : "Simpan Nominal & Struk"}
           </button>
         </form>
       ) : (
-        <p className="text-xs italic text-muted-foreground">
-          Data belanja terkunci karena status pesanan sudah diantar/selesai.
-        </p>
+        <p className="text-xs italic text-muted-foreground">Data belanja terkunci karena status pesanan sudah diantar/selesai.</p>
       )}
     </section>
   );
