@@ -21,7 +21,13 @@ USING (
   EXISTS (
     SELECT 1 FROM public.orders o
     WHERE o.id = driver_locations.order_id
-      AND (o.user_id = auth.uid() OR o.driver_id = auth.uid() OR public.has_role(auth.uid(), 'superadmin'))
+      AND (
+        public.has_role(auth.uid(), 'superadmin')
+        OR (
+          o.status IN ('diambil', 'dijemput', 'diantar')
+          AND (o.user_id = auth.uid() OR o.driver_id = auth.uid())
+        )
+      )
   )
 );
 
