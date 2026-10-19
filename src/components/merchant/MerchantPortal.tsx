@@ -23,7 +23,7 @@ export function MerchantPortal() {
     queryKey: ["my-official-merchant", user?.id],
     enabled: !!user && !isAdmin,
     queryFn: async () => {
-      const { data, error } = await supabase.from("merchants").select("*")
+      const { data, error } = await (supabase as any).from("merchants").select("*")
         .eq("type", "official_mitra").eq("owner_id", user!.id)
         .order("created_at", { ascending: false }).limit(1).maybeSingle();
       if (error) throw error;
@@ -34,7 +34,7 @@ export function MerchantPortal() {
     queryKey: ["admin-official-merchants"],
     enabled: isAdmin,
     queryFn: async () => {
-      const { data, error } = await supabase.from("merchants").select("*")
+      const { data, error } = await (supabase as any).from("merchants").select("*")
         .eq("type", "official_mitra").order("created_at", { ascending: false });
       if (error) throw error;
       return data as MerchantRow[];
@@ -44,7 +44,7 @@ export function MerchantPortal() {
     queryKey: ["my-merchant-products", own.data?.id],
     enabled: !!own.data?.id && own.data.verification_status === "approved",
     queryFn: async () => {
-      const { data, error } = await supabase.from("merchant_products").select("*")
+      const { data, error } = await (supabase as any).from("merchant_products").select("*")
         .eq("merchant_id", own.data!.id).order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -58,7 +58,7 @@ export function MerchantPortal() {
     e.preventDefault();
     if (!user) { setMessage("Masuk ke akun Mider terlebih dahulu untuk mendaftar."); return; }
     setBusy(true); setMessage("");
-    const { error } = await supabase.from("merchants").insert({
+    const { error } = await (supabase as any).from("merchants").insert({
       name: name.trim(), address: address.trim(), phone_wa: phone.trim() || null,
       owner_id: user.id, type: "official_mitra", verification_status: "pending", is_open: false,
     });
@@ -72,7 +72,7 @@ export function MerchantPortal() {
     const rejection = approved ? null : window.prompt("Alasan penolakan (wajib diisi):", "Mohon lengkapi data restoran");
     if (!approved && !rejection?.trim()) return;
     setBusy(true);
-    const { error } = await supabase.from("merchants").update({
+    const { error } = await (supabase as any).from("merchants").update({
       verification_status: approved ? "approved" : "rejected",
       rejection_note: approved ? null : rejection!.trim(),
       is_open: approved,
@@ -89,7 +89,7 @@ export function MerchantPortal() {
     e.preventDefault();
     if (!own.data) return;
     setBusy(true); setMessage("");
-    const { error } = await supabase.from("merchant_products").insert({
+    const { error } = await (supabase as any).from("merchant_products").insert({
       merchant_id: own.data.id, name: productName.trim(),
       description: productDescription.trim(), price: Math.round(Number(productPrice)),
     });
@@ -101,7 +101,7 @@ export function MerchantPortal() {
     }
   }
   async function toggleProduct(id: string, available: boolean) {
-    const { error } = await supabase.from("merchant_products").update({ is_available: !available }).eq("id", id);
+    const { error } = await (supabase as any).from("merchant_products").update({ is_available: !available }).eq("id", id);
     if (error) setMessage(error.message);
     else await qc.invalidateQueries({ queryKey: ["my-merchant-products", own.data?.id] });
   }
@@ -152,7 +152,7 @@ export function OfficialMerchantCatalog() {
   const catalog = useQuery({
     queryKey: ["official-merchant-catalog"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("merchants")
+      const { data, error } = await (supabase as any).from("merchants")
         .select("id,name,address,phone_wa,image_url,opening_hours")
         .eq("type", "official_mitra").eq("verification_status", "approved").eq("is_open", true)
         .order("name");
@@ -163,7 +163,7 @@ export function OfficialMerchantCatalog() {
   const menu = useQuery({
     queryKey: ["official-merchant-products"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("merchant_products")
+      const { data, error } = await (supabase as any).from("merchant_products")
         .select("id,merchant_id,name,description,price,image_url")
         .eq("is_available", true).order("name");
       if (error) throw error;
