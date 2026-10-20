@@ -9,7 +9,7 @@ const point = z.object({
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
 });
-const wa = z.string().trim().regex(/^(\\+62|62|0)8\\d{6,11}$/);
+const wa = z.string().trim().regex(/^(\+62|62|0)8\d{6,11}$/, "Nomor WhatsApp tidak valid. Gunakan format 08xxxxxxxxxx atau +628xxxxxxxxxx.");
 
 const schema = z
   .object({
