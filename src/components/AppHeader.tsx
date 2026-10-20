@@ -1,17 +1,18 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { Bike, ChevronDown, LogOut, ShoppingBag, Store, UserRound, ArrowLeftRight } from "lucide-react";
+import { Bike, ChevronDown, LogOut, ShoppingBag, Store, UserRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
 export function AppHeader() {
-  const { user, isAdmin, isDriver, testRole, setSimulation } = useAuth();
+  const { user, isAdmin, isDriver, isMitra, isCustomerOnly, testRole, setSimulation } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
 
   const isDriverPage = currentPath.startsWith("/driver");
+  const isMitraPage = currentPath.startsWith("/mitra");
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -26,7 +27,7 @@ export function AppHeader() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur">
-      {/* Bar Simulasi Admin */}
+      {/* Bar Simulasi Superadmin */}
       {isAdmin && (
         <div className="flex flex-wrap items-center justify-between gap-2 bg-amber-500 px-4 py-1.5 text-xs font-semibold text-black">
           <span>
@@ -34,13 +35,16 @@ export function AppHeader() {
           </span>
           <div className="flex flex-wrap gap-2">
             <button onClick={() => setSimulation(null)} className="underline hover:opacity-80">
-              Reset (Admin)
+              Reset
             </button>
             <button onClick={() => setSimulation("driver")} className="rounded bg-white/20 px-2 py-0.5 hover:bg-white/30">
               Tes Driver
             </button>
+            <button onClick={() => setSimulation("mitra")} className="rounded bg-white/20 px-2 py-0.5 hover:bg-white/30">
+              Tes Mitra
+            </button>
             <button onClick={() => setSimulation("user")} className="rounded bg-white/20 px-2 py-0.5 hover:bg-white/30">
-              Tes Konsumen
+              Tes Pelanggan
             </button>
           </div>
         </div>
@@ -57,13 +61,12 @@ export function AppHeader() {
 
         {user ? (
           <nav aria-label="Navigasi utama" className="ml-auto flex items-center gap-1.5 sm:gap-2">
-            {/* Tombol Cepat Switch Mode untuk Driver */}
+            {/* 1. Switch Mode Cepat untuk Driver */}
             {isDriver && (
               isDriverPage ? (
                 <Link
                   to="/"
                   className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary/20"
-                  title="Pindah ke mode pemesanan"
                 >
                   <ShoppingBag className="h-3.5 w-3.5" />
                   <span>Mode Pemesan</span>
@@ -72,10 +75,30 @@ export function AppHeader() {
                 <Link
                   to="/driver"
                   className="inline-flex items-center gap-1.5 rounded-full bg-primary px-2.5 py-1 text-xs font-bold text-primary-foreground hover:bg-primary/90"
-                  title="Kembali ke dashboard kerja driver"
                 >
                   <Bike className="h-3.5 w-3.5" />
                   <span>Mode Driver</span>
+                </Link>
+              )
+            )}
+
+            {/* 2. Switch Mode Cepat untuk Mitra Resto */}
+            {isMitra && (
+              isMitraPage ? (
+                <Link
+                  to="/"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary/20"
+                >
+                  <ShoppingBag className="h-3.5 w-3.5" />
+                  <span>Mode Pemesan</span>
+                </Link>
+              ) : (
+                <Link
+                  to="/mitra"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-primary px-2.5 py-1 text-xs font-bold text-primary-foreground hover:bg-primary/90"
+                >
+                  <Store className="h-3.5 w-3.5" />
+                  <span>Mode Resto</span>
                 </Link>
               )
             )}
@@ -87,25 +110,31 @@ export function AppHeader() {
               Saldo
             </Link>
 
-            {/* Dropdown Akun Terkelompok */}
+            {/* Dropdown Akun */}
             <details className="relative">
               <summary className="flex cursor-pointer list-none items-center gap-1 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground [&::-webkit-details-marker]:hidden">
                 <UserRound className="h-4 w-4" />
                 <ChevronDown className="h-3.5 w-3.5" />
               </summary>
               <div className="absolute right-0 top-full z-50 mt-2 min-w-56 rounded-xl border border-border bg-card p-2 shadow-lg">
-                {/* Badge Status Akun */}
+                {/* Status Akun */}
                 <div className="mb-2 border-b border-border px-2 pb-2 text-[11px]">
                   <span className="text-muted-foreground">Login sebagai: </span>
                   <span className="font-bold text-foreground">
-                    {isAdmin ? "Superadmin" : isDriver ? "Mitra Driver" : "Pelanggan"}
+                    {isAdmin
+                      ? "Superadmin"
+                      : isDriver
+                      ? "Mitra Driver"
+                      : isMitra
+                      ? "Mitra Resto"
+                      : "Pelanggan"}
                   </span>
                 </div>
 
-                {/* Bagian Driver */}
+                {/* Skenario Driver: hanya dashboard driver & link pemesan */}
                 {isDriver && (
                   <div className="mb-1 space-y-0.5">
-                    <p className="px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Operasional</p>
+                    <p className="px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Akses Driver</p>
                     <Link
                       to="/driver"
                       className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-accent"
@@ -115,44 +144,53 @@ export function AppHeader() {
                     </Link>
                     <Link
                       to="/"
-                      className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-accent"
+                      className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent"
                     >
                       <ShoppingBag className="h-3.5 w-3.5" /> Beranda Pemesanan
                     </Link>
                   </div>
                 )}
 
-                {/* Bagian Jika Belum Jadi Driver */}
-                {!isDriver && (
+                {/* Skenario Mitra Resto: hanya dashboard resto & link pemesan */}
+                {isMitra && (
                   <div className="mb-1 space-y-0.5">
-                    <p className="px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Gabung Mitra</p>
+                    <p className="px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Akses Resto</p>
                     <Link
-                      to="/daftar-driver"
+                      to="/mitra"
+                      className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-accent"
+                      activeProps={{ className: "text-primary bg-primary/10" }}
+                    >
+                      <Store className="h-3.5 w-3.5 text-primary" /> Dashboard Mitra Resto
+                    </Link>
+                    <Link
+                      to="/"
                       className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent"
                     >
-                      <Bike className="h-3.5 w-3.5" /> Daftar Driver
+                      <ShoppingBag className="h-3.5 w-3.5" /> Beranda Pemesanan
                     </Link>
                   </div>
                 )}
 
-                {/* Bagian Kemitraan Resto */}
-                <div className="mb-1 space-y-0.5 border-t border-border pt-1">
-                  <p className="px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Resto</p>
-                  <Link
-                    to="/mitra"
-                    className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent"
-                  >
-                    <Store className="h-3.5 w-3.5" /> Dashboard Mitra Resto
-                  </Link>
-                  <Link
-                    to="/merchant"
-                    className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
-                  >
-                    Daftar Mitra Resto Baru
-                  </Link>
-                </div>
+                {/* Skenario Pelanggan: matikan kedua dashboard, tampilkan opsi pendaftaran */}
+                {isCustomerOnly && (
+                  <div className="mb-1 space-y-0.5">
+                    <p className="px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Daftar Mitra</p>
+                    <Link
+                      to="/daftar-driver"
+                      className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent"
+                    >
+                      <Bike className="h-3.5 w-3.5 text-primary" /> Daftar Menjadi Driver
+                    </Link>
+                    <Link
+                      to="/merchant"
+                      className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent"
+                    >
+                      <Store className="h-3.5 w-3.5 text-primary" /> Daftar Mitra Resto
+                    </Link>
+                  </div>
+                )}
 
-                {/* Bagian Bagian Admin */}
+                {/* Panel Superadmin (jika admin) */}
                 {isAdmin && (
                   <div className="mb-1 border-t border-border pt-1">
                     <Link
@@ -165,7 +203,7 @@ export function AppHeader() {
                   </div>
                 )}
 
-                {/* Logout */}
+                {/* Tombol Logout */}
                 <div className="border-t border-border pt-1">
                   <button
                     type="button"
