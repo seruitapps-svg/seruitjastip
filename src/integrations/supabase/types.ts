@@ -415,9 +415,12 @@ export type Database = {
           longitude: number | null
           name: string
           opening_hours: string | null
+          owner_name: string | null
           phone_wa: string | null
+          status: string
           type: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           address: string
@@ -430,9 +433,12 @@ export type Database = {
           longitude?: number | null
           name: string
           opening_hours?: string | null
+          owner_name?: string | null
           phone_wa?: string | null
+          status?: string
           type?: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           address?: string
@@ -445,9 +451,12 @@ export type Database = {
           longitude?: number | null
           name?: string
           opening_hours?: string | null
+          owner_name?: string | null
           phone_wa?: string | null
+          status?: string
           type?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1106,7 +1115,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "superadmin" | "driver" | "user"
+      app_role: "superadmin" | "driver" | "mitra" | "user"
       driver_registration_status: "pending" | "approved" | "rejected"
       order_status:
         | "menunggu_verifikasi"
@@ -1244,7 +1253,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["superadmin", "driver", "user"],
+      app_role: ["superadmin", "driver", "mitra", "user"],
       driver_registration_status: ["pending", "approved", "rejected"],
       order_status: [
         "menunggu_verifikasi",
