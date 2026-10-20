@@ -64,6 +64,22 @@ function MerchantRegistrationPage() {
       return;
     }
 
+    const latitude = Number(form.latitude);
+    const longitude = Number(form.longitude);
+    if (
+      !form.latitude.trim() ||
+      !form.longitude.trim() ||
+      !Number.isFinite(latitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      !Number.isFinite(longitude) ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      setErrMsg("Tentukan titik lokasi restoran di Google Maps terlebih dahulu, lalu kirim pendaftaran.");
+      return;
+    }
+
     setSaving(true);
     setErrMsg("");
     setSuccess(false);
@@ -75,8 +91,8 @@ function MerchantRegistrationPage() {
         owner_name: form.ownerName.trim(),
         phone_wa: form.phone.trim(),
         address: form.address.trim(),
-        latitude: Number(form.latitude),
-        longitude: Number(form.longitude),
+        latitude,
+        longitude,
         type: form.category.trim() || "Kuliner",
         opening_hours: form.openingHours.trim(),
         status: "pending",
