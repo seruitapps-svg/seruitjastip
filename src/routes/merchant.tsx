@@ -6,6 +6,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { MapLocationPicker } from "@/components/MapLocationPicker";
 
 export const Route = createFileRoute("/merchant")({
   head: () => ({
@@ -191,28 +192,11 @@ function MerchantRegistrationPage() {
               </label>
 
               <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-3">
-                <div>
-                  <h2 className="text-sm font-bold text-foreground">Titik Lokasi Restoran *</h2>
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Buka peta, pilih atau tekan lama titik restoran, lalu salin koordinat latitude dan longitude ke kolom di bawah. Titik ini digunakan untuk menandai lokasi resto.</p>
-                  <a href="https://www.google.com/maps" target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-primary hover:bg-muted">
-                    Buka Google Maps untuk memilih titik ↗
-                  </a>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="block text-sm font-medium text-foreground">
-                    Latitude *
-                    <input required type="number" step="any" min="-90" max="90" value={form.latitude} onChange={(e) => updateField("latitude", e.target.value)} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="-6.200000" />
-                  </label>
-                  <label className="block text-sm font-medium text-foreground">
-                    Longitude *
-                    <input required type="number" step="any" min="-180" max="180" value={form.longitude} onChange={(e) => updateField("longitude", e.target.value)} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="106.816666" />
-                  </label>
-                </div>
-                {form.latitude && form.longitude && (
-                  <a href={`https://www.google.com/maps?q=${encodeURIComponent(form.latitude + "," + form.longitude)}`} target="_blank" rel="noreferrer" className="inline-flex text-xs font-semibold text-primary underline underline-offset-2">
-                    Periksa titik yang dipilih di peta
-                  </a>
-                )}
+                <h2 className="text-sm font-bold text-foreground">Titik Lokasi Restoran *</h2>
+                <MapLocationPicker
+                  value={form.latitude && form.longitude ? { lat: Number(form.latitude), lng: Number(form.longitude) } : null}
+                  onChange={(point) => setForm((current) => ({ ...current, latitude: String(point.lat), longitude: String(point.lng) }))}
+                />
               </div>
 
               <Button type="submit" disabled={saving} className="w-full rounded-xl py-2.5">
