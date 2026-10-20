@@ -8,19 +8,23 @@ type Coordinates = { lat: number; lng: number };
 type MapLocationPickerProps = {
   value: Coordinates | null;
   onChange: (value: Coordinates) => void;
+  onAddressChange?: (address: string) => void;
 };
 
-export function MapLocationPicker({ value, onChange }: MapLocationPickerProps) {
+export function MapLocationPicker({ value, onChange, onAddressChange }: MapLocationPickerProps) {
   const mapElementRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
   const onChangeRef = useRef(onChange);
+  const onAddressChangeRef = useRef(onAddressChange);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [addressLoading, setAddressLoading] = useState(false);
 
   useEffect(() => {
     onChangeRef.current = onChange;
-  }, [onChange]);
+    onAddressChangeRef.current = onAddressChange;
+  }, [onChange, onAddressChange]);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,6 +47,32 @@ export function MapLocationPicker({ value, onChange }: MapLocationPickerProps) {
         });
         mapRef.current = map;
 
+        const reverseGeocode = (point: Coordinates) => {
+          if (!maps.Geocoder || !onAddressChangeRef.current) return;
+          setAddressLoading(true);
+          new maps.Geocoder().geocode(
+            { location: point },
+            (results: any[], status: string) => {
+              if (cancelled) return;
+              setAddressLoading(false);
+              if (status === "OK" && results?.[0]?.formatted_address) {
+                onAddressChangeRef.current?.(results[0].formatted_address);
+              } else {
+                setError("Titik sudah dipilih, tetapi alamat otomatis tidak ditemukan. Silakan isi alamat lengkap secara manual.");
+              }
+            },
+          );
+        };
+
+        const handleMarkerDrag = () => {
+          const position = markerRef.current?.getPosition();
+          if (!position) return;
+          const point = { lat: position.lat(), lng: position.lng() };
+          onChangeRef.current(point);
+          reverseGeocode(point);
+          setError("");
+        };
+
         const updatePoint = (point: Coordinates, panToPoint = false) => {
           if (!markerRef.current) {
             markerRef.current = new maps.Marker({
@@ -51,18 +81,15 @@ export function MapLocationPicker({ value, onChange }: MapLocationPickerProps) {
               draggable: true,
               title: "Titik lokasi restoran",
             });
-            markerRef.current.addListener("dragend", () => {
-              const position = markerRef.current?.getPosition();
-              if (position) {
-                onChangeRef.current({ lat: position.lat(), lng: position.lng() });
-              }
-            });
+            markerRef.current.addListener("dragend", handleMarkerDrag);
           } else {
             markerRef.current.setPosition(point);
           }
 
           if (panToPoint) map.panTo(point);
           onChangeRef.current(point);
+          reverseGeocode(point);
+          setError("");
         };
 
         if (value) {
@@ -72,12 +99,7 @@ export function MapLocationPicker({ value, onChange }: MapLocationPickerProps) {
             draggable: true,
             title: "Titik lokasi restoran",
           });
-          markerRef.current.addListener("dragend", () => {
-            const position = markerRef.current?.getPosition();
-            if (position) {
-              onChangeRef.current({ lat: position.lat(), lng: position.lng() });
-            }
-          });
+          markerRef.current.addListener("dragend", handleMarkerDrag);
         }
 
         map.addListener("click", (event: any) => {
@@ -86,7 +108,6 @@ export function MapLocationPicker({ value, onChange }: MapLocationPickerProps) {
             lat: event.latLng.lat(),
             lng: event.latLng.lng(),
           });
-          setError("");
         });
 
         setLoading(false);
@@ -121,7 +142,18 @@ export function MapLocationPicker({ value, onChange }: MapLocationPickerProps) {
       markerRef.current.addListener("dragend", () => {
         const position = markerRef.current?.getPosition();
         if (position) {
-          onChangeRef.current({ lat: position.lat(), lng: position.lng() });
+          const point = { lat: position.lat(), lng: position.lng() };
+          onChangeRef.current(point);
+          if (window.google?.maps?.Geocoder) {
+            new window.google.maps.Geocoder().geocode(
+              { location: point },
+              (results: any[], status: string) => {
+                if (status === "OK" && results?.[0]?.formatted_address) {
+                  onAddressChangeRef.current?.(results[0].formatted_address);
+                }
+              },
+            );
+          }
         }
       });
     } else {
@@ -159,11 +191,37 @@ export function MapLocationPicker({ value, onChange }: MapLocationPickerProps) {
             markerRef.current.addListener("dragend", () => {
               const positionNow = markerRef.current?.getPosition();
               if (positionNow) {
-                onChangeRef.current({ lat: positionNow.lat(), lng: positionNow.lng() });
+                const nextPoint = { lat: positionNow.lat(), lng: positionNow.lng() };
+                onChangeRef.current(nextPoint);
+                if (window.google?.maps?.Geocoder) {
+                  new window.google.maps.Geocoder().geocode(
+                    { location: nextPoint },
+                    (results: any[], status: string) => {
+                      if (status === "OK" && results?.[0]?.formatted_address) {
+                        onAddressChangeRef.current?.(results[0].formatted_address);
+                      }
+                    },
+                  );
+                }
               }
             });
           } else {
             markerRef.current.setPosition(point);
+          }
+
+          if (window.google.maps.Geocoder) {
+            setAddressLoading(true);
+            new window.google.maps.Geocoder().geocode(
+              { location: point },
+              (results: any[], status: string) => {
+                setAddressLoading(false);
+                if (status === "OK" && results?.[0]?.formatted_address) {
+                  onAddressChangeRef.current?.(results[0].formatted_address);
+                } else {
+                  setError("Titik sudah dipilih, tetapi alamat otomatis tidak ditemukan. Silakan isi alamat lengkap secara manual.");
+                }
+              },
+            );
           }
         }
       },
@@ -176,7 +234,7 @@ export function MapLocationPicker({ value, onChange }: MapLocationPickerProps) {
     <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">
-          Ketuk titik lokasi restoran pada Google Maps. Geser pin untuk menyesuaikan posisi.
+          Ketuk titik lokasi restoran pada Google Maps. Alamat akan terisi otomatis, dan pin bisa digeser.
         </p>
         <button
           type="button"
@@ -201,6 +259,8 @@ export function MapLocationPicker({ value, onChange }: MapLocationPickerProps) {
           </div>
         )}
       </div>
+
+      {addressLoading && <p className="text-xs text-muted-foreground">Mencari alamat dari titik map...</p>}
 
       {value ? (
         <p className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
