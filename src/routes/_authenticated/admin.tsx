@@ -664,12 +664,14 @@ function AdminPage() {
                   </div>
                   {(() => {
                     const isDrv = selectedUser.roles.includes("driver");
+                    const isMitra = selectedUser.roles.includes("mitra");
                     const isAdm = selectedUser.roles.includes("superadmin");
                     return (
                       <div className="space-y-2 border-t border-border pt-4">
                         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kelola Peran</p>
                         <div className="flex flex-wrap gap-2">
                           <button type="button" className={isDrv ? btnDanger : btnOutline} disabled={busy === selectedUser.id} onClick={() => run(selectedUser.id, () => supabase.rpc("admin_set_role", { _user_id: selectedUser.id, _role: "driver", _grant: !isDrv }))}>{isDrv ? "Cabut driver" : "Jadikan driver"}</button>
+                          <button type="button" className={isMitra ? btnDanger : btnOutline} disabled={busy === selectedUser.id} onClick={() => run(selectedUser.id, () => supabase.rpc("admin_set_role", { _user_id: selectedUser.id, _role: "mitra", _grant: !isMitra }))}>{isMitra ? "Cabut mitra" : "Jadikan mitra"}</button>
                           <button type="button" className={isAdm ? btnDanger : btnOutline} disabled={busy === selectedUser.id} onClick={() => run(selectedUser.id, () => supabase.rpc("admin_set_role", { _user_id: selectedUser.id, _role: "superadmin", _grant: !isAdm }))}>{isAdm ? "Cabut admin" : "Jadikan admin"}</button>
                           {isDrv && <button type="button" className={btnOutline} onClick={() => setOpenWallet(openWallet === selectedUser.id ? null : selectedUser.id)}>Saldo</button>}
                         </div>
