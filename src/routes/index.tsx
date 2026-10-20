@@ -18,6 +18,7 @@ import {
   Smartphone,
   Banknote,
   QrCode,
+  Wallet,
   Zap,
   CalendarClock,
   ArrowLeft,
@@ -258,7 +259,7 @@ function Index() {
   const [recipientWa, setRecipientWa] = useState("");
   const [isForOther, setIsForOther] = useState(false);
 
-  const [paymentMethod, setPaymentMethod] = useState<"cod" | "transfer">("cod");
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "transfer" | "wallet">("cod");
   const [notes, setNotes] = useState("");
   const [formError, setFormError] = useState("");
   const [calculating, setCalculating] = useState(false);
@@ -277,6 +278,20 @@ function Index() {
         .maybeSingle();
       if (error) throw error;
       return data;
+    },
+  });
+
+  const userWalletQuery = useQuery({
+    queryKey: ["order-user-wallet", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_wallets")
+        .select("balance")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return Number(data?.balance ?? 0);
     },
   });
 
@@ -1046,15 +1061,17 @@ function Index() {
                     {/* Metode Pembayaran */}
                     <div>
                       <label className="mb-1 block text-sm font-medium text-foreground">Metode Pembayaran</label>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                         {([
                           ["cod", "COD", "Tunai ke driver", Banknote],
-                          ["transfer", "Transfer", "Scan QRIS", QrCode],
+                          ["transfer", "Transfer / QRIS", "Pembayaran transfer", QrCode],
+                          ["wallet", "Saldo User", user ? (userWalletQuery.isLoading ? "Memuat saldo..." : `Saldo: ${formatRupiah(userWalletQuery.data ?? 0)}`) : "Login untuk menggunakan saldo", Wallet],
                         ] as const).map(([id, name, sub, Icon]) => (
                           <button
                             key={id}
                             type="button"
-                            onClick={() => setPaymentMethod(id)}
+                            disabled={id === "wallet" && (!user || userWalletQuery.isLoading || userWalletQuery.isError)}
+                            onClick={() => { if (id === "wallet" && !user) { setFormError("Login terlebih dahulu untuk membayar dengan Saldo User."); return; } setFormError(""); setPaymentMethod(id); }}
                             className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
                               paymentMethod === id
                                 ? "border-primary bg-accent"
