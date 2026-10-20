@@ -43,14 +43,56 @@ function AuthPage() {
 
   useEffect(() => {
     if (redirect) sessionStorage.setItem("seruit-after-login", safePath(redirect));
-    const go = () => {
-      const target = sessionStorage.getItem("seruit-after-login") || "/";
-      sessionStorage.removeItem("seruit-after-login");
-      navigate({ to: target, replace: true });
+
+    let navigating = false;
+    const go = async (userObj?: { id: string }) => {
+      if (navigating) return;
+      navigating = true;
+      try {
+        const explicit = sessionStorage.getItem("seruit-after-login");
+        if (explicit && explicit !== "/") {
+          sessionStorage.removeItem("seruit-after-login");
+          await navigate({ to: explicit, replace: true });
+          return;
+        }
+        sessionStorage.removeItem("seruit-after-login");
+
+        const u = userObj ?? (await supabase.auth.getUser()).data.user;
+        if (!u) {
+          await navigate({ to: "/", replace: true });
+          return;
+        }
+
+        const { data: roles, error } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", u.id);
+
+        if (error) throw error;
+        const roleList = (roles ?? []).map((r) => r.role);
+
+        if (roleList.includes("driver")) {
+          await navigate({ to: "/driver", replace: true });
+        } else if (roleList.includes("mitra")) {
+          await navigate({ to: "/mitra", replace: true });
+        } else if (roleList.includes("superadmin")) {
+          await navigate({ to: "/admin", replace: true });
+        } else {
+          await navigate({ to: "/", replace: true });
+        }
+      } catch (error) {
+        console.error("[Auth] Gagal menentukan tujuan setelah login:", error);
+        await navigate({ to: "/", replace: true });
+      } finally {
+        navigating = false;
+      }
     };
-    supabase.auth.getUser().then(({ data }) => data.user && go());
-    const { data: sub } = supabase.auth.onAuthStateChange((e) => {
-      if (e === "SIGNED_IN") go();
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) void go(data.user);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session?.user) void go(session.user);
     });
     return () => sub.subscription.unsubscribe();
   }, [redirect, navigate]);
