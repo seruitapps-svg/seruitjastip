@@ -98,8 +98,8 @@ export const createOrder = createServerFn({ method: "POST" })
       .single();
 
     if (error) {
-      console.error(error);
-      throw new Error("Gagal menyimpan pesanan.");
+      console.error("Order insert failed:", error.code, error.message, error.details, error.hint);
+      throw new Error(`Gagal menyimpan pesanan (${error.code ?? "DB"}): ${error.message}`);
     }
 
     if (data.paymentMethod === "wallet") {
