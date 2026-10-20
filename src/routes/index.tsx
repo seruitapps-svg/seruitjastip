@@ -147,6 +147,7 @@ function Index() {
   // Form states
   const [origin, setOrigin] = useState<SelectedPlace | null>(null);
   const [selectedRestoId, setSelectedRestoId] = useState<string | null>(null);
+  const [selectedMenuQuantities, setSelectedMenuQuantities] = useState<Record<string, number>>({});
 
   const pointRestos = useQuery({
     queryKey: ["point-restos"],
@@ -178,6 +179,48 @@ function Index() {
     enabled: selectedService === "food" && foodType === "mitra",
   });
 
+  const merchantProducts = useQuery({
+    queryKey: ["public-merchant-products", selectedRestoId],
+    enabled: selectedService === "food" && foodType === "mitra" && !!selectedRestoId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("merchant_products")
+        .select("id, merchant_id, name, description, price, image_url, is_available")
+        .eq("merchant_id", selectedRestoId!)
+        .eq("is_available", true)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const selectedMenuTotal = (merchantProducts.data ?? []).reduce(
+    (total, product) => total + Number(product.price) * (selectedMenuQuantities[product.id] ?? 0),
+    0,
+  );
+
+  function changeMenuQuantity(product: { id: string; name: string; price: number | string }, delta: number) {
+    setSelectedMenuQuantities((current) => {
+      const nextQuantity = Math.max(0, (current[product.id] ?? 0) + delta);
+      const next = { ...current };
+      if (nextQuantity === 0) delete next[product.id];
+      else next[product.id] = nextQuantity;
+      const lines = (merchantProducts.data ?? []).map((item) => {
+        const quantity = item.id === product.id ? nextQuantity : (next[item.id] ?? 0);
+        return quantity > 0
+          ? `${quantity}x ${item.name} @ ${formatRupiah(Number(item.price))} = ${formatRupiah(Number(item.price) * quantity)}`
+          : null;
+      }).filter((line): line is string => Boolean(line));
+      const total = (merchantProducts.data ?? []).reduce((sum, item) => {
+        const quantity = item.id === product.id ? nextQuantity : (next[item.id] ?? 0);
+        return sum + Number(item.price) * quantity;
+      }, 0);
+      setItemDetail(lines.length ? `${lines.join("; ")}. Total menu: ${formatRupiah(total)}.` : "");
+      return next;
+    });
+    setSummary(null);
+  }
+
   function pickResto(resto: {
     id: string;
     name: string;
@@ -186,6 +229,9 @@ function Index() {
     longitude: number | null;
   }) {
     setSelectedRestoId(resto.id);
+    setSelectedMenuQuantities({});
+    setItemDetail("");
+    setSummary(null);
     if (resto.latitude != null && resto.longitude != null) {
       setOrigin({
         address: `${resto.name} — ${resto.address}`,
@@ -301,6 +347,10 @@ function Index() {
       return;
     }
     setSelectedService(srv.id);
+    setSelectedRestoId(null);
+    setSelectedMenuQuantities({});
+    setItemDetail("");
+    setOrigin(null);
     setSummary(null);
     setFormError("");
     window.scrollTo({ top: 160, behavior: "smooth" });
@@ -327,6 +377,11 @@ function Index() {
     setSummary(null);
 
     if (!selectedService) return;
+    if (selectedService === "food" && foodType === "mitra") {
+      if (!selectedRestoId) return setFormError("Pilih Mitra Resto Resmi terlebih dahulu.");
+      if (selectedMenuTotal <= 0) return setFormError("Pilih minimal satu menu yang ingin dipesan.");
+      if (!origin) return setFormError("Restoran belum memiliki titik lokasi yang valid. Hubungi mitra untuk memperbarui lokasi.");
+    }
     if (!origin) return setFormError("Pilih lokasi Titik A dari saran alamat.");
     if (!destination) return setFormError("Pilih lokasi Titik B dari saran alamat.");
 
@@ -393,7 +448,7 @@ function Index() {
           : isCar
           ? "Mider Car (Taksi Penumpang Mobil)"
           : selectedService === "food"
-          ? `Point Resto: ${itemDetail.trim()}`
+          ? `${foodType === "mitra" ? "Mitra Resto Resmi" : "Point Resto"}: ${itemDetail.trim()}`
           : itemDetail.trim();
 
       // Mapping fallback service id yang didukung createOrder
@@ -688,7 +743,7 @@ function Index() {
                 )}
 
                 {/* Form Perhitungan & Pemesanan */}
-                {(selectedService !== "food" || foodType === "point") && (
+                {(
                   <form
                     onSubmit={handleCalculate}
                     className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-sm"
@@ -741,6 +796,55 @@ function Index() {
                         )}
                       </div>
                     )}
+                    {selectedService === "food" && foodType === "mitra" && (
+                      <section className="space-y-3 rounded-xl border border-border p-3">
+                        <div>
+                          <h3 className="text-sm font-bold text-foreground">Pilih Menu Makanan & Minuman</h3>
+                          <p className="mt-1 text-xs text-muted-foreground">Pilih restoran terlebih dahulu, lalu tambah jumlah menu yang ingin dipesan.</p>
+                        </div>
+                        {!selectedRestoId ? (
+                          <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">Pilih salah satu Mitra Resto Resmi di atas untuk melihat menu.</p>
+                        ) : merchantProducts.isLoading ? (
+                          <p className="py-3 text-center text-xs text-muted-foreground">Memuat menu restoran…</p>
+                        ) : merchantProducts.isError ? (
+                          <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-xs text-destructive">Menu gagal dimuat. Pastikan akses baca produk pelanggan sudah diizinkan di Supabase.</p>
+                        ) : (merchantProducts.data ?? []).length === 0 ? (
+                          <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">Belum ada menu tersedia di restoran ini.</p>
+                        ) : (
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            {(merchantProducts.data ?? []).map((product) => {
+                              const quantity = selectedMenuQuantities[product.id] ?? 0;
+                              return (
+                                <div key={product.id} className="flex min-w-0 gap-3 rounded-xl border border-border p-2.5">
+                                  {product.image_url ? (
+                                    <img src={product.image_url} alt={product.name} loading="lazy" className="h-20 w-20 shrink-0 rounded-lg object-cover" />
+                                  ) : (
+                                    <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"><UtensilsCrossed className="h-6 w-6" /></div>
+                                  )}
+                                  <div className="min-w-0 flex-1">
+                                    <div className="line-clamp-2 text-sm font-semibold text-foreground">{product.name}</div>
+                                    {product.description && <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{product.description}</p>}
+                                    <div className="mt-1 text-sm font-bold text-primary">{formatRupiah(Number(product.price))}</div>
+                                    <div className="mt-2 flex items-center gap-2">
+                                      <button type="button" aria-label={`Kurangi ${product.name}`} onClick={() => changeMenuQuantity(product, -1)} disabled={quantity === 0} className="flex h-7 w-7 items-center justify-center rounded-md border border-border disabled:opacity-40">−</button>
+                                      <span className="min-w-4 text-center text-xs font-bold">{quantity}</span>
+                                      <button type="button" aria-label={`Tambah ${product.name}`} onClick={() => changeMenuQuantity(product, 1)} className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">+</button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {selectedMenuTotal > 0 && (
+                          <div className="flex items-center justify-between rounded-lg bg-primary/10 p-3 text-sm">
+                            <span className="font-medium text-foreground">Subtotal menu</span>
+                            <span className="font-extrabold text-primary">{formatRupiah(selectedMenuTotal)}</span>
+                          </div>
+                        )}
+                      </section>
+                    )}
+
                     <PlaceAutocomplete
                       label={originLabel}
                       placeholder="Ketik nama tempat/warung atau alamat penjemputan…"
