@@ -43,14 +43,46 @@ function AuthPage() {
 
   useEffect(() => {
     if (redirect) sessionStorage.setItem("seruit-after-login", safePath(redirect));
-    const go = () => {
-      const target = sessionStorage.getItem("seruit-after-login") || "/";
+    
+    const go = async (userObj?: any) => {
+      // 1. Jika ada tujuan spesifik sebelumnya (misal klik link chat pesanan), buka link tersebut
+      const explicit = sessionStorage.getItem("seruit-after-login");
+      if (explicit && explicit !== "/") {
+        sessionStorage.removeItem("seruit-after-login");
+        navigate({ to: explicit, replace: true });
+        return;
+      }
       sessionStorage.removeItem("seruit-after-login");
-      navigate({ to: target, replace: true });
+
+      // 2. Ambil data user & roles
+      const u = userObj ?? (await supabase.auth.getUser()).data.user;
+      if (!u) {
+        navigate({ to: "/", replace: true });
+        return;
+      }
+
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", u.id);
+
+      const roleList = (roles || []).map((r: any) => r.role);
+
+      // 3. Pendaratan default sesuai peran akun
+      if (roleList.includes("driver")) {
+        navigate({ to: "/driver", replace: true });
+      } else if (roleList.includes("mitra")) {
+        navigate({ to: "/mitra", replace: true });
+      } else if (roleList.includes("superadmin")) {
+        navigate({ to: "/admin", replace: true });
+      } else {
+        navigate({ to: "/", replace: true });
+      }
     };
-    supabase.auth.getUser().then(({ data }) => data.user && go());
-    const { data: sub } = supabase.auth.onAuthStateChange((e) => {
-      if (e === "SIGNED_IN") go();
+
+    supabase.auth.getUser().then(({ data }) => data.user && go(data.user));
+    const { data: sub } = supabase.auth.onAuthStateChange((e, session) => {
+      if (e === "SIGNED_IN" && session?.user) go(session.user);
     });
     return () => sub.subscription.unsubscribe();
   }, [redirect, navigate]);
