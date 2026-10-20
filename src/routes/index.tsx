@@ -160,7 +160,22 @@ function Index() {
       if (error) throw error;
       return data;
     },
-    enabled: selectedService === "food",
+    enabled: selectedService === "food" && foodType === "point",
+  });
+
+  const officialRestos = useQuery({
+    queryKey: ["official-merchant-restos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("merchants")
+        .select("id, name, address, latitude, longitude, image_url, is_open")
+        .eq("type", "official_merchant")
+        .eq("status", "approved")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: selectedService === "food" && foodType === "mitra",
   });
 
   function pickResto(resto: {
@@ -626,14 +641,47 @@ function Index() {
                     </div>
 
                     {foodType === "mitra" && (
-                      <div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4 text-center">
-                        <Store className="mx-auto h-8 w-8 text-primary" />
-                        <h3 className="mt-2 text-sm font-bold text-foreground">
-                          Katalog Mitra Resto Segera Hadir
-                        </h3>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Fitur merchant &amp; menu mandiri sedang disiapkan. Sementara ini, Anda dapat menggunakan opsi <strong>Point Resto</strong> untuk memesan dari warung/resto mana saja.
-                        </p>
+                      <div className="space-y-3">
+                        <div>
+                          <h3 className="text-sm font-bold text-foreground">Mitra Resto Resmi</h3>
+                          <p className="mt-1 text-xs text-muted-foreground">Daftar restoran mitra yang telah disetujui admin.</p>
+                        </div>
+                        {officialRestos.isLoading ? (
+                          <p className="py-4 text-center text-xs text-muted-foreground">Memuat daftar mitra resto…</p>
+                        ) : officialRestos.isError ? (
+                          <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                            Daftar mitra resto gagal dimuat. Silakan coba lagi beberapa saat.
+                          </p>
+                        ) : (officialRestos.data ?? []).length === 0 ? (
+                          <p className="rounded-lg border border-dashed border-border px-3 py-3 text-xs text-muted-foreground">
+                            Belum ada Mitra Resto Resmi yang disetujui admin. Restoran yang baru mendaftar akan tampil setelah disetujui.
+                          </p>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                            {(officialRestos.data ?? []).map((resto) => {
+                              const active = selectedRestoId === resto.id;
+                              return (
+                                <button
+                                  key={resto.id}
+                                  type="button"
+                                  onClick={() => pickResto(resto)}
+                                  className={`flex min-w-0 flex-col items-start gap-2 rounded-xl border p-3 text-left transition-all ${active ? "border-primary bg-primary/5 ring-2 ring-primary/30" : "border-border bg-card hover:border-primary/40"}`}
+                                >
+                                  {resto.image_url ? (
+                                    <img src={resto.image_url} alt={resto.name} loading="lazy" className="h-24 w-full rounded-lg object-cover" />
+                                  ) : (
+                                    <span className="flex h-24 w-full items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                                      <Store className="h-7 w-7" />
+                                    </span>
+                                  )}
+                                  <span className="line-clamp-2 text-xs font-bold text-foreground">{resto.name}</span>
+                                  <span className="line-clamp-2 text-[11px] text-muted-foreground">{resto.address}</span>
+                                  <span className={`text-[10px] font-semibold ${resto.is_open ? "text-emerald-600" : "text-muted-foreground"}`}>{resto.is_open ? "Buka" : "Tutup"}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
