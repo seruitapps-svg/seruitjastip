@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-export type Role = "superadmin" | "driver" | "user";
+export type Role = "superadmin" | "driver" | "mitra" | "user";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -12,7 +12,7 @@ export function useAuth() {
 
   useEffect(() => {
     const storedRole = window.localStorage.getItem("seruit_test_role") as Role | null;
-    if (storedRole === "superadmin" || storedRole === "driver" || storedRole === "user") {
+    if (storedRole === "superadmin" || storedRole === "driver" || storedRole === "mitra" || storedRole === "user") {
       setTestRole(storedRole);
     }
 
@@ -35,7 +35,7 @@ export function useAuth() {
         .select("role")
         .eq("user_id", user!.id);
       if (error) throw error;
-      return data.map((r) => r.role as Role);
+      return (data || []).map((r) => r.role as Role);
     },
   });
 
@@ -53,13 +53,18 @@ export function useAuth() {
     window.location.reload();
   };
 
+  const isDriver = activeRole ? activeRole === "driver" : actualRoles.includes("driver");
+  const isMitra = activeRole ? activeRole === "mitra" : actualRoles.includes("mitra");
+  const isCustomerOnly = !isDriver && !isMitra && !isActualAdmin;
+
   return {
     user,
     ready: ready && (!user || !rolesQuery.isLoading),
     roles: actualRoles,
     isAdmin: isActualAdmin,
-    isDriver: activeRole ? activeRole === "driver" : actualRoles.includes("driver"),
-    isCustomerView: activeRole === "user",
+    isDriver,
+    isMitra,
+    isCustomerOnly,
     testRole: isActualAdmin ? testRole : null,
     setSimulation,
   };
