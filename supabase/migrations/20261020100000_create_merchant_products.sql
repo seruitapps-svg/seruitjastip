@@ -27,6 +27,7 @@ CREATE POLICY "Mitra can view own products"
       FROM public.merchants m
       WHERE m.id = merchant_products.merchant_id
         AND m.user_id = (SELECT auth.uid())
+        AND m.status = 'approved'
     )
   );
 
@@ -40,6 +41,7 @@ CREATE POLICY "Mitra can insert own products"
       FROM public.merchants m
       WHERE m.id = merchant_products.merchant_id
         AND m.user_id = (SELECT auth.uid())
+        AND m.status = 'approved'
     )
   );
 
@@ -53,6 +55,7 @@ CREATE POLICY "Mitra can update own products"
       FROM public.merchants m
       WHERE m.id = merchant_products.merchant_id
         AND m.user_id = (SELECT auth.uid())
+        AND m.status = 'approved'
     )
   )
   WITH CHECK (
@@ -61,6 +64,7 @@ CREATE POLICY "Mitra can update own products"
       FROM public.merchants m
       WHERE m.id = merchant_products.merchant_id
         AND m.user_id = (SELECT auth.uid())
+        AND m.status = 'approved'
     )
   );
 
@@ -74,5 +78,6 @@ CREATE POLICY "Mitra can delete own products"
       FROM public.merchants m
       WHERE m.id = merchant_products.merchant_id
         AND m.user_id = (SELECT auth.uid())
+        AND m.status = 'approved'
     )
   );
