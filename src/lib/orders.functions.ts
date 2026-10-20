@@ -9,7 +9,7 @@ const point = z.object({
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
 });
-const wa = z.string().trim().regex(/^(\+62|62|0)8\d{6,11}$/);
+const wa = z.string().trim().regex(/^(\\+62|62|0)8\\d{6,11}$/);
 
 const schema = z
   .object({
@@ -37,7 +37,7 @@ export const createOrder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => schema.parse(data))
   .handler(async ({ data, context }) => {
-    // Harga dihitung ulang di server — angka dari browser tidak dipercaya
+    // Harga dihitung ulang di server — angka dari browser tidak dipercaya.
     const route = await fetchMotorRoute(data.origin, data.destination);
     const { data: settings, error: settingsError } = await context.supabase
       .from("app_settings")
@@ -48,6 +48,7 @@ export const createOrder = createServerFn({ method: "POST" })
       console.error(settingsError);
       throw new Error("Gagal memuat pengaturan tarif.");
     }
+
     const price = calculatePrice(
       {
         distanceMeters: route.distanceMeters,
@@ -62,6 +63,7 @@ export const createOrder = createServerFn({ method: "POST" })
         oversizeFee: Number(settings.oversize_fee),
       },
     );
+
     const { data: row, error } = await context.supabase
       .from("orders")
       .insert({
@@ -94,9 +96,36 @@ export const createOrder = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
+
     if (error) {
       console.error(error);
       throw new Error("Gagal menyimpan pesanan.");
     }
+
+    if (data.paymentMethod === "wallet") {
+      // RPC berjalan di server/database; saldo tidak pernah dipotong dari browser.
+      const walletDb = context.supabase as unknown as {
+        rpc: (name: string, args: Record<string, string>) => Promise<{ error: { message?: string } | null }>;
+      };
+      const { error: paymentError } = await walletDb.rpc("pay_order_with_user_wallet", {
+        _order_id: row.id,
+      });
+
+      if (paymentError) {
+        console.error("Pembayaran saldo user gagal:", paymentError);
+        // Jangan tinggalkan pesanan yang masih bisa diambil driver jika pembayaran gagal.
+        const { error: cancelError } = await walletDb.rpc("cancel_order", {
+          _order_id: row.id,
+          _note: "Pembayaran saldo user gagal",
+        });
+        if (cancelError) console.error("Gagal membatalkan pesanan setelah pembayaran gagal:", cancelError);
+
+        if (/insufficient|saldo|balance/i.test(paymentError.message ?? "")) {
+          throw new Error("Saldo user tidak mencukupi. Silakan top up saldo lalu coba pesan kembali.");
+        }
+        throw new Error("Pembayaran saldo gagal diproses. Pesanan dibatalkan jika pembatalan diizinkan. Periksa daftar pesanan sebelum mencoba kembali.");
+      }
+    }
+
     return { id: row.id };
   });
