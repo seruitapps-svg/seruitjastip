@@ -460,53 +460,6 @@ export type Database = {
         }
         Relationships: []
       }
-      merchant_products: {
-        Row: {
-          category: string
-          created_at: string
-          description: string
-          id: string
-          image_url: string | null
-          is_available: boolean
-          merchant_id: string
-          name: string
-          price: number
-          updated_at: string
-        }
-        Insert: {
-          category?: string
-          created_at?: string
-          description?: string
-          id?: string
-          image_url?: string | null
-          is_available?: boolean
-          merchant_id: string
-          name: string
-          price: number
-          updated_at?: string
-        }
-        Update: {
-          category?: string
-          created_at?: string
-          description?: string
-          id?: string
-          image_url?: string | null
-          is_available?: boolean
-          merchant_id?: string
-          name?: string
-          price?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "merchant_products_merchant_id_fkey"
-            columns: ["merchant_id"]
-            isOneToOne: false
-            referencedRelation: "merchants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       order_messages: {
         Row: {
           body: string
