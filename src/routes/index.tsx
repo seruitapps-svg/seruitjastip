@@ -172,6 +172,7 @@ function Index() {
         .select("id, name, address, latitude, longitude, image_url, is_open")
         .eq("type", "official_merchant")
         .eq("status", "approved")
+        .eq("is_open", true)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
