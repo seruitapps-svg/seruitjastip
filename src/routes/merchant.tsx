@@ -103,21 +103,37 @@ function MerchantRegistrationPage() {
       setSuccess(true);
       await myMerchantQuery.refetch();
     } catch (err: unknown) {
+      console.error("Gagal mengirim pendaftaran mitra:", err);
       let message = "";
       if (typeof err === "string") {
         message = err;
-      } else if (err && typeof err === "object" && "message" in err && typeof err.message === "string") {
-        message = err.message;
+      } else if (err && typeof err === "object") {
+        const detail = err as {
+          message?: unknown;
+          code?: unknown;
+          details?: unknown;
+          hint?: unknown;
+          error_description?: unknown;
+        };
+        const parts = [
+          typeof detail.message === "string" ? detail.message : "",
+          typeof detail.code === "string" ? `Kode: ${detail.code}` : "",
+          typeof detail.details === "string" ? detail.details : "",
+          typeof detail.hint === "string" ? `Petunjuk: ${detail.hint}` : "",
+          typeof detail.error_description === "string" ? detail.error_description : "",
+        ].filter(Boolean);
+        message = parts.join(" — ");
+        if (!message) {
+          try {
+            message = JSON.stringify(err);
+          } catch {
+            message = "";
+          }
+        }
       } else if (err instanceof Error) {
         message = err.message;
-      } else {
-        try {
-          message = JSON.stringify(err);
-        } catch {
-          message = "";
-        }
       }
-      setErrMsg(message || "Gagal mengirim pendaftaran mitra. Periksa koneksi lalu coba lagi.");
+      setErrMsg(message || "Gagal mengirim pendaftaran mitra. Detail kesalahan tidak diberikan oleh aplikasi. Pastikan versi terbaru sudah terbit, lalu coba lagi.");
     } finally {
       setSaving(false);
     }
