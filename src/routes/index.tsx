@@ -1088,13 +1088,15 @@ function Index() {
                       </p>
                     ) : null}
 
-                    <button
-                      type="submit"
-                      disabled={calculating}
-                      className="w-full rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
-                    >
-                      {calculating ? "Menghitung rute & ongkir…" : "Hitung Estimasi Harga"}
-                    </button>
+                    {(selectedService !== "food" || showFoodOrderForm) && (
+                      <button
+                        type="submit"
+                        disabled={calculating}
+                        className="w-full rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                      >
+                        {calculating ? "Menghitung rute & ongkir…" : "Hitung Estimasi Harga"}
+                      </button>
+                    )}
                   </form>
                 )}
 
