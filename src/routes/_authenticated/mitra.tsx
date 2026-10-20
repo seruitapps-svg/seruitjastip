@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Store, ShoppingBag, MapPin, ToggleLeft, ToggleRight, ImagePlus, Save, LoaderCircle } from "lucide-react";
+import { Store, MapPin, ToggleLeft, ToggleRight, ImagePlus, Save, LoaderCircle } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadCompressedMedia } from "@/lib/image-compressor";
+import { MerchantProductManager } from "@/components/mitra/MerchantProductManager";
 
 export const Route = createFileRoute("/_authenticated/mitra")({
   head: () => ({
@@ -236,10 +237,7 @@ function MitraDashboardPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5">
-          <h2 className="text-base font-bold text-foreground">Pengelolaan Produk / Menu</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Saya belum mengaktifkan tambah/edit/hapus produk karena struktur tabel produk beserta kolom harga, stok, foto, dan relasi ke resto belum tersedia pada tipe database di repo ini. Saya tidak mengarang nama tabel atau mengubah database tanpa dasar skema yang terverifikasi.</p>
-        </section>
+        <MerchantProductManager merchantId={merchant.id} userId={user!.id} canOperate={canOperate} />
       </main>
     </div>
   );
