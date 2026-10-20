@@ -23,7 +23,7 @@ type Partner = {
 };
 type Account = { id: string; full_name: string; email: string | null; phone: string };
 
-const emptyForm = { user_id: "", name: "", owner_name: "", type: "Kuliner", address: "", phone_wa: "", latitude: "", longitude: "" };
+const emptyForm = { user_id: "", name: "", owner_name: "", type: "official_merchant", address: "", phone_wa: "", latitude: "", longitude: "" };
 const statusLabels: Record<string, string> = { pending: "Menunggu", approved: "Aktif", rejected: "Ditolak", inactive: "Nonaktif" };
 const statusClass: Record<string, string> = {
   pending: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
@@ -123,7 +123,7 @@ export function AdminRestoMitra() {
         user_id: form.user_id,
         name: form.name.trim(),
         owner_name: form.owner_name.trim(),
-        type: form.type.trim() || "Kuliner",
+        type: form.type.trim() || "official_merchant",
         address: form.address.trim(),
         phone_wa: form.phone_wa.trim(),
         latitude,
@@ -211,7 +211,7 @@ export function AdminRestoMitra() {
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="text-sm font-medium text-foreground">Nama resto *<input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" /></label>
               <label className="text-sm font-medium text-foreground">Nama pemilik *<input required value={form.owner_name} onChange={(event) => setForm({ ...form, owner_name: event.target.value })} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" /></label>
-              <label className="text-sm font-medium text-foreground">Kategori<input value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value })} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" /></label>
+              <label className="text-sm font-medium text-foreground">Tipe Mitra<select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value })} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"><option value="official_merchant">Mitra Resmi</option><option value="point_resto">Point Resto</option></select></label>
               <label className="text-sm font-medium text-foreground">WhatsApp<input type="tel" value={form.phone_wa} onChange={(event) => setForm({ ...form, phone_wa: event.target.value })} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" /></label>
             </div>
             <label className="block text-sm font-medium text-foreground">Alamat *<textarea required rows={2} value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" /></label>
