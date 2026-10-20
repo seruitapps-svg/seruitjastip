@@ -103,7 +103,21 @@ function MerchantRegistrationPage() {
       setSuccess(true);
       await myMerchantQuery.refetch();
     } catch (err: unknown) {
-      setErrMsg(err instanceof Error ? err.message : "Gagal mengirim pendaftaran mitra.");
+      let message = "";
+      if (typeof err === "string") {
+        message = err;
+      } else if (err && typeof err === "object" && "message" in err && typeof err.message === "string") {
+        message = err.message;
+      } else if (err instanceof Error) {
+        message = err.message;
+      } else {
+        try {
+          message = JSON.stringify(err);
+        } catch {
+          message = "";
+        }
+      }
+      setErrMsg(message || "Gagal mengirim pendaftaran mitra. Periksa koneksi lalu coba lagi.");
     } finally {
       setSaving(false);
     }
