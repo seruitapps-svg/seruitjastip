@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, CircleUserRound, Clock3, MapPin, Plus, Search, Store, ToggleLeft, ToggleRight, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { MapLocationPicker } from "@/components/MapLocationPicker";
 
 type PartnerStatus = "pending" | "approved" | "rejected" | "inactive";
 type Partner = {
@@ -214,7 +215,13 @@ export function AdminRestoMitra() {
               <label className="text-sm font-medium text-foreground">WhatsApp<input type="tel" value={form.phone_wa} onChange={(event) => setForm({ ...form, phone_wa: event.target.value })} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" /></label>
             </div>
             <label className="block text-sm font-medium text-foreground">Alamat *<textarea required rows={2} value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" /></label>
-            <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3"><div><p className="text-sm font-bold text-foreground">Titik lokasi map *</p><p className="mt-1 text-xs text-muted-foreground">Pilih titik di peta, lalu masukkan koordinat latitude dan longitude.</p><a href="https://www.google.com/maps" target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs font-semibold text-primary underline">Buka Google Maps untuk memilih titik ↗</a></div><div className="grid gap-3 sm:grid-cols-2"><label className="text-sm font-medium text-foreground">Latitude *<input required type="number" step="any" min="-90" max="90" value={form.latitude} onChange={(event) => setForm({ ...form, latitude: event.target.value })} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" placeholder="-6.200000" /></label><label className="text-sm font-medium text-foreground">Longitude *<input required type="number" step="any" min="-180" max="180" value={form.longitude} onChange={(event) => setForm({ ...form, longitude: event.target.value })} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" placeholder="106.816666" /></label></div></div>
+            <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3">
+              <p className="text-sm font-bold text-foreground">Titik lokasi map *</p>
+              <MapLocationPicker
+                value={form.latitude && form.longitude ? { lat: Number(form.latitude), lng: Number(form.longitude) } : null}
+                onChange={(point) => setForm((current) => ({ ...current, latitude: String(point.lat), longitude: String(point.lng) }))}
+              />
+            </div>
             {formError && <p role="alert" className="rounded-lg bg-destructive/10 p-2.5 text-xs text-destructive">{formError}</p>}
             <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Batal</Button><Button type="submit" disabled={busy !== null || accountsQuery.isLoading}>{busy === "create" ? "Menyimpan..." : "Simpan Mitra"}</Button></div>
           </form>
