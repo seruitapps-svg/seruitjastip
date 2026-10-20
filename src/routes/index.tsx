@@ -1142,18 +1142,27 @@ function Index() {
                     </div>
 
                     <div className="space-y-1 rounded-xl bg-muted p-3 text-xs sm:text-sm">
-                      <div className="flex justify-between">
+                      {selectedService === "food" && foodType === "mitra" && (
+                        <div className="flex justify-between gap-3">
+                          <span className="text-muted-foreground">Total Produk Makanan/Minuman</span>
+                          <span className="shrink-0 text-foreground">{formatRupiah(selectedMenuTotal)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between gap-3">
                         <span className="text-muted-foreground">Biaya Layanan Aplikasi</span>
-                        <span className="text-foreground">{formatRupiah(summary.price.consumerServiceFee)}</span>
+                        <span className="shrink-0 text-foreground">{formatRupiah(summary.price.consumerServiceFee)}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between gap-3">
                         <span className="text-muted-foreground">Ongkos Kirim</span>
-                        <span className="text-foreground">{formatRupiah(summary.price.shippingFare)}</span>
+                        <span className="shrink-0 text-foreground">{formatRupiah(summary.price.shippingFare)}</span>
                       </div>
-                      <div className="mt-1 flex justify-between border-t border-border pt-2 text-sm sm:text-base font-bold">
-                        <span className="text-foreground">Total Estimasi</span>
-                        <span className="text-primary">{formatRupiah(summary.price.total)}</span>
+                      <div className="mt-1 flex justify-between gap-3 border-t border-border pt-2 text-sm sm:text-base font-bold">
+                        <span className="text-foreground">Total Estimasi Pembayaran</span>
+                        <span className="shrink-0 text-primary">{formatRupiah(summary.price.total + (selectedService === "food" && foodType === "mitra" ? selectedMenuTotal : 0))}</span>
                       </div>
+                      {selectedService === "food" && foodType === "mitra" && (
+                        <p className="pt-1 text-[11px] text-muted-foreground">Total ini mencakup harga menu dan biaya layanan/pengiriman yang tertera.</p>
+                      )}
                     </div>
 
                     <button
