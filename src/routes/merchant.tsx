@@ -25,6 +25,8 @@ function MerchantRegistrationPage() {
     ownerName: "",
     phone: "",
     address: "",
+    latitude: "",
+    longitude: "",
     category: "",
     openingHours: "08:00 - 21:00",
   });
@@ -72,6 +74,8 @@ function MerchantRegistrationPage() {
         owner_name: form.ownerName.trim(),
         phone_wa: form.phone.trim(),
         address: form.address.trim(),
+        latitude: Number(form.latitude),
+        longitude: Number(form.longitude),
         type: form.category.trim() || "Kuliner",
         opening_hours: form.openingHours.trim(),
         status: "pending",
@@ -183,8 +187,33 @@ function MerchantRegistrationPage() {
 
               <label className="block text-sm font-medium text-foreground">
                 Alamat Lengkap Resto *
-                <textarea required rows={3} value={form.address} onChange={(e) => updateField("address", e.target.value)} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="Alamat patokan lokasi restoran" />
+                <textarea required rows={3} value={form.address} onChange={(e) => updateField("address", e.target.value)} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="Alamat lengkap atau patokan restoran" />
               </label>
+
+              <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-3">
+                <div>
+                  <h2 className="text-sm font-bold text-foreground">Titik Lokasi Restoran *</h2>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Buka peta, pilih atau tekan lama titik restoran, lalu salin koordinat latitude dan longitude ke kolom di bawah. Titik ini digunakan untuk menandai lokasi resto.</p>
+                  <a href="https://www.google.com/maps" target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-primary hover:bg-muted">
+                    Buka Google Maps untuk memilih titik ↗
+                  </a>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm font-medium text-foreground">
+                    Latitude *
+                    <input required type="number" step="any" min="-90" max="90" value={form.latitude} onChange={(e) => updateField("latitude", e.target.value)} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="-6.200000" />
+                  </label>
+                  <label className="block text-sm font-medium text-foreground">
+                    Longitude *
+                    <input required type="number" step="any" min="-180" max="180" value={form.longitude} onChange={(e) => updateField("longitude", e.target.value)} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="106.816666" />
+                  </label>
+                </div>
+                {form.latitude && form.longitude && (
+                  <a href={`https://www.google.com/maps?q=${encodeURIComponent(form.latitude + "," + form.longitude)}`} target="_blank" rel="noreferrer" className="inline-flex text-xs font-semibold text-primary underline underline-offset-2">
+                    Periksa titik yang dipilih di peta
+                  </a>
+                )}
+              </div>
 
               <Button type="submit" disabled={saving} className="w-full rounded-xl py-2.5">
                 {saving ? "Mengirim Pendaftaran..." : "Kirim Pendaftaran Mitra"}
