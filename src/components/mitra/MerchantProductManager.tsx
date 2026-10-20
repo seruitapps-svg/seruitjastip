@@ -62,8 +62,7 @@ export function MerchantProductManager({
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Cast lokal diperlukan sampai tipe Supabase diperbarui lewat generate types setelah migration diterapkan.
-  const productsTable = () => (supabase.from("merchant_products" as never) as any);
+  const productsTable = () => supabase.from("merchant_products");
 
   const productsQuery = useQuery({
     queryKey: ["merchant-products", merchantId],
