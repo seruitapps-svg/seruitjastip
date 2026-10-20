@@ -93,7 +93,7 @@ function MerchantRegistrationPage() {
         address: form.address.trim(),
         latitude,
         longitude,
-        type: form.category.trim() || "Kuliner",
+        type: "official_merchant",
         opening_hours: form.openingHours.trim(),
         status: "pending",
         is_open: true,
