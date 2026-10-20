@@ -220,6 +220,7 @@ export function AdminRestoMitra() {
               <MapLocationPicker
                 value={form.latitude && form.longitude ? { lat: Number(form.latitude), lng: Number(form.longitude) } : null}
                 onChange={(point) => setForm((current) => ({ ...current, latitude: String(point.lat), longitude: String(point.lng) }))}
+                onAddressChange={(address) => setForm((current) => ({ ...current, address }))}
               />
             </div>
             {formError && <p role="alert" className="rounded-lg bg-destructive/10 p-2.5 text-xs text-destructive">{formError}</p>}
