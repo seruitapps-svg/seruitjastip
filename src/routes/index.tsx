@@ -142,6 +142,7 @@ function Index() {
   const [mode, setMode] = useState<"onbid" | "jastip">("onbid");
   const [selectedService, setSelectedService] = useState<ExtendedServiceId | null>(null);
   const [foodType, setFoodType] = useState<"point" | "mitra">("point");
+  const [showFoodOrderForm, setShowFoodOrderForm] = useState(false);
   const [showDigistoreModal, setShowDigistoreModal] = useState(false);
 
   // Form states
@@ -230,6 +231,7 @@ function Index() {
     longitude: number | null;
   }) {
     setSelectedRestoId(resto.id);
+    setShowFoodOrderForm(false);
     setSelectedMenuQuantities({});
     setItemDetail("");
     setSummary(null);
@@ -348,6 +350,7 @@ function Index() {
       return;
     }
     setSelectedService(srv.id);
+    setShowFoodOrderForm(false);
     setSelectedRestoId(null);
     setSelectedMenuQuantities({});
     setItemDetail("");
@@ -676,7 +679,7 @@ function Index() {
                     <div className="grid grid-cols-2 gap-2 rounded-xl border border-border bg-muted p-1">
                       <button
                         type="button"
-                        onClick={() => setFoodType("point")}
+                        onClick={() => { setFoodType("point"); setShowFoodOrderForm(false); setSelectedRestoId(null); setSelectedMenuQuantities({}); setItemDetail(""); }}
                         className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-all ${
                           foodType === "point" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
                         }`}
@@ -686,7 +689,7 @@ function Index() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setFoodType("mitra")}
+                        onClick={() => { setFoodType("mitra"); setShowFoodOrderForm(false); setSelectedRestoId(null); setSelectedMenuQuantities({}); setItemDetail(""); }}
                         className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-all ${
                           foodType === "mitra" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
                         }`}
@@ -797,7 +800,7 @@ function Index() {
                         )}
                       </div>
                     )}
-                    {selectedService === "food" && foodType === "mitra" && (
+                    {selectedService === "food" && foodType === "mitra" && selectedRestoId && (
                       <section className="space-y-3 rounded-xl border border-border p-3">
                         <div>
                           <h3 className="text-sm font-bold text-foreground">Pilih Menu Makanan & Minuman</h3>
@@ -846,6 +849,9 @@ function Index() {
                       </section>
                     )}
 
+                    {selectedService !== "food" || showFoodOrderForm ? (
+                      <>
+                    <div id="food-order-details" className={selectedService === "food" ? "space-y-4" : undefined}>
                     <PlaceAutocomplete
                       label={originLabel}
                       placeholder="Ketik nama tempat/warung atau alamat penjemputan…"
@@ -1060,6 +1066,27 @@ function Index() {
                         {formError}
                       </p>
                     )}
+                    </div>
+                      </>
+                    ) : selectedService === "food" && selectedRestoId && (foodType === "point" || selectedMenuTotal > 0) ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (foodType === "mitra" && selectedMenuTotal > 0) {
+                            setItemDetail((merchantProducts.data ?? []).filter((product) => (selectedMenuQuantities[product.id] ?? 0) > 0).map((product) => `${selectedMenuQuantities[product.id]}x ${product.name} @ ${formatRupiah(Number(product.price))}`).join("; "));
+                          }
+                          setShowFoodOrderForm(true);
+                          setTimeout(() => document.getElementById("food-order-details")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+                        }}
+                        className="w-full rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground hover:opacity-90"
+                      >
+                        Lanjut Pesan{foodType === "mitra" ? ` · ${formatRupiah(selectedMenuTotal)}` : ""}
+                      </button>
+                    ) : selectedService === "food" ? (
+                      <p className="rounded-lg border border-dashed border-border p-3 text-center text-xs text-muted-foreground">
+                        {foodType === "mitra" ? "Pilih outlet dan minimal satu menu untuk melanjutkan." : "Pilih outlet terlebih dahulu untuk melanjutkan."}
+                      </p>
+                    ) : null}
 
                     <button
                       type="submit"
