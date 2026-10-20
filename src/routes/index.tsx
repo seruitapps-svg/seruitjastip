@@ -969,20 +969,24 @@ function Index() {
                       </div>
                     )}
 
-                    {/* Data Diri Pemesan */}
+                    {/* Kontak Pemesan: ringkas untuk akun login, tetap wajib untuk tamu */}
                     <div className="space-y-2 rounded-xl border border-border/70 p-3">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-3">
                         <span className="text-xs font-bold text-foreground">Kontak Pemesan</span>
                         {user && (
-                          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                          <label className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
                             <input
                               type="checkbox"
                               checked={isForOther}
                               onChange={(e) => {
-                                setIsForOther(e.target.checked);
-                                if (!e.target.checked && profileQuery.data) {
+                                const checked = e.target.checked;
+                                setIsForOther(checked);
+                                if (!checked && profileQuery.data) {
                                   setSenderName(profileQuery.data.full_name || "");
                                   setSenderWa(profileQuery.data.phone || "");
+                                } else if (checked && profileQuery.data && senderName === (profileQuery.data.full_name || "")) {
+                                  setSenderName("");
+                                  setSenderWa("");
                                 }
                               }}
                               className="rounded border-input text-primary"
@@ -992,30 +996,38 @@ function Index() {
                         )}
                       </div>
 
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div>
-                          <label className="mb-1 block text-xs text-muted-foreground">Nama Anda</label>
-                          <input
-                            type="text"
-                            value={senderName}
-                            onChange={(e) => setSenderName(e.target.value)}
-                            maxLength={60}
-                            placeholder="Nama lengkap pemesan"
-                            className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                          />
+                      {user && !isForOther && profileQuery.data ? (
+                        <div className="rounded-lg bg-muted/60 px-3 py-2.5">
+                          <p className="text-sm font-medium text-foreground">{senderName || profileQuery.data.full_name || "Nama belum diisi"}</p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">{senderWa || profileQuery.data.phone || "Nomor WhatsApp belum diisi"}</p>
+                          <p className="mt-1 text-[11px] text-muted-foreground">Menggunakan kontak akun Anda.</p>
                         </div>
-                        <div>
-                          <label className="mb-1 block text-xs text-muted-foreground">Nomor WhatsApp</label>
-                          <input
-                            type="tel"
-                            value={senderWa}
-                            onChange={(e) => setSenderWa(e.target.value)}
-                            placeholder="08xxxxxxxxxx"
-                            maxLength={16}
-                            className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                          />
+                      ) : (
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <div>
+                            <label className="mb-1 block text-xs text-muted-foreground">{isForOther ? "Nama orang yang menerima pesanan" : "Nama Anda"}</label>
+                            <input
+                              type="text"
+                              value={senderName}
+                              onChange={(e) => setSenderName(e.target.value)}
+                              maxLength={60}
+                              placeholder={isForOther ? "Nama orang yang menerima pesanan" : "Nama lengkap pemesan"}
+                              className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs text-muted-foreground">Nomor WhatsApp</label>
+                            <input
+                              type="tel"
+                              value={senderWa}
+                              onChange={(e) => setSenderWa(e.target.value)}
+                              placeholder="08xxxxxxxxxx"
+                              maxLength={16}
+                              className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                            />
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
 
                     {/* Catatan Driver */}
