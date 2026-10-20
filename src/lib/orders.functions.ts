@@ -25,7 +25,7 @@ const schema = z
     senderWa: wa,
     recipientName: z.string().trim().max(60),
     recipientWa: z.string().trim().max(16),
-    paymentMethod: z.enum(["cod", "transfer"]),
+    paymentMethod: z.enum(["cod", "transfer", "wallet"]),
     notes: z.string().trim().max(200),
   })
   .refine(
