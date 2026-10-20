@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { MapLocationPicker } from "@/components/MapLocationPicker";
+import { uploadCompressedMedia } from "@/lib/image-compressor";
 
 export const Route = createFileRoute("/merchant")({
   head: () => ({
@@ -31,6 +32,7 @@ function MerchantRegistrationPage() {
     category: "",
     openingHours: "08:00 - 21:00",
   });
+  const [outletPhoto, setOutletPhoto] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [errMsg, setErrMsg] = useState("");
   const [success, setSuccess] = useState(false);
@@ -85,6 +87,14 @@ function MerchantRegistrationPage() {
     setSuccess(false);
 
     try {
+      const imageUrl = outletPhoto
+        ? await uploadCompressedMedia("merchant-assets", user.id, "outlet", outletPhoto, {
+            maxWidth: 1200,
+            maxHeight: 1200,
+            quality: 0.8,
+          })
+        : null;
+
       const { error } = await supabase.from("merchants").insert({
         user_id: user.id,
         name: form.name.trim(),
@@ -94,6 +104,7 @@ function MerchantRegistrationPage() {
         latitude,
         longitude,
         type: "official_merchant",
+        image_url: imageUrl,
         opening_hours: form.openingHours.trim(),
         status: "pending",
         is_open: true,
@@ -236,6 +247,25 @@ function MerchantRegistrationPage() {
                 Alamat Lengkap Resto *
                 <textarea required rows={3} value={form.address} onChange={(e) => updateField("address", e.target.value)} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="Alamat lengkap atau patokan restoran" />
               </label>
+
+              <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3">
+                <label htmlFor="outlet-photo" className="block text-sm font-bold text-foreground">
+                  Foto Outlet atau Logo (Opsional)
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  Pilih foto restoran atau logo. Gambar akan dikompresi sebelum diunggah.
+                </p>
+                <input
+                  id="outlet-photo"
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => setOutletPhoto(event.target.files?.[0] ?? null)}
+                  className="block w-full text-sm text-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary/10 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-primary"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {outletPhoto?.name ?? "Belum ada foto dipilih"}
+                </p>
+              </div>
 
               <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-3">
                 <h2 className="text-sm font-bold text-foreground">Titik Lokasi Restoran *</h2>
