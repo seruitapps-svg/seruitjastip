@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Store, ShoppingBag, MapPin, ToggleLeft, ToggleRight, ImagePlus, Save, LoaderCircle } from "lucide-react";
+import { Store, ShoppingBag, MapPin, ToggleLeft, ToggleRight, ImagePlus, Save, LoaderCircle, Plus, Pencil, Trash2, X, UtensilsCrossed } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -30,6 +30,15 @@ function MitraDashboardPage() {
   const [changingStatus, setChangingStatus] = useState(false);
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [productEditorOpen, setProductEditorOpen] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [productName, setProductName] = useState("");
+  const [productDescription, setProductDescription] = useState("");
+  const [productPrice, setProductPrice] = useState("");
+  const [productAvailable, setProductAvailable] = useState(true);
+  const [productPhoto, setProductPhoto] = useState<File | null>(null);
+  const [savingProduct, setSavingProduct] = useState(false);
+
 
   const merchantQuery = useQuery({
     queryKey: ["my-merchant-profile", user?.id],
@@ -48,6 +57,144 @@ function MitraDashboardPage() {
   });
 
   const merchant = merchantQuery.data;
+  const productsQuery = useQuery({
+    queryKey: ["merchant-products", merchant?.id],
+    enabled: !!merchant?.id && merchant?.status === "approved",
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("merchant_products")
+        .select("*")
+        .eq("merchant_id", merchant!.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const products = productsQuery.data ?? [];
+
+  function resetProductEditor() {
+    setProductEditorOpen(false);
+    setEditingProductId(null);
+    setProductName("");
+    setProductDescription("");
+    setProductPrice("");
+    setProductAvailable(true);
+    setProductPhoto(null);
+  }
+
+  function openNewProductEditor() {
+    resetProductEditor();
+    setProductEditorOpen(true);
+  }
+
+  function openEditProductEditor(product: (typeof products)[number]) {
+    setEditingProductId(product.id);
+    setProductName(product.name);
+    setProductDescription(product.description ?? "");
+    setProductPrice(String(product.price));
+    setProductAvailable(product.is_available);
+    setProductPhoto(null);
+    setProductEditorOpen(true);
+  }
+
+  async function saveProduct(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!merchant || !user || !canOperate || savingProduct) return;
+
+    const normalizedName = productName.trim();
+    const parsedPrice = Number(productPrice);
+    if (!normalizedName) {
+      setErrorMessage("Nama produk wajib diisi.");
+      return;
+    }
+    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+      setErrorMessage("Harga produk harus berupa angka nol atau lebih.");
+      return;
+    }
+
+    setSavingProduct(true);
+    setErrorMessage("");
+    setMessage("");
+    try {
+      let imageUrl: string | null | undefined;
+      if (productPhoto) {
+        imageUrl = await uploadCompressedMedia("merchant-assets", user.id, "product", productPhoto, {
+          maxWidth: 1000,
+          maxHeight: 1000,
+          quality: 0.78,
+        });
+      }
+
+      const values = {
+        name: normalizedName,
+        description: productDescription.trim() || null,
+        price: parsedPrice,
+        is_available: productAvailable,
+        updated_at: new Date().toISOString(),
+        ...(imageUrl ? { image_url: imageUrl } : {}),
+      };
+
+      if (editingProductId) {
+        const { error } = await supabase
+          .from("merchant_products")
+          .update(values)
+          .eq("id", editingProductId)
+          .eq("merchant_id", merchant.id);
+        if (error) throw error;
+        setMessage("Produk berhasil diperbarui.");
+      } else {
+        const { error } = await supabase
+          .from("merchant_products")
+          .insert({ ...values, merchant_id: merchant.id });
+        if (error) throw error;
+        setMessage("Produk berhasil ditambahkan.");
+      }
+
+      resetProductEditor();
+      await queryClient.invalidateQueries({ queryKey: ["merchant-products", merchant.id] });
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Gagal menyimpan produk.");
+    } finally {
+      setSavingProduct(false);
+    }
+  }
+
+  async function toggleProductAvailability(product: (typeof products)[number]) {
+    if (!merchant || !canOperate) return;
+    setErrorMessage("");
+    try {
+      const { error } = await supabase
+        .from("merchant_products")
+        .update({ is_available: !product.is_available, updated_at: new Date().toISOString() })
+        .eq("id", product.id)
+        .eq("merchant_id", merchant.id);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["merchant-products", merchant.id] });
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Gagal mengubah ketersediaan produk.");
+    }
+  }
+
+  async function deleteProduct(product: (typeof products)[number]) {
+    if (!merchant || !canOperate) return;
+    if (!window.confirm(`Hapus produk "${product.name}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+    setErrorMessage("");
+    setMessage("");
+    try {
+      const { error } = await supabase
+        .from("merchant_products")
+        .delete()
+        .eq("id", product.id)
+        .eq("merchant_id", merchant.id);
+      if (error) throw error;
+      setMessage("Produk berhasil dihapus.");
+      await queryClient.invalidateQueries({ queryKey: ["merchant-products", merchant.id] });
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Gagal menghapus produk.");
+    }
+  }
+
 
   useEffect(() => {
     if (!merchant) return;
@@ -236,9 +383,98 @@ function MitraDashboardPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5">
-          <h2 className="text-base font-bold text-foreground">Pengelolaan Produk / Menu</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Saya belum mengaktifkan tambah/edit/hapus produk karena struktur tabel produk beserta kolom harga, stok, foto, dan relasi ke resto belum tersedia pada tipe database di repo ini. Saya tidak mengarang nama tabel atau mengubah database tanpa dasar skema yang terverifikasi.</p>
+        <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <UtensilsCrossed className="mt-0.5 h-5 w-5 text-primary" />
+              <div>
+                <h2 className="text-base font-bold text-foreground">Pengelolaan Produk / Menu</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Kelola nama menu, harga, foto, dan ketersediaan produk resto Anda.</p>
+              </div>
+            </div>
+            <Button onClick={openNewProductEditor} disabled={!canOperate || savingProduct} className="gap-2">
+              <Plus className="h-4 w-4" /> Tambah Produk
+            </Button>
+          </div>
+
+          {!canOperate && <p className="rounded-xl bg-muted p-3 text-sm text-muted-foreground">Pengelolaan produk aktif setelah resto disetujui admin.</p>}
+
+          {productEditorOpen && (
+            <form onSubmit={saveProduct} className="space-y-4 rounded-xl border border-border bg-background p-4">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-bold text-foreground">{editingProductId ? "Edit Produk" : "Tambah Produk Baru"}</h3>
+                <Button type="button" variant="ghost" size="icon" onClick={resetProductEditor} aria-label="Tutup formulir"><X className="h-4 w-4" /></Button>
+              </div>
+              <label className="block text-sm font-medium text-foreground">Nama produk *
+                <input required maxLength={120} value={productName} onChange={(event) => setProductName(event.target.value)} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="Contoh: Nasi goreng spesial" />
+              </label>
+              <label className="block text-sm font-medium text-foreground">Harga (Rp) *
+                <input required type="number" min="0" step="1" inputMode="numeric" value={productPrice} onChange={(event) => setProductPrice(event.target.value)} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="15000" />
+              </label>
+              <label className="block text-sm font-medium text-foreground">Deskripsi
+                <textarea rows={2} maxLength={1000} value={productDescription} onChange={(event) => setProductDescription(event.target.value)} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="Deskripsi singkat menu (opsional)" />
+              </label>
+              <label className="block rounded-xl border border-dashed border-border p-3 text-sm font-medium text-foreground">
+                <span className="flex items-center gap-2"><ImagePlus className="h-4 w-4" /> Foto produk</span>
+                <input type="file" accept="image/*" onChange={(event) => setProductPhoto(event.target.files?.[0] ?? null)} className="mt-2 block w-full text-sm" />
+                {productPhoto && <span className="mt-1 block text-xs text-muted-foreground">Dipilih: {productPhoto.name}</span>}
+                {editingProductId && <span className="mt-1 block text-xs text-muted-foreground">Kosongkan jika tidak ingin mengganti foto.</span>}
+              </label>
+              <label className="flex items-center gap-2 text-sm text-foreground">
+                <input type="checkbox" checked={productAvailable} onChange={(event) => setProductAvailable(event.target.checked)} className="h-4 w-4 accent-primary" />
+                Produk tersedia untuk dipesan
+              </label>
+              <div className="flex gap-2">
+                <Button type="submit" disabled={savingProduct} className="flex-1 gap-2">
+                  {savingProduct ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  {savingProduct ? "Menyimpan..." : "Simpan Produk"}
+                </Button>
+                <Button type="button" variant="outline" onClick={resetProductEditor} disabled={savingProduct}>Batal</Button>
+              </div>
+            </form>
+          )}
+
+          {productsQuery.isLoading ? (
+            <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"><LoaderCircle className="h-4 w-4 animate-spin" /> Memuat produk...</div>
+          ) : productsQuery.error ? (
+            <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+              Gagal memuat produk: {productsQuery.error.message}
+              <Button variant="outline" size="sm" className="ml-2" onClick={() => void productsQuery.refetch()}>Coba lagi</Button>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center">
+              <UtensilsCrossed className="mx-auto h-8 w-8 text-muted-foreground" />
+              <p className="mt-2 text-sm font-semibold text-foreground">Belum ada produk</p>
+              <p className="mt-1 text-xs text-muted-foreground">Tekan Tambah Produk untuk mulai membuat menu resto.</p>
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {products.map((product) => (
+                <article key={product.id} className="overflow-hidden rounded-xl border border-border bg-background">
+                  <div className="flex gap-3 p-3">
+                    {product.image_url ? (
+                      <img src={product.image_url} alt={product.name} loading="lazy" className="h-24 w-24 shrink-0 rounded-lg object-cover" />
+                    ) : (
+                      <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"><UtensilsCrossed className="h-7 w-7" /></div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="break-words font-bold text-foreground">{product.name}</h3>
+                        <span className={product.is_available ? "rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700" : "rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground"}>{product.is_available ? "Tersedia" : "Habis"}</span>
+                      </div>
+                      <p className="mt-1 font-bold text-primary">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(product.price)}</p>
+                      {product.description && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{product.description}</p>}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2 border-t border-border p-3">
+                    <Button variant="outline" size="sm" disabled={!canOperate} onClick={() => openEditProductEditor(product)} className="flex-1 gap-1"><Pencil className="h-3.5 w-3.5" /> Edit</Button>
+                    <Button variant="outline" size="sm" disabled={!canOperate} onClick={() => void toggleProductAvailability(product)} className="flex-1">{product.is_available ? "Tandai Habis" : "Aktifkan"}</Button>
+                    <Button variant="destructive" size="sm" disabled={!canOperate} onClick={() => void deleteProduct(product)} aria-label={`Hapus ${product.name}`}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
       </main>
     </div>
