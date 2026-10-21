@@ -244,7 +244,7 @@ function DriverPage() {
       ]);
       if (openAfter) navigate({ to: "/pesanan/$id", params: { id } });
     } catch (error) {
-      setErr(error instanceof Error ? error.message : "Aksi gagal diproses. Periksa koneksi lalu coba lagi.");
+      setErr(getDriverErrorMessage(error, "Aksi gagal diproses. Periksa koneksi lalu coba lagi."));
     } finally {
       setBusy(null);
     }
