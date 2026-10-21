@@ -1,3 +1,0 @@
-GitHub RW verification test
-Created: 2026-10-21
-Purpose: temporary read-write-read connectivity check.
