@@ -533,6 +533,8 @@ function Index() {
           recipientWa: o.recipientWa,
           paymentMethod: o.paymentMethod,
           notes: o.notes,
+          foodOrderType: selectedService === "food" ? foodType : undefined,
+          merchantId: selectedService === "food" ? selectedRestoId : undefined,
         },
       });
       navigate({ to: "/pesanan/$id", params: { id: res.id } });
