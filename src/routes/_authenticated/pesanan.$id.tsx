@@ -112,7 +112,13 @@ function OrderDetail() {
   const isMyDriver = o.driver_id === user?.id;
   const canChat = isOwner || isMyDriver || isAdmin;
   const orderWithShopContact = o as typeof o & { shop_wa?: string | null };
-  const emergencyPhone = isMyDriver ? (orderWithShopContact.shop_wa || (o.service === "kirim" ? o.recipient_wa : null)) : null;
+  const emergencyPhone = isMyDriver
+    ? o.service === "kirim"
+      ? o.recipient_wa
+      : o.service === "belanja"
+        ? orderWithShopContact.shop_wa ?? null
+        : null
+    : null;
   const cleanPhone = (phone: string) => phone.replace(/\D/g, "").replace(/^0/, "62");
   const emergencyMessage = `Halo, saya kurir Mider mengantarkan pesanan dari ${o.sender_name}. Saya sudah di lokasi.`;
   const itemCost = Number((o as any).item_cost ?? 0);
@@ -338,6 +344,7 @@ function OrderDetail() {
                 </button>
               </div>
               <DriverInfoCard orderId={o.id} />
+              {user && <OrderChat orderId={o.id} myId={user.id} />}
               <button type="button" onClick={() => setDriverPopupOpen(false)} className={btnPrimary + " w-full"}>Tutup</button>
             </section>
           </div>
