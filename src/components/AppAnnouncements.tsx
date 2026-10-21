@@ -18,10 +18,14 @@ type Notice = {
 export function AppAnnouncements() {
   const { user, isDriver, isMitra, isAdmin, testRole } = useAuth();
   const [dismissed, setDismissed] = useState<string[]>([]);
-  const audience = isAdmin && testRole ? testRole : isDriver ? "driver" : isMitra ? "mitra" : "user";
+  const audiences: string[] = isAdmin && testRole ? [testRole] : [
+    ...(isDriver ? ["driver"] : []),
+    ...(isMitra ? ["mitra"] : []),
+    ...(!isDriver && !isMitra && !isAdmin ? ["user"] : []),
+  ];
 
   const notices = useQuery({
-    queryKey: ["active-announcements"],
+    queryKey: ["active-announcements", user?.id, audiences.join(",")],
     enabled: !isAdmin || Boolean(testRole),
     refetchInterval: 60000,
     queryFn: async () => {
@@ -38,11 +42,11 @@ export function AppAnnouncements() {
 
   useEffect(() => {
     setDismissed([]);
-  }, [user?.id, audience]);
+  }, [user?.id, audiences.join(",")]);
 
   if (notices.isError || !notices.data?.length) return null;
   const visible = notices.data.filter((item) =>
-    (item.audience === "all" || item.audience === audience) && !dismissed.includes(item.id)
+    (item.audience === "all" || audiences.includes(item.audience)) && !dismissed.includes(item.id)
   );
   if (!visible.length) return null;
 
