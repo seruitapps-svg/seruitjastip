@@ -229,6 +229,39 @@ function DriverPage() {
     };
   }, [isDriver, qc]);
 
+  async function confirmPickupPin() {
+    const order = pickupPinOrder;
+    const pin = pickupPinInput.trim();
+    if (!order || !/^[0-9]{4}$/.test(pin)) {
+      setErr("Masukkan 4 digit PIN dari pemesan.");
+      return;
+    }
+    if (busy !== null) return;
+
+    setBusy(order.id);
+    setErr("");
+    try {
+      const { error } = await (supabase as any).rpc("driver_advance_order", {
+        _order_id: order.id,
+        _pin: pin,
+      });
+      if (error) throw error;
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["pool"] }),
+        qc.invalidateQueries({ queryKey: ["driver-jobs"] }),
+        qc.invalidateQueries({ queryKey: ["driver-wallet-header"] }),
+        qc.invalidateQueries({ queryKey: ["wallet"] }),
+        qc.invalidateQueries({ queryKey: ["driver-wallet-earnings"] }),
+      ]);
+      setPickupPinOrder(null);
+      setPickupPinInput("");
+    } catch (error) {
+      setErr(getDriverErrorMessage(error, "Penjemputan gagal dikonfirmasi."));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function run(id: string, fn: () => Promise<{ error: { message: string } | null }>, openAfter = false) {
     if (busy) return;
     setBusy(id);
@@ -439,7 +472,7 @@ function DriverPage() {
                       >
                         {o.service === "ojek"
                           ? o.status === "diambil"
-                            ? "Penumpang sudah dijemput"
+                            ? "Konfirmasi penjemputan"
                             : o.status === "dijemput"
                               ? "Mulai antar penumpang"
                               : o.status === "diantar"
@@ -473,14 +506,8 @@ function DriverPage() {
               {err && <p className="text-sm text-destructive">{err}</p>}
               <div className="flex gap-2">
                 <button type="button" disabled={busy !== null} onClick={() => { setPickupPinOrder(null); setPickupPinInput(""); setErr(""); }} className="flex-1 rounded-xl border border-border px-3 py-2.5 text-sm font-semibold text-foreground">Batal</button>
-                <button type="button" disabled={busy !== null || pickupPinInput.length !== 4} onClick={() => {
-                  const order = pickupPinOrder;
-                  if (!order) return;
-                  void run(order.id, async () => supabase.rpc("driver_advance_order", { _order_id: order.id, _pin: pickupPinInput }), false);
-                  setPickupPinOrder(null);
-                  setPickupPinInput("");
-                }} className={`flex-1 ${btnPrimary}`}>
-                  {busy === pickupPinOrder.id ? "Memverifikasi..." : "Konfirmasi dijemput"}
+                <button type="button" disabled={busy !== null || pickupPinInput.length !== 4} onClick={() => void confirmPickupPin()} className={`flex-1 ${btnPrimary}`}>
+                  {busy === pickupPinOrder.id ? "Memverifikasi..." : "Konfirmasi penjemputan"}
                 </button>
               </div>
             </div>
