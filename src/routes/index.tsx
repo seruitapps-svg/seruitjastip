@@ -575,7 +575,8 @@ function Index() {
           </div>
         </div>
 
-        {/* Hero Banner */}
+        {/* Hero Banner: tampil hanya sebelum layanan On-Bid dipilih */}
+        {(mode === "jastip" || !selectedService) && (
         <section className="py-5 text-center">
           <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
             {mode === "onbid" ? "Mau diantar kemana hari ini?" : "Jastip Terjadwal Antar Wilayah"}
@@ -586,6 +587,7 @@ function Index() {
               : "Pesan titipan barang atau tiket penumpang pada jadwal driver yang tersedia."}
           </p>
         </section>
+        )}
 
         {mode === "jastip" ? (
           <JastipCatalog />
