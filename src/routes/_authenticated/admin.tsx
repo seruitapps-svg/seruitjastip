@@ -45,6 +45,26 @@ function AdminPage() {
   const [driverEditForm, setDriverEditForm] = useState({ full_name: "", phone: "", vehicle_type: "Motor", vehicle_plate: "" });
   const [financialOpen, setFinancialOpen] = useState(true);
 
+  const priorityNotifications = useQuery({
+    queryKey: ["admin-priority-notifications"],
+    enabled: isAdmin,
+    refetchInterval: 60000,
+    queryFn: async () => {
+      const [ordersResult, driversResult, topupsResult] = await Promise.all([
+        supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "menunggu_verifikasi"),
+        supabase.from("driver_profiles").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase.from("wallet_topup_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
+      ]);
+      const error = ordersResult.error ?? driversResult.error ?? topupsResult.error;
+      if (error) throw error;
+      return {
+        orders: ordersResult.count ?? 0,
+        drivers: driversResult.count ?? 0,
+        topups: topupsResult.count ?? 0,
+      };
+    },
+  });
+
   const orders = useQuery({
     queryKey: ["admin-orders", filter],
     enabled: isAdmin,
@@ -292,7 +312,76 @@ function AdminPage() {
       <AppHeader />
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-6">
         <h1 className="text-xl font-extrabold text-foreground">Dashboard Admin</h1>
-        <nav aria-label="Kategori panel superadmin" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <section aria-labelledby="admin-priority-title" className="space-y-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 sm:p-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-700" aria-hidden="true">🔔</span>
+            <div className="min-w-0">
+              <h2 id="admin-priority-title" className="text-sm font-extrabold text-foreground">Notifikasi Penting</h2>
+              <p className="text-xs text-muted-foreground">Prioritas yang perlu diperiksa superadmin.</p>
+            </div>
+            {priorityNotifications.isFetching && <span className="ml-auto text-[11px] text-muted-foreground">Memperbarui…</span>}
+          </div>
+          {priorityNotifications.isError ? (
+            <p role="status" className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              Jumlah notifikasi belum bisa dimuat. Buka menu terkait untuk memeriksa data.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {[
+                {
+                  key: "orders",
+                  title: "Pesanan menunggu",
+                  detail: "Perlu verifikasi",
+                  count: priorityNotifications.data?.orders ?? 0,
+                  icon: "📦",
+                  category: "operasional" as const,
+                  tab: "order" as const,
+                  urgent: true,
+                },
+                {
+                  key: "drivers",
+                  title: "Pendaftaran driver",
+                  detail: "Perlu pemeriksaan",
+                  count: priorityNotifications.data?.drivers ?? 0,
+                  icon: "🛵",
+                  category: "operasional" as const,
+                  tab: "driver_approval" as const,
+                  urgent: true,
+                },
+                {
+                  key: "topups",
+                  title: "Permintaan top-up",
+                  detail: "Menunggu keputusan",
+                  count: priorityNotifications.data?.topups ?? 0,
+                  icon: "💳",
+                  category: "pengguna" as const,
+                  tab: "topup" as const,
+                  urgent: false,
+                },
+              ].map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => {
+                    setCategory(item.category);
+                    setSubTab(item.tab);
+                  }}
+                  className={`flex min-h-[76px] items-center gap-3 rounded-xl border p-3 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${item.count > 0 ? "border-amber-500/40 bg-card" : "border-border bg-card"}`}
+                >
+                  <span className="text-xl" aria-hidden="true">{item.icon}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs font-bold text-foreground">{item.title}</span>
+                    <span className="mt-1 block text-[11px] text-muted-foreground">{item.detail}</span>
+                  </span>
+                  <span className={`flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full px-2 text-sm font-extrabold tabular-nums ${item.count > 0 ? "bg-amber-500 text-white" : "bg-muted text-muted-foreground"}`}>
+                    {priorityNotifications.isLoading ? "…" : item.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+        <nav aria-label="Kategori panel superadmin" className="grid grid-cols-2 gap-2 sm:grid-cols-2">
           {[
             { id: "operasional" as const, icon: "📦", title: "Operasional", detail: "Pesanan masuk dan verifikasi driver" },
             { id: "pengguna" as const, icon: "👥", title: "Pengguna & Driver", detail: "Akun, saldo, dan permintaan top-up" },
@@ -309,7 +398,7 @@ function AdminPage() {
                 else if (item.id === "pengguna") setSubTab("akun");
                 else if (item.id === "pengaturan") setSubTab("tarif");
               }}
-              className={`flex min-h-[76px] items-start gap-3 rounded-xl border p-3 text-left transition-colors ${category === item.id ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-card hover:bg-muted/40"}`}
+              className={`flex min-h-[112px] flex-col items-start gap-2 rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:min-h-[96px] sm:flex-row sm:gap-3 sm:p-4 ${category === item.id ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-card hover:bg-muted/40"}`}
             >
               <span className="text-xl" aria-hidden="true">{item.icon}</span>
               <span className="min-w-0">
