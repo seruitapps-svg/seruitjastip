@@ -641,6 +641,8 @@ export type Database = {
           id: string
           is_test: boolean | null
           item_detail: string
+          food_order_type: string | null
+          merchant_id: string | null
           length_cm: number
           monetization_version: number
           notes: string
@@ -688,6 +690,8 @@ export type Database = {
           id?: string
           is_test?: boolean | null
           item_detail: string
+          food_order_type?: string | null
+          merchant_id?: string | null
           length_cm: number
           monetization_version?: number
           notes?: string
@@ -735,6 +739,8 @@ export type Database = {
           id?: string
           is_test?: boolean | null
           item_detail?: string
+          food_order_type?: string | null
+          merchant_id?: string | null
           length_cm?: number
           monetization_version?: number
           notes?: string
