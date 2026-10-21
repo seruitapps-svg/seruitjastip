@@ -74,29 +74,36 @@ function DriverPage() {
     setOjekSaving(true);
     setErr("");
     try {
-      // Prefer the database RPC so any server-side business rules remain enforced.
-      const { error: rpcError } = await supabase.rpc("driver_toggle_ojek", { _enabled: val });
+      // Update the logged-in driver's own profile directly, and request the
+      // changed value back. A successful RPC response alone did not guarantee
+      // that accepts_ojek had actually changed in the deployed database.
+      const { data: updatedProfile, error: updateError } = await supabase
+        .from("driver_profiles")
+        .update({ accepts_ojek: val })
+        .eq("user_id", user.id)
+        .select("accepts_ojek")
+        .maybeSingle();
 
-      if (rpcError) {
-        // Fallback for deployments where the RPC is missing/out of sync.
-        // RLS must still restrict this update to the authenticated driver's own profile.
-        const { error: updateError } = await supabase
-          .from("driver_profiles")
-          .update({ accepts_ojek: val })
-          .eq("user_id", user.id);
+      if (updateError) {
+        throw new Error(`Gagal menyimpan status ojek: ${updateError.message}`);
+      }
 
-        if (updateError) {
-          throw new Error(
-            `Gagal mengubah layanan ojek. RPC: ${rpcError.message}. Update profil: ${updateError.message}`
-          );
-        }
+      if (!updatedProfile) {
+        throw new Error(
+          "Profil driver tidak berhasil diperbarui. Periksa izin UPDATE/RLS pada tabel driver_profiles di Supabase."
+        );
+      }
+
+      if (updatedProfile.accepts_ojek !== val) {
+        throw new Error("Database belum menyimpan status ojek yang dipilih. Coba muat ulang halaman.");
       }
 
       await qc.invalidateQueries({ queryKey: ["my-driver-profile", user.id] });
       const refreshed = await driverProfile.refetch();
       if (refreshed.error) throw refreshed.error;
+
       if (refreshed.data?.accepts_ojek !== val) {
-        throw new Error("Status ojek belum berubah di database. Muat ulang halaman dan coba lagi.");
+        throw new Error("Status ojek belum cocok dengan data terbaru. Muat ulang halaman dan coba lagi.");
       }
     } catch (error) {
       setErr(error instanceof Error ? error.message : "Pengaturan layanan ojek gagal diperbarui. Periksa koneksi lalu coba lagi.");
