@@ -55,6 +55,7 @@ function DaftarDriver() {
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [agreementAccepted, setAgreementAccepted] = useState(false);
 
   const application = useQuery({
     queryKey: ["my-driver-application", user?.id],
@@ -91,6 +92,10 @@ function DaftarDriver() {
       return;
     }
     const existingProfile = application.data;
+    if (!agreementAccepted) {
+      setErrorMessage("Anda harus membaca dan menyetujui Perjanjian Kemitraan sebelum mengirim pendaftaran.");
+      return;
+    }
     if (!form.fullName.trim() || !form.phone.trim() || !form.nik.trim() || !form.vehicleType.trim() || !form.vehicleBrand.trim() || !form.vehicleModel.trim() || !form.vehiclePlate.trim()) {
       setErrorMessage("Nama, nomor HP, NIK, jenis kendaraan, merk, tipe/model, dan plat nomor wajib diisi.");
       return;
@@ -121,6 +126,8 @@ function DaftarDriver() {
         vehicle_brand: form.vehicleBrand.trim(),
         vehicle_model: form.vehicleModel.trim(),
         vehicle_plate: form.vehiclePlate.trim().toUpperCase(),
+        partnership_agreement_accepted_at: new Date().toISOString(),
+        partnership_agreement_version: "2026-10-21-v1",
         photo_ktp: ktpUrl,
         photo_sim: simUrl,
         photo_vehicle: vehicleUrl,
@@ -267,6 +274,65 @@ function DaftarDriver() {
                 placeholder="Contoh: BE 1234 ABC"
               />
             </div>
+
+            <section className="space-y-3 rounded-xl border border-border p-3">
+              <div>
+                <h2 className="text-base font-extrabold text-foreground">Perjanjian Kemitraan Driver Mider</h2>
+                <p className="mt-1 text-xs text-muted-foreground">Baca ketentuan berikut. Centang persetujuan sebelum mengirim pendaftaran.</p>
+              </div>
+              <div className="max-h-80 space-y-3 overflow-y-auto rounded-lg border border-border bg-muted/30 p-3 text-xs leading-relaxed text-foreground">
+                <h3 className="text-sm font-bold">PERJANJIAN KEMITRAAN PENYEDIAAN LAYANAN TRANSPORTASI DAN/ATAU PENGANTARAN BERBASIS APLIKASI</h3>
+                <p>Perjanjian ini disetujui secara elektronik pada tanggal persetujuan oleh PT Fast Network Indonesia, berkedudukan di Kota Metro, Indonesia, sebagai pengelola aplikasi Mider (selanjutnya disebut “Aplikator”), dan individu yang mendaftar sebagai driver melalui aplikasi Mider (selanjutnya disebut “Mitra”). Keduanya bersama-sama disebut “Para Pihak”.</p>
+                <h4 className="font-bold">PASAL 1 — DEFINISI</h4>
+                <p>Aplikasi adalah perangkat lunak Mider yang digunakan Mitra dan Konsumen di Kota Metro dan sekitarnya. Konsumen adalah pengguna layanan. Layanan adalah jasa transportasi, pengantaran makanan, barang, dan layanan lain yang tersedia di aplikasi. Sistem mencakup teknologi, algoritma, GPS, dan infrastruktur server Aplikator.</p>
+                <h4 className="font-bold">PASAL 2 — RUANG LINGKUP KEMITRAAN</h4>
+                <p>1. Para Pihak bermaksud menjalin hubungan kemitraan, bukan hubungan kerja konvensional atau kepegawaian. Penerapan hubungan ini tetap tunduk pada hukum yang berlaku dan fakta pelaksanaannya.</p>
+                <p>2. Aplikator memberikan akses non-eksklusif dan dapat dicabut kepada Mitra untuk menggunakan Mider dan menerima penawaran pesanan.</p>
+                <p>3. Mitra dapat menentukan kapan menggunakan aplikasi dan tidak diwajibkan memenuhi target jam kerja, dengan tetap memperhatikan pesanan yang telah diterima dan kewajiban keselamatan.</p>
+                <h4 className="font-bold">PASAL 3 — SYARAT PENDAFTARAN</h4>
+                <p>1. Mitra wajib memberikan data yang benar, akurat, dan masih berlaku, termasuk KTP, SIM yang sesuai, STNK, SKCK apabila dipersyaratkan, foto diri, serta dokumen lain yang diminta secara sah.</p>
+                <p>2. Kendaraan wajib laik jalan dan memenuhi persyaratan hukum, termasuk rem, lampu, dan perlengkapan keselamatan.</p>
+                <p>3. Aplikator dapat menerima atau menolak pendaftaran berdasarkan verifikasi dan ketentuan yang berlaku.</p>
+                <h4 className="font-bold">PASAL 4 — HAK DAN KEWAJIBAN MITRA</h4>
+                <p>1. Mitra wajib menjaga akun, kata sandi, dan PIN; tidak memindahtangankan akun; melayani Konsumen dengan sopan dan jujur; mematuhi hukum, lalu lintas, dan standar keselamatan; serta menanggung pemeliharaan kendaraan, bahan bakar, pulsa, internet, dan biaya operasional pribadi.</p>
+                <p>2. Mitra dilarang melakukan order fiktif, manipulasi lokasi/jarak, menggunakan fake GPS atau aplikasi modifikasi, serta melakukan kecurangan lain.</p>
+                <p>3. Mitra berhak menerima pembayaran atas layanan yang diselesaikan sesuai ketentuan yang diinformasikan, melihat riwayat transaksi dan rincian biaya, serta mengajukan keluhan atau banding melalui kanal bantuan resmi.</p>
+                <h4 className="font-bold">PASAL 5 — HAK DAN KEWAJIBAN APLIKATOR</h4>
+                <p>1. Aplikator berupaya menyediakan dan memelihara aplikasi serta menyediakan kanal dukungan operasional.</p>
+                <p>2. Aplikator dapat mengatur alokasi pesanan, tarif, biaya layanan, komisi, dan insentif dengan menyampaikan ketentuan yang berlaku melalui aplikasi atau kanal resmi.</p>
+                <p>3. Aplikator dapat memberi peringatan, membatasi, menangguhkan, atau mengakhiri kemitraan atas pelanggaran, dengan memperhatikan tingkat pelanggaran, proses penanganan, dan hukum yang berlaku.</p>
+                <h4 className="font-bold">PASAL 6 — TARIF DAN KEUANGAN</h4>
+                <p>1. Tarif mengikuti ketentuan yang ditampilkan atau diinformasikan melalui Mider dan peraturan yang berlaku.</p>
+                <p>2. Biaya platform atau komisi, jika berlaku, akan diinformasikan kepada Mitra melalui aplikasi.</p>
+                <p>3. Masing-masing pihak bertanggung jawab atas kewajiban pajaknya sesuai peraturan perundang-undangan.</p>
+                <h4 className="font-bold">PASAL 7 — KODE ETIK DAN SANKSI</h4>
+                <p>1. Mitra wajib mengikuti panduan dan kode etik Mider.</p>
+                <p>2. Pelanggaran mencakup pelecehan, kekerasan, pencurian, penggelapan, order fiktif, manipulasi sistem, dan penggunaan akun oleh orang lain.</p>
+                <p>3. Sanksi dapat berupa teguran, pembekuan sementara, atau pemutusan kemitraan sesuai tingkat pelanggaran dan hukum yang berlaku.</p>
+                <h4 className="font-bold">PASAL 8 — KERAHASIAAN DAN PRIVASI</h4>
+                <p>1. Mitra wajib menjaga kerahasiaan data Konsumen, peta, informasi bisnis, dan informasi nonpublik yang diperoleh melalui layanan.</p>
+                <p>2. Aplikator dapat memproses data pribadi Mitra untuk pendaftaran, verifikasi, keamanan, dan operasional layanan sesuai ketentuan pelindungan data pribadi yang berlaku.</p>
+                <h4 className="font-bold">PASAL 9 — PERUBAHAN KETENTUAN</h4>
+                <p>Perubahan ketentuan akan diberitahukan melalui aplikasi atau kanal resmi. Perubahan yang memerlukan persetujuan baru akan dimintakan persetujuan sesuai hukum yang berlaku; penggunaan aplikasi semata-mata tidak mengesampingkan ketentuan persetujuan yang diwajibkan hukum.</p>
+                <h4 className="font-bold">PASAL 10 — PENGAKHIRAN</h4>
+                <p>1. Mitra dapat mengakhiri kemitraan dengan berhenti menggunakan layanan dan menyampaikan pemberitahuan melalui kanal yang tersedia.</p>
+                <p>2. Aplikator dapat mengakhiri kemitraan atas pelanggaran atau penghentian layanan sesuai ketentuan yang berlaku.</p>
+                <p>3. Pengakhiran tidak menghapus kewajiban keuangan yang telah timbul dan belum diselesaikan.</p>
+                <h4 className="font-bold">PASAL 11 — HUKUM DAN SENGKETA</h4>
+                <p>Perjanjian tunduk pada hukum Republik Indonesia. Perselisihan diupayakan diselesaikan melalui musyawarah terlebih dahulu. Jika tidak tercapai, sengketa diselesaikan melalui instansi atau pengadilan yang berwenang sesuai hukum yang berlaku.</p>
+                <p className="border-t border-border pt-2 font-semibold">Persetujuan elektronik: dengan mencentang kotak di bawah dan mengirim formulir, Mitra menyatakan telah membaca, memahami, dan menyetujui Perjanjian Kemitraan ini.</p>
+              </div>
+              <label className="flex items-start gap-3 rounded-lg border border-border p-3 text-sm font-medium text-foreground">
+                <input
+                  type="checkbox"
+                  checked={agreementAccepted}
+                  onChange={(event) => setAgreementAccepted(event.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                  required
+                />
+                <span>Saya telah membaca, memahami, dan menyetujui Perjanjian Kemitraan Driver Mider di atas.</span>
+              </label>
+            </section>
 
             <div className="space-y-3 rounded-xl border border-border p-3">
               <div>
