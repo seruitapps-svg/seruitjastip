@@ -529,7 +529,7 @@ function MitraDashboardPage() {
                     {(order as any).food_order_type === "mitra" && (order as any).merchant_response === "rejected" && (
                       <p className="rounded-lg bg-destructive/10 p-2 text-xs font-semibold text-destructive">Pesanan ditolak.</p>
                     )}
-                    {(order as any).food_order_type === "mitra" && (order as any).confirmation_pin && ["diambil", "dijemput", "diantar"].includes(order.status) && (
+                    {(order as any).food_order_type === "mitra" && (order as any).merchant_response === "accepted" && (order as any).confirmation_pin && ["diambil", "dijemput", "diantar"].includes(order.status) && (
                       <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
                         <p className="text-xs font-semibold text-muted-foreground">PIN Pengambilan untuk driver</p>
                         <p className="mt-1 text-2xl font-extrabold tracking-[0.3em] text-emerald-700">{(order as any).confirmation_pin}</p>
