@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadCompressedMedia } from "@/lib/image-compressor";
+import { formatRupiah } from "@/lib/config";
+import { STATUS_LABEL } from "@/lib/order-status";
 
 export const Route = createFileRoute("/_authenticated/mitra")({
   head: () => ({
@@ -61,6 +63,37 @@ function MitraDashboardPage() {
   });
 
   const merchant = merchantQuery.data;
+  const ordersQuery = useQuery({
+    queryKey: ["mitra-orders", merchant?.id],
+    enabled: !!merchant?.id && merchant?.status === "approved",
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("merchant_id", merchant!.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  useEffect(() => {
+    if (!merchant?.id || merchant.status !== "approved") return;
+    const channel = supabase
+      .channel(`mitra-orders-${merchant.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders", filter: `merchant_id=eq.${merchant.id}` },
+        () => {
+          void queryClient.invalidateQueries({ queryKey: ["mitra-orders", merchant.id] });
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [merchant?.id, merchant?.status, queryClient]);
+
   const productsQuery = useQuery({
     queryKey: ["merchant-products", merchant?.id],
     enabled: !!merchant?.id && merchant?.status === "approved",
@@ -410,15 +443,58 @@ function MitraDashboardPage() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-border bg-card p-5">
+        <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
           <div className="flex items-start gap-3">
             <ShoppingBag className="mt-0.5 h-5 w-5 text-primary" />
             <div>
               <h2 className="text-base font-bold text-foreground">Pesanan Masuk</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Bagian ini akan menampilkan pesanan pelanggan yang diarahkan ke resto Anda.</p>
-              <p className="mt-2 text-xs text-muted-foreground">Data pesanan belum ditampilkan di dashboard ini karena alur pesanan Food & Drink belum terhubung ke akun resto.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Pesanan pelanggan yang ditujukan ke outlet Anda. Status dan nilai transaksi diperbarui mengikuti pesanan.</p>
             </div>
           </div>
+
+          {!canOperate ? (
+            <p className="rounded-xl bg-muted p-3 text-sm text-muted-foreground">Pesanan akan tampil setelah outlet disetujui admin.</p>
+          ) : ordersQuery.isLoading ? (
+            <div className="flex items-center gap-2 py-5 text-sm text-muted-foreground"><LoaderCircle className="h-4 w-4 animate-spin" /> Memuat pesanan masuk...</div>
+          ) : ordersQuery.error ? (
+            <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+              Gagal memuat pesanan. Periksa izin baca pesanan Mitra Resto di database, lalu coba lagi.
+              <Button variant="outline" size="sm" className="mt-2" onClick={() => void ordersQuery.refetch()}>Coba Lagi</Button>
+            </div>
+          ) : (ordersQuery.data ?? []).length === 0 ? (
+            <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Belum ada pesanan yang masuk ke outlet Anda.</p>
+          ) : (
+            <div className="space-y-3">
+              {(ordersQuery.data ?? []).map((order) => {
+                const itemCost = Number((order as any).item_cost ?? 0);
+                const total = Math.max(
+                  Number(order.total ?? 0),
+                  Number(order.shipping_fare ?? 0) + Number(order.consumer_service_fee ?? 0) + itemCost,
+                );
+                return (
+                  <article key={order.id} className="space-y-3 rounded-xl border border-border p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="text-xs text-muted-foreground">#{order.code} · {new Date(order.created_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}</p>
+                        <h3 className="mt-1 text-sm font-bold text-foreground">{order.sender_name}</h3>
+                      </div>
+                      <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
+                        {STATUS_LABEL[order.status] ?? order.status}
+                      </span>
+                    </div>
+                    <p className="whitespace-pre-wrap break-words text-sm text-foreground">{order.item_detail}</p>
+                    <div className="space-y-1 rounded-lg bg-muted p-3 text-xs">
+                      <div className="flex justify-between gap-3"><span className="text-muted-foreground">Subtotal menu</span><span className="font-semibold text-foreground">{formatRupiah(itemCost)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-muted-foreground">Ongkos kirim</span><span className="font-semibold text-foreground">{formatRupiah(order.shipping_fare)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-muted-foreground">Biaya layanan</span><span className="font-semibold text-foreground">{formatRupiah(order.consumer_service_fee)}</span></div>
+                      <div className="flex justify-between gap-3 border-t border-border pt-2 text-sm"><span className="font-bold text-foreground">Total transaksi</span><span className="font-extrabold text-primary">{formatRupiah(total)}</span></div>
+                    </div>
+                    <Link to="/pesanan/$id" params={{ id: order.id }} className="inline-flex rounded-lg border border-border px-3 py-2 text-xs font-semibold text-foreground hover:bg-accent">Lihat detail pesanan</Link>
+                  </article>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
