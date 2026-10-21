@@ -432,7 +432,7 @@ function DriverPage() {
                             if (needsPin) {
                               const pin = window.prompt("Masukkan 4 digit PIN konfirmasi dari pemesan:");
                               if (pin === null) return;
-                              if (!/^\\d{4}$/.test(pin.trim())) throw new Error("PIN harus tepat 4 angka.");
+                              if (!/^\d{4}$/.test(pin.trim())) throw new Error("PIN harus tepat 4 angka.");
                               return supabase.rpc("driver_advance_order", { _order_id: o.id, _pin: pin.trim() });
                             }
                             return supabase.rpc("driver_advance_order", { _order_id: o.id });
