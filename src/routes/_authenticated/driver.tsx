@@ -429,7 +429,7 @@ function DriverPage() {
                         className={btnPrimary}
                         disabled={busy === o.id}
                         onClick={() => {
-                          if ((o as any).food_order_type === "mitra" && o.status === "dijemput") {
+                          if ((o as any).food_order_type === "mitra" && ["diambil", "dijemput"].includes(o.status)) {
                             setPickupPin("");
                             setPinOrderId(o.id);
                             return;
