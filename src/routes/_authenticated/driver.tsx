@@ -425,7 +425,7 @@ function DriverPage() {
                       <button
                         className={btnPrimary}
                         disabled={busy === o.id}
-                        onClick={() => run(o.id, async () => supabase.rpc("driver_advance_order", { _order_id: o.id }))}
+                        onClick={() => run(o.id, async () => supabase.rpc("driver_advance_order", { _order_id: o.id, _pin: null }))}
                       >
                         {o.service === "ojek"
                           ? o.status === "diambil"
