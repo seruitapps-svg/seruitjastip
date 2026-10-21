@@ -45,6 +45,7 @@ function MitraDashboardPage() {
   const [productPhoto, setProductPhoto] = useState<File | null>(null);
   const [savingProduct, setSavingProduct] = useState(false);
   const [respondingOrderId, setRespondingOrderId] = useState<string | null>(null);
+  const [showTransactionHistory, setShowTransactionHistory] = useState(false);
 
 
   const merchantQuery = useQuery({
@@ -384,6 +385,9 @@ function MitraDashboardPage() {
       order.status === "tersedia",
   );
   const activePopupOrder = pendingMitraOrders[0];
+  const allMitraOrders = (ordersQuery.data ?? []);
+  const activeMitraOrders = allMitraOrders.filter((order) => order.status !== "selesai");
+  const completedMitraOrders = allMitraOrders.filter((order) => order.status === "selesai");
 
   return (
     <div className="min-h-screen bg-background pb-10">
@@ -529,11 +533,11 @@ function MitraDashboardPage() {
               Gagal memuat pesanan. Periksa izin baca pesanan Mitra Resto di database, lalu coba lagi.
               <Button variant="outline" size="sm" className="mt-2" onClick={() => void ordersQuery.refetch()}>Coba Lagi</Button>
             </div>
-          ) : (ordersQuery.data ?? []).length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Belum ada pesanan yang masuk ke outlet Anda.</p>
+          ) : activeMitraOrders.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Tidak ada pesanan aktif saat ini. Riwayat transaksi yang selesai tersedia di bagian bawah.</p>
           ) : (
             <div className="space-y-3">
-              {(ordersQuery.data ?? []).map((order) => {
+              {activeMitraOrders.map((order) => {
                 const itemCost = Number((order as any).item_cost ?? 0);
                 const total = Math.max(
                   Number(order.total ?? 0),
@@ -590,6 +594,58 @@ function MitraDashboardPage() {
                 );
               })}
             </div>
+          )}
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
+          <button
+            type="button"
+            onClick={() => setShowTransactionHistory((current) => !current)}
+            className="flex w-full items-center justify-between gap-3 text-left"
+            aria-expanded={showTransactionHistory}
+          >
+            <div className="flex items-start gap-3">
+              <ShoppingBag className="mt-0.5 h-5 w-5 text-muted-foreground" />
+              <div>
+                <h2 className="text-base font-bold text-foreground">Riwayat Transaksi Selesai</h2>
+                <p className="mt-1 text-sm text-muted-foreground">{completedMitraOrders.length} transaksi selesai. Bagian ini dipisahkan dari pesanan aktif.</p>
+              </div>
+            </div>
+            <ChevronUp className={`h-5 w-5 shrink-0 text-muted-foreground transition-transform ${showTransactionHistory ? "" : "rotate-180"}`} />
+          </button>
+          {showTransactionHistory && (
+            completedMitraOrders.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Belum ada transaksi yang selesai.</p>
+            ) : (
+              <div className="space-y-3">
+                {completedMitraOrders.map((order) => {
+                  const itemCost = Number((order as any).item_cost ?? 0);
+                  const total = Math.max(
+                    Number(order.total ?? 0),
+                    Number(order.shipping_fare ?? 0) + Number(order.consumer_service_fee ?? 0) + itemCost,
+                  );
+                  return (
+                    <article key={order.id} className="space-y-2 rounded-xl border border-border bg-muted/20 p-3">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="text-xs text-muted-foreground">#{order.code} · {new Date(order.created_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}</p>
+                          <h3 className="mt-1 text-sm font-bold text-foreground">{order.sender_name}</h3>
+                        </div>
+                        <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                          {STATUS_LABEL[order.status] ?? order.status}
+                        </span>
+                      </div>
+                      <p className="whitespace-pre-wrap break-words text-sm text-foreground">{order.item_detail}</p>
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2">
+                        <span className="text-xs text-muted-foreground">Total transaksi</span>
+                        <span className="text-sm font-extrabold text-primary">{formatRupiah(total)}</span>
+                      </div>
+                      <Link to="/pesanan/$id" params={{ id: order.id }} className="inline-flex rounded-lg border border-border px-3 py-2 text-xs font-semibold text-foreground hover:bg-accent">Lihat detail transaksi</Link>
+                    </article>
+                  );
+                })}
+              </div>
+            )
           )}
         </section>
 
