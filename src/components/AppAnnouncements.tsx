@@ -54,29 +54,60 @@ export function AppAnnouncements() {
   const IconFor = (type: Notice["announcement_type"]) =>
     type === "important" || type === "maintenance" ? AlertTriangle : type === "promotion" ? Sparkles : Info;
 
+  const inlineNotices = visible.filter((item) => item.placement !== "popup");
+  const popupNotices = visible.filter((item) => item.placement === "popup");
+
   return (
-    <div className="border-b border-border bg-background">
-      <div className="mx-auto max-w-3xl space-y-2 px-4 py-2">
-        {visible.map((item) => {
-          const Icon = IconFor(item.announcement_type);
-          const isPopup = item.placement === "popup";
-          return (
-            <section key={item.id} role="status" className={`rounded-xl border p-3 ${styleFor(item.announcement_type)} ${isPopup ? "shadow-md ring-1 ring-current/10" : ""}`}>
-              <div className="flex items-start gap-2">
-                <Icon className="mt-0.5 h-4 w-4 shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-extrabold">{item.title}</div>
-                  <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-relaxed">{item.message}</p>
-                  {item.placement === "inbox" && <div className="mt-2 text-[10px] font-semibold uppercase tracking-wide opacity-70"><Megaphone className="mr-1 inline h-3 w-3" />Pusat pengumuman</div>}
-                </div>
-                <button type="button" onClick={() => setDismissed((current) => [...current, item.id])} className="rounded-md p-1 opacity-70 hover:bg-black/5 hover:opacity-100" aria-label={`Tutup pengumuman: ${item.title}`}>
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </section>
-          );
-        })}
-      </div>
-    </div>
+    <>
+      {inlineNotices.length > 0 && (
+        <div className="border-b border-border bg-background">
+          <div className="mx-auto max-w-3xl space-y-2 px-4 py-2">
+            {inlineNotices.map((item) => {
+              const Icon = IconFor(item.announcement_type);
+              return (
+                <section key={item.id} role="status" className={`rounded-xl border p-3 ${styleFor(item.announcement_type)}`}>
+                  <div className="flex items-start gap-2">
+                    <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-extrabold">{item.title}</div>
+                      <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-relaxed">{item.message}</p>
+                      {item.placement === "inbox" && <div className="mt-2 text-[10px] font-semibold uppercase tracking-wide opacity-70"><Megaphone className="mr-1 inline h-3 w-3" />Pusat pengumuman</div>}
+                    </div>
+                    <button type="button" onClick={() => setDismissed((current) => [...current, item.id])} className="rounded-md p-1 opacity-70 hover:bg-black/5 hover:opacity-100" aria-label={`Tutup pengumuman: ${item.title}`}>
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {popupNotices.length > 0 && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Pengumuman aplikasi">
+          <div className="max-h-[85vh] w-full max-w-lg space-y-3 overflow-y-auto rounded-2xl border border-border bg-card p-4 shadow-2xl">
+            <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
+              <div className="flex items-center gap-2 text-sm font-extrabold text-foreground"><Megaphone className="h-4 w-4 text-primary" />Pengumuman</div>
+              <button type="button" onClick={() => setDismissed((current) => [...current, ...popupNotices.map((item) => item.id)])} className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold">Tutup semua</button>
+            </div>
+            {popupNotices.map((item) => {
+              const Icon = IconFor(item.announcement_type);
+              return (
+                <section key={item.id} className={`rounded-xl border p-3 ${styleFor(item.announcement_type)}`}>
+                  <div className="flex items-start gap-2">
+                    <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-extrabold">{item.title}</div>
+                      <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed">{item.message}</p>
+                    </div>
+                    <button type="button" onClick={() => setDismissed((current) => [...current, item.id])} className="rounded-md p-1 opacity-70 hover:bg-black/5 hover:opacity-100" aria-label={`Tutup pengumuman: ${item.title}`}><X className="h-3.5 w-3.5" /></button>
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
