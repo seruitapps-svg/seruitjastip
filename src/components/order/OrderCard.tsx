@@ -24,7 +24,13 @@ export function OrderCard({ order, actions, driverView = false }: { order: Order
           <div className="mt-1 truncate text-sm font-semibold text-foreground">{order.origin_address}</div>
           <div className="truncate text-sm text-muted-foreground">→ {order.dest_address}</div>
         </Link>
-        <StatusBadge status={order.status} />
+        {order.service === "ojek" && order.status === "dijemput" ? (
+          <span className="rounded-full bg-primary/15 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+            Penumpang sudah dijemput
+          </span>
+        ) : (
+          <StatusBadge status={order.status} />
+        )}
       </div>
       <div className="mt-2 flex items-center justify-between text-sm">
         <span className="text-muted-foreground">
