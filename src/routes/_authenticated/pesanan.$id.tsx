@@ -135,9 +135,8 @@ function OrderDetail() {
       if (!proceed) return;
     }
 
-    const needsPickupPin = o.service === "ojek" && o.status === "diambil";
-    const needsDeliveryPin = o.service !== "ojek" && o.status === "diantar";
-    if (needsPickupPin || needsDeliveryPin) {
+    const needsRestaurantPickupPin = String(o.service) === "point_food" && o.status === "diambil";
+    if (needsRestaurantPickupPin) {
       setDriverPinInput("");
       setShowPinModal(true);
       return;
@@ -149,7 +148,7 @@ function OrderDetail() {
   async function confirmCompleteOrder() {
     const pin = driverPinInput.trim();
     if (!/^[0-9]{4}$/.test(pin)) {
-      setErr("Masukkan 4 digit PIN dari pelanggan.");
+      setErr("Masukkan 4 digit PIN pengambilan dari mitra restoran atau pemesan.");
       return;
     }
 
@@ -290,20 +289,20 @@ function OrderDetail() {
               <button type="button" onClick={() => setIsNavigating(false)} className={btnPrimary}>Kembali ke pesanan</button>
             )}
           </div>
-          {showPinModal && isMyDriver && ((o.service === "ojek" && o.status === "diambil") || (o.service !== "ojek" && o.status === "diantar")) && (
+          {showPinModal && isMyDriver && String(o.service) === "point_food" && o.status === "diambil" && (
             <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="pin-modal-title-nav">
               <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-5 shadow-xl">
                 <div>
-                  <h2 id="pin-modal-title-nav" className="text-lg font-bold text-foreground">{o.service === "ojek" ? "Konfirmasi penjemputan penumpang" : "Konfirmasi PIN pelanggan"}</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">{o.service === "ojek" ? "Minta 4 digit PIN dari pemesan untuk mengonfirmasi penjemputan." : "Minta 4 digit PIN kepada pelanggan saat pesanan diserahkan."}</p>
+                  <h2 id="pin-modal-title-nav" className="text-lg font-bold text-foreground">"Konfirmasi pengambilan di restoran"</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">"Masukkan PIN pengambilan dari mitra restoran atau pemesan untuk mengonfirmasi pengambilan pesanan."</p>
                 </div>
-                <label htmlFor="driver-confirmation-pin-nav" className="block text-sm font-medium text-foreground">PIN 4 digit</label>
+                <label htmlFor="driver-confirmation-pin-nav" className="block text-sm font-medium text-foreground">PIN pengambilan restoran</label>
                 <input id="driver-confirmation-pin-nav" inputMode="numeric" autoComplete="one-time-code" maxLength={4} value={driverPinInput} onChange={(event) => setDriverPinInput(event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="••••" className="w-full rounded-xl border border-input bg-background px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-foreground" />
                 {err && <p className="text-sm text-destructive">{err}</p>}
                 <div className="flex gap-2">
                   <button type="button" disabled={busy} onClick={() => { setShowPinModal(false); setDriverPinInput(""); setErr(""); }} className="flex-1 rounded-xl border border-border px-3 py-2.5 text-sm font-semibold text-foreground">Batal</button>
                   <button type="button" disabled={busy || driverPinInput.length !== 4} onClick={() => void confirmCompleteOrder()} className={`flex-1 ${btnPrimary}`}>
-                    {busy ? "Memverifikasi..." : o.service === "ojek" ? "Konfirmasi penjemputan" : "Konfirmasi selesai"}
+                    {busy ? "Memverifikasi..." : "Konfirmasi pengambilan"}
                   </button>
                 </div>
               </div>
@@ -527,12 +526,12 @@ function OrderDetail() {
           </section>
         )}
 
-        {showPinModal && isMyDriver && o.status === "diantar" && (
+        {showPinModal && isMyDriver && String(o.service) === "point_food" && o.status === "diambil" && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="pin-modal-title">
             <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-5 shadow-xl">
               <div>
-                <h2 id="pin-modal-title" className="text-lg font-bold text-foreground">{o.service === "ojek" ? "Konfirmasi penjemputan penumpang" : "Konfirmasi PIN pelanggan"}</h2>
-                <p className="mt-1 text-sm text-muted-foreground">{o.service === "ojek" ? "Minta 4 digit PIN dari pemesan untuk mengonfirmasi penjemputan." : "Minta 4 digit PIN kepada pelanggan saat pesanan diserahkan."}</p>
+                <h2 id="pin-modal-title" className="text-lg font-bold text-foreground">Konfirmasi pengambilan di restoran</h2>
+                <p className="mt-1 text-sm text-muted-foreground">"Masukkan PIN pengambilan dari mitra restoran atau pemesan untuk mengonfirmasi pengambilan pesanan."</p>
               </div>
               <label htmlFor="driver-confirmation-pin" className="block text-sm font-medium text-foreground">PIN 4 digit</label>
               <input id="driver-confirmation-pin" inputMode="numeric" autoComplete="one-time-code" maxLength={4} value={driverPinInput} onChange={(event) => setDriverPinInput(event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="••••" className="w-full rounded-xl border border-input bg-background px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-foreground" />
