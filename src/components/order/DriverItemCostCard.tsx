@@ -21,14 +21,18 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const isEditable = ["diambil", "dijemput", "diantar"].includes(order.status);
+  const foodOrderType = (order as any).food_order_type as "point" | "mitra" | null | undefined;
   const detailText = (order.item_detail || "").toLowerCase();
+  // Prefer the structured subtype. Text fallback is only for legacy orders without it.
   const isPointResto =
-    order.service === "food" ||
-    order.service === "point_food" ||
-    detailText.includes("point resto") ||
-    detailText.includes("resto") ||
-    detailText.includes("warung");
-  const isJastipBelanja = order.service === "belanja" && !isPointResto;
+    foodOrderType === "point" ||
+    (!foodOrderType &&
+      (order.service === "food" ||
+        order.service === "point_food" ||
+        detailText.includes("point resto") ||
+        detailText.includes("resto") ||
+        detailText.includes("warung")));
+  const isJastipBelanja = order.service === "belanja" && foodOrderType !== "mitra" && !isPointResto;
 
   async function handleSave(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
