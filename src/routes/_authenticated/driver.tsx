@@ -542,7 +542,7 @@ function DriverPage() {
                       >
                         {o.service === "ojek"
                           ? o.status === "diambil"
-                            ? "Konfirmasi penjemputan"
+                            ? "Konfirmasi penjemputan penumpang"
                             : o.status === "dijemput"
                               ? "Mulai antar penumpang"
                               : o.status === "diantar"
