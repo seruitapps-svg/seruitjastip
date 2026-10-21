@@ -461,7 +461,7 @@ function DriverPage() {
                         className={btnPrimary}
                         disabled={busy === o.id}
                         onClick={() => {
-                          if (o.service === "ojek" && o.status === "diambil") {
+                          if (String(o.service) === "point_food" && o.status === "diambil") {
                             setErr("");
                             setPickupPinInput("");
                             setPickupPinOrder({ id: o.id, code: o.code });
@@ -470,15 +470,17 @@ function DriverPage() {
                           void run(o.id, async () => supabase.rpc("driver_advance_order", { _order_id: o.id, _pin: null }));
                         }}
                       >
-                        {o.service === "ojek"
-                          ? o.status === "diambil"
-                            ? "Konfirmasi penjemputan"
-                            : o.status === "dijemput"
-                              ? "Mulai antar penumpang"
-                              : o.status === "diantar"
-                                ? "Tandai perjalanan selesai"
-                                : DRIVER_NEXT_LABEL[o.status]
-                          : DRIVER_NEXT_LABEL[o.status]}
+                        {String(o.service) === "point_food" && o.status === "diambil"
+                          ? "Konfirmasi pengambilan di restoran"
+                          : o.service === "ojek"
+                            ? o.status === "diambil"
+                              ? "Konfirmasi penjemputan"
+                              : o.status === "dijemput"
+                                ? "Mulai antar penumpang"
+                                : o.status === "diantar"
+                                  ? "Tandai perjalanan selesai"
+                                  : DRIVER_NEXT_LABEL[o.status]
+                            : DRIVER_NEXT_LABEL[o.status]}
                       </button>
                       <button
                         className={btnOutline}
@@ -498,10 +500,10 @@ function DriverPage() {
           <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="pickup-pin-title">
             <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-5 shadow-xl">
               <div>
-                <h2 id="pickup-pin-title" className="text-lg font-bold text-foreground">Konfirmasi penjemputan penumpang</h2>
-                <p className="mt-1 text-sm text-muted-foreground">Minta 4 digit PIN dari pemesan, lalu masukkan di sini untuk mengonfirmasi penjemputan order #{pickupPinOrder.code}.</p>
+                <h2 id="pickup-pin-title" className="text-lg font-bold text-foreground">Konfirmasi pengambilan di restoran</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Minta PIN pengambilan dari mitra restoran atau pemesan, lalu masukkan untuk mengonfirmasi pengambilan order #{pickupPinOrder.code}.</p>
               </div>
-              <label htmlFor="driver-pickup-pin" className="block text-sm font-medium text-foreground">PIN penjemputan</label>
+              <label htmlFor="driver-pickup-pin" className="block text-sm font-medium text-foreground">PIN pengambilan restoran</label>
               <input id="driver-pickup-pin" inputMode="numeric" autoComplete="one-time-code" maxLength={4} value={pickupPinInput} onChange={(event) => setPickupPinInput(event.target.value.replace(/\\D/g, "").slice(0, 4))} placeholder="••••" className="w-full rounded-xl border border-input bg-background px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-foreground" />
               {err && <p className="text-sm text-destructive">{err}</p>}
               <div className="flex gap-2">
