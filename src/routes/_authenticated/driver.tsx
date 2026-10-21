@@ -43,6 +43,8 @@ function DriverPage() {
   const [onlineSaving, setOnlineSaving] = useState(false);
   const [ojekSaving, setOjekSaving] = useState(false);
   const [err, setErr] = useState("");
+  const [pickupPinOrder, setPickupPinOrder] = useState<{ id: string; code: string } | null>(null);
+  const [pickupPinInput, setPickupPinInput] = useState("");
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileForm, setProfileForm] = useState({ full_name: "", phone: "", vehicle_type: "Motor", vehicle_plate: "" });
@@ -425,7 +427,15 @@ function DriverPage() {
                       <button
                         className={btnPrimary}
                         disabled={busy === o.id}
-                        onClick={() => run(o.id, async () => supabase.rpc("driver_advance_order", { _order_id: o.id, _pin: null }))}
+                        onClick={() => {
+                          if (o.service === "ojek" && o.status === "diambil") {
+                            setErr("");
+                            setPickupPinInput("");
+                            setPickupPinOrder({ id: o.id, code: o.code });
+                            return;
+                          }
+                          void run(o.id, async () => supabase.rpc("driver_advance_order", { _order_id: o.id, _pin: null }));
+                        }}
                       >
                         {o.service === "ojek"
                           ? o.status === "diambil"
@@ -449,6 +459,32 @@ function DriverPage() {
               </div>
             ))}
           </section>
+        )}
+
+        {pickupPinOrder && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="pickup-pin-title">
+            <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-5 shadow-xl">
+              <div>
+                <h2 id="pickup-pin-title" className="text-lg font-bold text-foreground">Konfirmasi penjemputan penumpang</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Minta 4 digit PIN dari pemesan, lalu masukkan di sini untuk mengonfirmasi penjemputan order #{pickupPinOrder.code}.</p>
+              </div>
+              <label htmlFor="driver-pickup-pin" className="block text-sm font-medium text-foreground">PIN penjemputan</label>
+              <input id="driver-pickup-pin" inputMode="numeric" autoComplete="one-time-code" maxLength={4} value={pickupPinInput} onChange={(event) => setPickupPinInput(event.target.value.replace(/\\D/g, "").slice(0, 4))} placeholder="••••" className="w-full rounded-xl border border-input bg-background px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-foreground" />
+              {err && <p className="text-sm text-destructive">{err}</p>}
+              <div className="flex gap-2">
+                <button type="button" disabled={busy !== null} onClick={() => { setPickupPinOrder(null); setPickupPinInput(""); setErr(""); }} className="flex-1 rounded-xl border border-border px-3 py-2.5 text-sm font-semibold text-foreground">Batal</button>
+                <button type="button" disabled={busy !== null || pickupPinInput.length !== 4} onClick={() => {
+                  const order = pickupPinOrder;
+                  if (!order) return;
+                  void run(order.id, async () => supabase.rpc("driver_advance_order", { _order_id: order.id, _pin: pickupPinInput }), false);
+                  setPickupPinOrder(null);
+                  setPickupPinInput("");
+                }} className={`flex-1 ${btnPrimary}`}>
+                  {busy === pickupPinOrder.id ? "Memverifikasi..." : "Konfirmasi dijemput"}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* 3. Switcher Tab Menu */}
