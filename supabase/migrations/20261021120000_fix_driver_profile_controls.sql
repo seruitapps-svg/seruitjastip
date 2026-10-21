@@ -25,7 +25,8 @@ CREATE POLICY driver_profiles_update_own_account
   USING (user_id = (SELECT auth.uid()))
   WITH CHECK (user_id = (SELECT auth.uid()));
 
-CREATE OR REPLACE FUNCTION public.driver_toggle_online(_enabled boolean)
+DROP FUNCTION IF EXISTS public.driver_toggle_online(boolean);
+CREATE FUNCTION public.driver_toggle_online(_enabled boolean)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -50,7 +51,8 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.driver_toggle_ojek(_enabled boolean)
+DROP FUNCTION IF EXISTS public.driver_toggle_ojek(boolean);
+CREATE FUNCTION public.driver_toggle_ojek(_enabled boolean)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
