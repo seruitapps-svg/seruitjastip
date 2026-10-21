@@ -47,7 +47,7 @@ function DriverPage() {
   const [pickupPin, setPickupPin] = useState("");
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
-  const [driverProfilePopupDismissed, setDriverProfilePopupDismissed] = useState(false);
+  const [driverProfilePopupOpen, setDriverProfilePopupOpen] = useState(false);
   const [profileForm, setProfileForm] = useState({ full_name: "", phone: "", vehicle_type: "Motor", vehicle_plate: "" });
 
   // Profil driver (status online & accepts_ojek)
@@ -258,6 +258,13 @@ function DriverPage() {
     return (
       <div className="min-h-screen bg-background">
         <AppHeader />
+      {active.length > 0 && hasDriverProfile && !driverProfilePopupOpen && (
+        <div className="mx-auto max-w-4xl px-4 pt-3">
+          <Button type="button" variant="outline" className="gap-2" onClick={() => setDriverProfilePopupOpen(true)}>
+            <Bike className="h-4 w-4" /> Lihat Profil Driver
+          </Button>
+        </div>
+      )}
         <div className="mx-auto max-w-md px-4 py-16 text-center">
           <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground/60" />
           <h2 className="mt-4 text-base font-bold text-foreground">Halaman Khusus Driver</h2>
@@ -273,22 +280,20 @@ function DriverPage() {
   const done = mine.data?.filter((o) => o.status === "selesai") ?? [];
   const availableOrders = pool.data?.filter((o) => driverProfile.data?.accepts_ojek !== false || o.service !== "ojek") ?? [];
 
-  // Tampilkan identitas driver selama masih ada pesanan aktif, untuk semua jenis layanan.
+  // Buka popup sekali saat pesanan aktif terdeteksi; driver dapat membukanya lagi lewat tombol profil.
   useEffect(() => {
-    if (active.length === 0) {
-      setDriverProfilePopupDismissed(false);
-      return;
+    if (active.length > 0 && hasDriverProfile) {
+      setDriverProfilePopupOpen(true);
+    } else {
+      setDriverProfilePopupOpen(false);
     }
-    if (!driverProfilePopupDismissed) return;
-    const timer = window.setTimeout(() => setDriverProfilePopupDismissed(false), 5000);
-    return () => window.clearTimeout(timer);
-  }, [active.length, driverProfilePopupDismissed]);
+  }, [active.length > 0, hasDriverProfile]);
 
   return (
     <div className="min-h-screen bg-background pb-16">
       <AppHeader />
 
-      {active.length > 0 && hasDriverProfile && !driverProfilePopupDismissed && (
+      {active.length > 0 && hasDriverProfile && driverProfilePopupOpen && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 p-4" role="dialog" aria-modal="true" aria-labelledby="driver-active-profile-title">
           <section className="w-full max-w-sm space-y-4 rounded-2xl border border-primary/30 bg-card p-5 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
@@ -297,7 +302,7 @@ function DriverPage() {
                 <h2 id="driver-active-profile-title" className="mt-1 text-lg font-extrabold text-foreground">Profil Driver</h2>
                 <p className="mt-1 text-sm text-muted-foreground">Identitas driver untuk pesanan yang sedang berjalan.</p>
               </div>
-              <button type="button" aria-label="Tutup profil driver sementara" onClick={() => setDriverProfilePopupDismissed(true)} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+              <button type="button" aria-label="Tutup profil driver sementara" onClick={() => setDriverProfilePopupOpen(false)} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -317,9 +322,9 @@ function DriverPage() {
               </div>
             </div>
             <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
-              Popup ini akan muncul kembali selama masih ada pesanan aktif.
+              Tutup popup ini kapan saja. Buka kembali melalui tombol Profil Driver di dashboard.
             </div>
-            <Button type="button" className="w-full" onClick={() => setDriverProfilePopupDismissed(true)}>Tutup sementara</Button>
+            <Button type="button" className="w-full" onClick={() => setDriverProfilePopupOpen(false)}>Tutup</Button>
           </section>
         </div>
       )}
