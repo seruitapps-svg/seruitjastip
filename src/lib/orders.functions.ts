@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { randomInt } from "node:crypto";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { calculatePrice } from "./pricing";
 import { fetchMotorRoute } from "./maps.server";
@@ -144,7 +143,8 @@ export const createOrder = createServerFn({ method: "POST" })
         service: data.serviceId,
         merchant_id: data.foodOrderType ? data.merchantId : null,
         food_order_type: data.foodOrderType ?? null,
-        confirmation_pin: data.foodOrderType === "mitra" ? String(randomInt(1000, 10000)) : null,
+        confirmation_pin: null,
+        merchant_response: data.foodOrderType === "mitra" ? "pending" : null,
         origin_address: data.origin.address,
         origin_lat: data.origin.lat,
         origin_lng: data.origin.lng,
