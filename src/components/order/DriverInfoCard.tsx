@@ -1,4 +1,4 @@
-import { Bike, MessageSquare, Phone, Star } from "lucide-react";
+import { Bike, MessageSquare, Star } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -34,8 +34,6 @@ export function DriverInfoCard({ orderId, onChatClick }: DriverInfoCardProps) {
   });
 
   if (!driver) return null;
-
-  const whatsappNumber = driver.phone?.replace(/\D/g, "").replace(/^0/, "62");
 
   return (
     <section className="space-y-3 rounded-2xl border border-emerald-500/20 bg-card p-4 shadow-sm" aria-label="Informasi driver">
@@ -73,18 +71,6 @@ export function DriverInfoCard({ orderId, onChatClick }: DriverInfoCardProps) {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {whatsappNumber && (
-            <a
-              href={`https://wa.me/${whatsappNumber}`}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-full border border-border p-2.5 text-green-600 transition hover:bg-green-50"
-              title="Hubungi driver via WhatsApp"
-              aria-label="Hubungi driver via WhatsApp"
-            >
-              <Phone className="h-4 w-4" />
-            </a>
-          )}
           {onChatClick && (
             <button
               type="button"
