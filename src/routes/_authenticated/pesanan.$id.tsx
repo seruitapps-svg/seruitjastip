@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { MessageSquare, Phone, QrCode, Send, Navigation, X, ReceiptText, ExternalLink } from "lucide-react";
+import { MessageSquare, Phone, QrCode, Send, Navigation, X, ReceiptText, ExternalLink, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { RouteMap } from "@/components/order/RouteMap";
