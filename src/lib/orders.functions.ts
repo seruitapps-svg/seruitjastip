@@ -98,9 +98,10 @@ export const createOrder = createServerFn({ method: "POST" })
         if (!product || product.merchant_id !== data.merchantId || !Number.isFinite(Number(product.price)) || Number(product.price) < 0) {
           throw new Error("Data menu Mitra Resto tidak valid.");
         }
-        const lineTotal = Number(product.price) * item.quantity;
+        const unitPrice = Math.round(Number(product.price));
+        const lineTotal = unitPrice * item.quantity;
         menuSubtotal += lineTotal;
-        return `${item.quantity}x ${product.name} @ Rp ${Number(product.price).toLocaleString("id-ID")} = Rp ${lineTotal.toLocaleString("id-ID")}`;
+        return `${item.quantity}x ${product.name} @ Rp ${unitPrice.toLocaleString("id-ID")} = Rp ${lineTotal.toLocaleString("id-ID")}`;
       });
       if (!Number.isSafeInteger(menuSubtotal) || menuSubtotal <= 0) {
         throw new Error("Subtotal menu Mitra Resto tidak valid.");
