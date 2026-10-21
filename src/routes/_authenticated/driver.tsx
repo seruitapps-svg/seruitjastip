@@ -43,6 +43,8 @@ function DriverPage() {
   const [onlineSaving, setOnlineSaving] = useState(false);
   const [ojekSaving, setOjekSaving] = useState(false);
   const [err, setErr] = useState("");
+  const [pinOrderId, setPinOrderId] = useState<string | null>(null);
+  const [pickupPin, setPickupPin] = useState("");
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileForm, setProfileForm] = useState({ full_name: "", phone: "", vehicle_type: "Motor", vehicle_plate: "" });
@@ -427,17 +429,12 @@ function DriverPage() {
                         className={btnPrimary}
                         disabled={busy === o.id}
                         onClick={() => {
-                          void run(o.id, async () => {
-                            const foodType = (o as any).food_order_type;
-                            const needsPin = foodType === "mitra" && o.status === "dijemput";
-                            if (needsPin) {
-                              const pin = window.prompt("Masukkan 4 digit PIN konfirmasi dari pemesan:");
-                              if (pin === null) return;
-                              if (!/^\d{4}$/.test(pin.trim())) throw new Error("PIN harus tepat 4 angka.");
-                              return supabase.rpc("driver_advance_order", { _order_id: o.id, _pin: pin.trim() });
-                            }
-                            return supabase.rpc("driver_advance_order", { _order_id: o.id });
-                          });
+                          if ((o as any).food_order_type === "mitra" && o.status === "dijemput") {
+                            setPickupPin("");
+                            setPinOrderId(o.id);
+                            return;
+                          }
+                          void run(o.id, async () => supabase.rpc("driver_advance_order", { _order_id: o.id }));
                         }}
                       >
                         {o.service === "ojek"
@@ -450,6 +447,35 @@ function DriverPage() {
                                 : DRIVER_NEXT_LABEL[o.status]
                           : DRIVER_NEXT_LABEL[o.status]}
                       </button>
+                      {pinOrderId === o.id && (
+                        <div className="w-full space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
+                          <label className="block text-sm font-semibold text-foreground">
+                            PIN pengambilan dari Mitra Resto
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              maxLength={4}
+                              value={pickupPin}
+                              onChange={(event) => setPickupPin(event.target.value.replace(/\D/g, "").slice(0, 4))}
+                              placeholder="Masukkan 4 digit PIN"
+                              className="mt-2 w-full rounded-lg border border-input bg-background px-3 py-3 text-center text-xl font-bold tracking-[0.5em] text-foreground"
+                            />
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button type="button" className={btnPrimary} disabled={busy === o.id || pickupPin.length !== 4}
+                              onClick={() => void run(o.id, async () => {
+                                const result = await supabase.rpc("driver_advance_order", { _order_id: o.id, _pin: pickupPin });
+                                if (!result.error) { setPinOrderId(null); setPickupPin(""); }
+                                return result;
+                              })}>
+                              {busy === o.id ? "Memverifikasi..." : "Verifikasi & Mulai Antar"}
+                            </button>
+                            <button type="button" className={btnOutline} disabled={busy === o.id}
+                              onClick={() => { setPinOrderId(null); setPickupPin(""); }}>Batal</button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">PIN benar langsung mengubah status ke Sedang Diantar. PIN salah membuat status tetap.</p>
+                        </div>
+                      )}
                       <button
                         className={btnOutline}
                         onClick={() => navigate({ to: "/pesanan/$id", params: { id: o.id } })}
