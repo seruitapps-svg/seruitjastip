@@ -249,25 +249,6 @@ function OrderDetail() {
               <button type="button" onClick={() => setIsNavigating(false)} className={btnPrimary}>Kembali ke pesanan</button>
             )}
           </div>
-          {false && isMyDriver && String(o.service) === "point_food" && o.status === "diambil" && (
-            <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="pin-modal-title-nav">
-              <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-5 shadow-xl">
-                <div>
-                  <h2 id="pin-modal-title-nav" className="text-lg font-bold text-foreground">"Konfirmasi pengambilan di restoran"</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">Masukkan PIN pengambilan dari mitra restoran atau pemesan untuk mengonfirmasi pengambilan pesanan.</p>
-                </div>
-                <label htmlFor="driver-confirmation-pin-nav" className="block text-sm font-medium text-foreground">PIN pengambilan restoran</label>
-                <input id="driver-confirmation-pin-nav" inputMode="numeric" autoComplete="one-time-code" maxLength={4} value={driverPinInput} onChange={(event) => setDriverPinInput(event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="••••" className="w-full rounded-xl border border-input bg-background px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-foreground" />
-                {err && <p className="text-sm text-destructive">{err}</p>}
-                <div className="flex gap-2">
-                  <button type="button" disabled={busy} onClick={() => { setShowPinModal(false); setDriverPinInput(""); setErr(""); }} className="flex-1 rounded-xl border border-border px-3 py-2.5 text-sm font-semibold text-foreground">Batal</button>
-                  <button type="button" disabled={busy || driverPinInput.length !== 4} onClick={() => void confirmCompleteOrder()} className={`flex-1 ${btnPrimary}`}>
-                    {busy ? "Memverifikasi..." : "Konfirmasi pengambilan"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
           {err && <p className="mt-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{err}</p>}
         </div>
       </div>
@@ -486,27 +467,7 @@ function OrderDetail() {
           </section>
         )}
 
-        {false && isMyDriver && String(o.service) === "point_food" && o.status === "diambil" && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="pin-modal-title">
-            <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-5 shadow-xl">
-              <div>
-                <h2 id="pin-modal-title" className="text-lg font-bold text-foreground">Konfirmasi pengambilan di restoran</h2>
-                <p className="mt-1 text-sm text-muted-foreground">"Masukkan PIN pengambilan dari mitra restoran atau pemesan untuk mengonfirmasi pengambilan pesanan."</p>
-              </div>
-              <label htmlFor="driver-confirmation-pin" className="block text-sm font-medium text-foreground">PIN 4 digit</label>
-              <input id="driver-confirmation-pin" inputMode="numeric" autoComplete="one-time-code" maxLength={4} value={driverPinInput} onChange={(event) => setDriverPinInput(event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="••••" className="w-full rounded-xl border border-input bg-background px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-foreground" />
-              {err && <p className="text-sm text-destructive">{err}</p>}
-              <div className="flex gap-2">
-                <button type="button" disabled={busy} onClick={() => { setShowPinModal(false); setDriverPinInput(""); setErr(""); }} className="flex-1 rounded-xl border border-border px-3 py-2.5 text-sm font-semibold text-foreground">Batal</button>
-                <button type="button" disabled={busy || driverPinInput.length !== 4} onClick={() => void confirmCompleteOrder()} className={`flex-1 ${btnPrimary}`}>
-                  {busy ? "Memverifikasi..." : "Konfirmasi selesai"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-      {showReceiptModal && (o as any).item_receipt_url && (
+        {showReceiptModal && (o as any).item_receipt_url && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in">
           <div className="relative max-h-[90vh] max-w-lg overflow-hidden rounded-2xl bg-card p-3 shadow-2xl">
             <div className="flex items-center justify-between border-b border-border pb-2">
