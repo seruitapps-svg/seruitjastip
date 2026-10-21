@@ -9,11 +9,13 @@ const point = z.object({
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
 });
-const wa = z.string().trim().regex(/^(\+62|62|0)8\d{6,11}$/, "Nomor WhatsApp tidak valid. Gunakan format 08xxxxxxxxxx atau +628xxxxxxxxxx.");
+const wa = z.string().trim().regex(/^(+62|62|0)8d{6,11}$/, "Nomor WhatsApp tidak valid. Gunakan format 08xxxxxxxxxx atau +628xxxxxxxxxx.");
 
 const schema = z
   .object({
     serviceId: z.enum(["titip", "kirim", "belanja", "ojek"]),
+    foodOrderType: z.enum(["point", "mitra"]).optional(),
+    merchantId: z.string().uuid().optional(),
     origin: point,
     destination: point,
     itemDetail: z.string().trim().min(3).max(500),
@@ -31,12 +33,30 @@ const schema = z
   .refine(
     (d) => d.serviceId !== "kirim" || (d.recipientName.length >= 2 && wa.safeParse(d.recipientWa).success),
     { message: "Data penerima tidak valid" },
+  )
+  .refine(
+    (d) => !d.foodOrderType || (d.serviceId === "belanja" && Boolean(d.merchantId)),
+    { message: "Identitas outlet Food & Drink tidak lengkap." },
   );
 
 export const createOrder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => schema.parse(data))
   .handler(async ({ data, context }) => {
+    // Validasi identitas outlet di server; jangan menebak jenis order dari item_detail.
+    if (data.foodOrderType && data.merchantId) {
+      const { data: merchant, error: merchantError } = await context.supabase
+        .from("merchants")
+        .select("id, type, status, is_open")
+        .eq("id", data.merchantId)
+        .maybeSingle();
+      if (merchantError) throw new Error("Gagal memvalidasi outlet Food & Drink.");
+      const expectedType = data.foodOrderType === "mitra" ? "official_merchant" : "point_resto";
+      if (!merchant || merchant.type !== expectedType || !merchant.is_open || (data.foodOrderType === "mitra" && merchant.status !== "approved")) {
+        throw new Error("Outlet tidak valid atau sedang tidak aktif. Silakan pilih outlet yang tersedia.");
+      }
+    }
+
     // Harga dihitung ulang di server — angka dari browser tidak dipercaya.
     const route = await fetchMotorRoute(data.origin, data.destination);
     const { data: settings, error: settingsError } = await context.supabase
@@ -69,6 +89,8 @@ export const createOrder = createServerFn({ method: "POST" })
       .insert({
         user_id: context.userId,
         service: data.serviceId,
+        merchant_id: data.foodOrderType ? data.merchantId : null,
+        food_order_type: data.foodOrderType ?? null,
         origin_address: data.origin.address,
         origin_lat: data.origin.lat,
         origin_lng: data.origin.lng,
