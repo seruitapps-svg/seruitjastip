@@ -426,7 +426,17 @@ function DriverPage() {
                         className={btnPrimary}
                         disabled={busy === o.id}
                         onClick={() => {
-                          void run(o.id, async () => supabase.rpc("driver_advance_order", { _order_id: o.id }));
+                          void run(o.id, async () => {
+                            const foodType = (o as any).food_order_type;
+                            const needsPin = (o.service === "ojek" && o.status === "diambil") || (foodType === "mitra" && o.status === "diantar");
+                            if (needsPin) {
+                              const pin = window.prompt("Masukkan 4 digit PIN konfirmasi dari pemesan:");
+                              if (pin === null) return;
+                              if (!/^\\d{4}$/.test(pin.trim())) throw new Error("PIN harus tepat 4 angka.");
+                              return supabase.rpc("driver_advance_order", { _order_id: o.id, _pin: pin.trim() });
+                            }
+                            return supabase.rpc("driver_advance_order", { _order_id: o.id });
+                          });
                         }}
                       >
                         {o.service === "ojek"
