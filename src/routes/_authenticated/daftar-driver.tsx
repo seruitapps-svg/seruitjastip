@@ -36,23 +36,7 @@ const INITIAL_FORM: DriverForm = {
   vehiclePlate: "",
 };
 
-const STATUS_COPY = {
-  pending: {
-    title: "Menunggu verifikasi",
-    description: "Pendaftaran Anda sudah diterima. Tunggu admin memeriksa data Anda.",
-    className: "border-amber-300 bg-amber-50 text-amber-900",
-  },
-  approved: {
-    title: "Pendaftaran disetujui",
-    description: "Selamat! Pendaftaran Anda disetujui. Silakan buka menu Driver.",
-    className: "border-green-300 bg-green-50 text-green-900",
-  },
-  rejected: {
-    title: "Pendaftaran ditolak",
-    description: "Pendaftaran Anda belum disetujui. Silakan hubungi admin untuk informasi lebih lanjut.",
-    className: "border-red-300 bg-red-50 text-red-900",
-  },
-};
+
 
 function DaftarDriver() {
   const { user, ready, isDriver } = useAuth();
@@ -274,7 +258,7 @@ function DaftarDriver() {
                     type="file"
                     accept="image/*"
                     capture="environment"
-                    required
+                    required={!application.data}
                     onChange={(event) => {
                       const file = event.target.files?.[0] ?? null;
                       setFiles((current) => ({ ...current, [item.key]: file }));
