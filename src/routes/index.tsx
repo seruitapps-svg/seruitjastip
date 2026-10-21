@@ -535,6 +535,12 @@ function Index() {
           notes: o.notes,
           foodOrderType: selectedService === "food" ? foodType : undefined,
           merchantId: selectedService === "food" ? selectedRestoId : undefined,
+          foodItems:
+            selectedService === "food" && foodType === "mitra"
+              ? Object.entries(selectedMenuQuantities)
+                  .filter(([, quantity]) => quantity > 0)
+                  .map(([productId, quantity]) => ({ productId, quantity }))
+              : undefined,
         },
       });
       navigate({ to: "/pesanan/$id", params: { id: res.id } });
