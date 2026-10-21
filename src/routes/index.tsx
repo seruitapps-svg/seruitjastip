@@ -6,7 +6,6 @@ import { AppHeader } from "@/components/AppHeader";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { JastipCatalog } from "@/components/jastip/JastipCatalog";
 import {
   Bike,
@@ -554,7 +553,6 @@ function Index() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
-      <AnnouncementBanner />
 
       <main className="mx-auto max-w-2xl px-4 pb-20">
         {/* Switcher Mode: On-Bid vs Jastip */}
