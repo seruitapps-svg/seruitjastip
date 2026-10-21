@@ -133,6 +133,18 @@ function OrderDetail() {
       if (!proceed) return;
     }
 
+    const foodType = (o as any).food_order_type;
+    const needsPin = (o.service === "ojek" && o.status === "diambil") || (foodType === "mitra" && o.status === "diantar");
+    if (needsPin) {
+      const pin = window.prompt("Masukkan 4 digit PIN konfirmasi dari pemesan:");
+      if (pin === null) return;
+      if (!/^\\d{4}$/.test(pin.trim())) {
+        setErr("PIN harus tepat 4 angka.");
+        return;
+      }
+      await act(() => supabase.rpc("driver_advance_order", { _order_id: o.id, _pin: pin.trim() }));
+      return;
+    }
     await act(() => supabase.rpc("driver_advance_order", { _order_id: o.id }));
   }
 
@@ -415,7 +427,7 @@ function OrderDetail() {
         ) : (
           <p className="text-center text-xs text-muted-foreground">Chat tersedia setelah Anda mengambil order ini.</p>
         )}
-        {isOwner && (o as any).confirmation_pin && ["diambil", "dijemput", "diantar"].includes(o.status) && (
+        {isOwner && (o as any).food_order_type === "mitra" && (o as any).confirmation_pin && ["diambil", "dijemput", "diantar"].includes(o.status) && (
           <section className="rounded-2xl border-2 border-dashed border-emerald-500/40 bg-emerald-50/50 p-4 text-center dark:bg-emerald-950/20">
             <p className="text-xs font-medium text-muted-foreground">PIN Konfirmasi Pengantaran</p>
             <p className="my-1 text-3xl font-extrabold tracking-widest text-emerald-600">{(o as any).confirmation_pin}</p>
