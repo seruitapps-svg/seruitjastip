@@ -262,7 +262,7 @@ function OrderDetail() {
                 </button>
               </div>
               <div className="space-y-3 text-sm">
-                {row("Status", STATUS_LABEL[o.status])}
+                {row("Status", o.service === "ojek" && o.status === "diambil" ? "Driver menuju penjemputan penumpang" : o.service === "ojek" && o.status === "dijemput" ? "Penumpang sudah dijemput" : o.service === "ojek" && o.status === "diantar" ? "Sedang mengantar penumpang" : STATUS_LABEL[o.status])}
                 {row("Layanan", (o as any).food_order_type === "mitra" ? "Mitra Resto Resmi" : (o as any).food_order_type === "point" ? "Point Resto" : SERVICE_NAME[o.service] ?? o.service)}
                 {row("Dari", o.origin_address)}
                 {row("Ke", o.dest_address)}
