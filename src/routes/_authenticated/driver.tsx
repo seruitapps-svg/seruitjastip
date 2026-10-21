@@ -70,14 +70,34 @@ function DriverPage() {
   }
 
   async function toggleOjek(val: boolean) {
-    if (ojekSaving) return;
+    if (ojekSaving || !user?.id) return;
     setOjekSaving(true);
     setErr("");
     try {
-      const { error } = await supabase.rpc("driver_toggle_ojek", { _enabled: val });
-      if (error) throw error;
-      await qc.invalidateQueries({ queryKey: ["my-driver-profile", user?.id] });
-      await driverProfile.refetch();
+      // Prefer the database RPC so any server-side business rules remain enforced.
+      const { error: rpcError } = await supabase.rpc("driver_toggle_ojek", { _enabled: val });
+
+      if (rpcError) {
+        // Fallback for deployments where the RPC is missing/out of sync.
+        // RLS must still restrict this update to the authenticated driver's own profile.
+        const { error: updateError } = await supabase
+          .from("driver_profiles")
+          .update({ accepts_ojek: val })
+          .eq("user_id", user.id);
+
+        if (updateError) {
+          throw new Error(
+            `Gagal mengubah layanan ojek. RPC: ${rpcError.message}. Update profil: ${updateError.message}`
+          );
+        }
+      }
+
+      await qc.invalidateQueries({ queryKey: ["my-driver-profile", user.id] });
+      const refreshed = await driverProfile.refetch();
+      if (refreshed.error) throw refreshed.error;
+      if (refreshed.data?.accepts_ojek !== val) {
+        throw new Error("Status ojek belum berubah di database. Muat ulang halaman dan coba lagi.");
+      }
     } catch (error) {
       setErr(error instanceof Error ? error.message : "Pengaturan layanan ojek gagal diperbarui. Periksa koneksi lalu coba lagi.");
     } finally {
