@@ -40,6 +40,8 @@ function AdminPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [editingDriverId, setEditingDriverId] = useState<string | null>(null);
+  const [driverEditForm, setDriverEditForm] = useState({ full_name: "", phone: "", vehicle_type: "Motor", vehicle_plate: "", photo_url: "" });
   const [financialOpen, setFinancialOpen] = useState(true);
 
   const orders = useQuery({
@@ -163,6 +165,36 @@ function AdminPage() {
     });
     if (error) window.alert("Gagal mengirim link: " + error.message);
     else window.alert("Link reset password berhasil dikirim ke " + email);
+  }
+
+  async function handleSaveDriverProfile(driverId: string) {
+    const fullName = driverEditForm.full_name.trim();
+    const phone = driverEditForm.phone.trim();
+    const vehicleType = driverEditForm.vehicle_type.trim();
+    const vehiclePlate = driverEditForm.vehicle_plate.trim().toUpperCase();
+    if (!fullName || !phone || !vehicleType || !vehiclePlate) {
+      setErr("Profil driver wajib dilengkapi: nama, nomor HP, jenis kendaraan, dan plat nomor.");
+      return;
+    }
+    setBusy("save-driver-" + driverId);
+    setErr("");
+    const { error } = await supabase
+      .from("driver_profiles")
+      .update({
+        full_name: fullName,
+        phone,
+        vehicle_type: vehicleType,
+        vehicle_plate: vehiclePlate,
+        photo_url: driverEditForm.photo_url.trim() || null,
+      })
+      .eq("id", driverId);
+    setBusy(null);
+    if (error) {
+      setErr("Gagal menyimpan profil driver: " + error.message);
+      return;
+    }
+    setEditingDriverId(null);
+    await qc.invalidateQueries({ queryKey: ["admin-driver-registrations"] });
   }
 
   async function handleDeleteUser(userId: string, name: string) {
@@ -541,6 +573,48 @@ function AdminPage() {
                     </span>
                   </div>
 
+                  {editingDriverId === item.id ? (
+                    <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
+                      <h4 className="text-sm font-bold text-foreground">Lengkapi profil publik driver</h4>
+                      <p className="text-xs text-muted-foreground">Nama, nomor HP, jenis kendaraan, dan plat nomor wajib lengkap sebelum driver disetujui. NIK tidak ditampilkan kepada pelanggan.</p>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <label className="text-xs font-semibold text-foreground">Nama lengkap
+                          <input value={driverEditForm.full_name} onChange={(e) => setDriverEditForm({ ...driverEditForm, full_name: e.target.value })} maxLength={120} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
+                        </label>
+                        <label className="text-xs font-semibold text-foreground">Nomor HP / WhatsApp
+                          <input value={driverEditForm.phone} onChange={(e) => setDriverEditForm({ ...driverEditForm, phone: e.target.value })} maxLength={20} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
+                        </label>
+                        <label className="text-xs font-semibold text-foreground">Jenis kendaraan
+                          <select value={driverEditForm.vehicle_type} onChange={(e) => setDriverEditForm({ ...driverEditForm, vehicle_type: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                            <option value="Motor">Motor</option><option value="Mobil">Mobil</option>
+                          </select>
+                        </label>
+                        <label className="text-xs font-semibold text-foreground">Plat nomor
+                          <input value={driverEditForm.vehicle_plate} onChange={(e) => setDriverEditForm({ ...driverEditForm, vehicle_plate: e.target.value.toUpperCase() })} maxLength={15} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
+                        </label>
+                        <label className="text-xs font-semibold text-foreground sm:col-span-2">URL foto profil driver (opsional; gunakan foto swafoto jika tersedia)
+                          <input value={driverEditForm.photo_url} onChange={(e) => setDriverEditForm({ ...driverEditForm, photo_url: e.target.value })} type="url" className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="https://..." />
+                        </label>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" disabled={busy !== null} className={btnPrimary} onClick={() => void handleSaveDriverProfile(item.id)}>{busy === "save-driver-" + item.id ? "Menyimpan..." : "Simpan Profil"}</button>
+                        <button type="button" disabled={busy !== null} className={btnOutline} onClick={() => setEditingDriverId(null)}>Batal</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button type="button" className={btnOutline} onClick={() => {
+                      setEditingDriverId(item.id);
+                      setDriverEditForm({
+                        full_name: item.full_name ?? "",
+                        phone: item.phone ?? "",
+                        vehicle_type: item.vehicle_type ?? "Motor",
+                        vehicle_plate: item.vehicle_plate ?? "",
+                        photo_url: item.photo_url ?? item.photo_selfie ?? "",
+                      });
+                      setErr("");
+                    }}>Lengkapi Profil Driver</button>
+                  )}
+
                   <div className="grid grid-cols-2 gap-3 pt-2 sm:grid-cols-4">
                     {[
                       { label: "KTP", url: item.photo_ktp },
@@ -575,9 +649,16 @@ function AdminPage() {
                         className={btnPrimary}
                         onClick={() =>
                           run("approve-driver-" + item.id, async () => {
+                            const name = String(item.full_name ?? "").trim();
+                            const phone = String(item.phone ?? "").trim();
+                            const vehicleType = String(item.vehicle_type ?? "").trim();
+                            const vehiclePlate = String(item.vehicle_plate ?? "").trim();
+                            if (!name || !phone || !vehicleType || !vehiclePlate) {
+                              return { error: { message: "Driver belum bisa disetujui. Klik Lengkapi Profil Driver dan isi nama, nomor HP, jenis kendaraan, serta plat nomor terlebih dahulu." } };
+                            }
                             const { error } = await supabase
                               .from("driver_profiles")
-                              .update({ status: "approved" })
+                              .update({ status: "approved", photo_url: item.photo_url || item.photo_selfie || null })
                               .eq("id", item.id);
                             return { error };
                           })
