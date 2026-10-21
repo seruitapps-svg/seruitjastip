@@ -41,7 +41,7 @@ function AdminPage() {
   const [err, setErr] = useState("");
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [editingDriverId, setEditingDriverId] = useState<string | null>(null);
-  const [driverEditForm, setDriverEditForm] = useState({ full_name: "", phone: "", vehicle_type: "Motor", vehicle_plate: "", photo_url: "" });
+  const [driverEditForm, setDriverEditForm] = useState({ full_name: "", phone: "", vehicle_type: "Motor", vehicle_plate: "" });
   const [financialOpen, setFinancialOpen] = useState(true);
 
   const orders = useQuery({
@@ -185,7 +185,6 @@ function AdminPage() {
         phone,
         vehicle_type: vehicleType,
         vehicle_plate: vehiclePlate,
-        photo_url: driverEditForm.photo_url.trim() || null,
       })
       .eq("id", driverId);
     setBusy(null);
@@ -592,9 +591,6 @@ function AdminPage() {
                         <label className="text-xs font-semibold text-foreground">Plat nomor
                           <input value={driverEditForm.vehicle_plate} onChange={(e) => setDriverEditForm({ ...driverEditForm, vehicle_plate: e.target.value.toUpperCase() })} maxLength={15} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
                         </label>
-                        <label className="text-xs font-semibold text-foreground sm:col-span-2">URL foto profil driver (opsional; gunakan foto swafoto jika tersedia)
-                          <input value={driverEditForm.photo_url} onChange={(e) => setDriverEditForm({ ...driverEditForm, photo_url: e.target.value })} type="url" className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="https://..." />
-                        </label>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <button type="button" disabled={busy !== null} className={btnPrimary} onClick={() => void handleSaveDriverProfile(item.id)}>{busy === "save-driver-" + item.id ? "Menyimpan..." : "Simpan Profil"}</button>
@@ -609,7 +605,6 @@ function AdminPage() {
                         phone: item.phone ?? "",
                         vehicle_type: item.vehicle_type ?? "Motor",
                         vehicle_plate: item.vehicle_plate ?? "",
-                        photo_url: item.photo_url ?? item.photo_selfie ?? "",
                       });
                       setErr("");
                     }}>Lengkapi Profil Driver</button>
@@ -658,7 +653,7 @@ function AdminPage() {
                             }
                             const { error } = await supabase
                               .from("driver_profiles")
-                              .update({ status: "approved", photo_url: item.photo_url || item.photo_selfie || null })
+                              .update({ status: "approved" })
                               .eq("id", item.id);
                             return { error };
                           })
