@@ -181,6 +181,7 @@ function DriverPage() {
         .from("orders")
         .select("*")
         .eq("status", "tersedia")
+        .or("food_order_type.is.null,food_order_type.eq.point,and(food_order_type.eq.mitra,merchant_response.eq.accepted)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
