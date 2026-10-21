@@ -37,6 +37,8 @@ function OrderDetail() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [showNavDetails, setShowNavDetails] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [driverPinInput, setDriverPinInput] = useState("");
+  const [showPinModal, setShowPinModal] = useState(false);
   const [ratingValue, setRatingValue] = useState(5);
   const [merchantRatingValue, setMerchantRatingValue] = useState(5);
   const [reviewText, setReviewText] = useState("");
@@ -136,16 +138,40 @@ function OrderDetail() {
     const foodType = (o as any).food_order_type;
     const needsPin = foodType === "mitra" && o.status === "diantar";
     if (needsPin) {
-      const pin = window.prompt("Masukkan 4 digit PIN konfirmasi dari pemesan:");
-      if (pin === null) return;
-      if (!/^\d{4}$/.test(pin.trim())) {
-        setErr("PIN harus tepat 4 angka.");
-        return;
-      }
-      await act(() => supabase.rpc("driver_advance_order", { _order_id: o.id, _pin: pin.trim() }));
+      setDriverPinInput("");
+      setErr("");
+      setShowPinModal(true);
       return;
     }
     await act(() => supabase.rpc("driver_advance_order", { _order_id: o.id }));
+  }
+
+  async function confirmMitraRestoPin() {
+    const pin = driverPinInput.trim();
+    if (!/^\d{4}$/.test(pin)) {
+      setErr("PIN harus tepat 4 angka.");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    const { error } = await supabase.rpc("driver_advance_order", {
+      _order_id: o.id,
+      _pin: pin,
+    });
+    setBusy(false);
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    setShowPinModal(false);
+    setDriverPinInput("");
+    qc.invalidateQueries({ queryKey: ["order", id] });
+    qc.invalidateQueries({ queryKey: ["order-history", id] });
+    qc.invalidateQueries({ queryKey: ["wallet"] });
+    qc.invalidateQueries({ queryKey: ["driver-wallet-earnings"] });
+    qc.invalidateQueries({ queryKey: ["wallet-page"] });
+    qc.invalidateQueries({ queryKey: ["driver-jobs"] });
+    qc.invalidateQueries({ queryKey: ["admin-financial-overview"] });
   }
 
   async function submitRating() {
@@ -435,6 +461,26 @@ function OrderDetail() {
               Berikan 4 angka PIN ini kepada driver saat menerima pesanan demi keamanan transaksi.
             </p>
           </section>
+        )}
+
+        {showPinModal && isMyDriver && (o as any).food_order_type === "mitra" && o.status === "diantar" && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="mitra-pin-modal-title">
+            <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-5 shadow-xl">
+              <div>
+                <h2 id="mitra-pin-modal-title" className="text-lg font-bold text-foreground">Konfirmasi penjemputan Mitra Resto</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Masukkan nomor antrean/PIN 4 digit yang ditampilkan kepada pemesan untuk memverifikasi pesanan Mitra Resto Resmi.</p>
+              </div>
+              <label htmlFor="mitra-confirmation-pin" className="block text-sm font-medium text-foreground">PIN nomor antrean</label>
+              <input id="mitra-confirmation-pin" inputMode="numeric" autoComplete="one-time-code" maxLength={4} value={driverPinInput} onChange={(event) => setDriverPinInput(event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="••••" className="w-full rounded-xl border border-input bg-background px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-foreground" />
+              {err && <p className="text-sm text-destructive">{err}</p>}
+              <div className="flex gap-2">
+                <button type="button" disabled={busy} onClick={() => { setShowPinModal(false); setDriverPinInput(""); setErr(""); }} className="flex-1 rounded-xl border border-border px-3 py-2.5 text-sm font-semibold text-foreground">Batal</button>
+                <button type="button" disabled={busy || driverPinInput.length !== 4} onClick={() => void confirmMitraRestoPin()} className={`flex-1 ${btnPrimary}`}>
+                  {busy ? "Memverifikasi..." : "Konfirmasi PIN"}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {isOwner && o.status === "selesai" && !ratingSent && (
