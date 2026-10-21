@@ -34,6 +34,9 @@ function DriverPage() {
   const [onlineSaving, setOnlineSaving] = useState(false);
   const [ojekSaving, setOjekSaving] = useState(false);
   const [err, setErr] = useState("");
+  const [showProfileEditor, setShowProfileEditor] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileForm, setProfileForm] = useState({ full_name: "", phone: "", vehicle_type: "Motor", vehicle_plate: "" });
 
   // Profil driver (status online & accepts_ojek)
   const driverProfile = useQuery({
@@ -42,15 +45,60 @@ function DriverPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("driver_profiles")
-        .select("accepts_ojek, is_online")
+        .select("id, user_id, full_name, phone, vehicle_type, vehicle_plate, photo_selfie, accepts_ojek, is_online")
         .or(`user_id.eq.${user!.id},id.eq.${user!.id}`)
         .maybeSingle();
       if (error) throw error;
-      return data as { accepts_ojek: boolean; is_online?: boolean } | null;
+      return data as { id: string; user_id: string; full_name: string; phone: string; vehicle_type: string; vehicle_plate: string; photo_selfie?: string | null; accepts_ojek: boolean; is_online?: boolean } | null;
     },
   });
 
   const isOnline = driverProfile.data?.is_online === true;
+
+  useEffect(() => {
+    const profile = driverProfile.data;
+    if (!profile) return;
+    setProfileForm({
+      full_name: profile.full_name ?? "",
+      phone: profile.phone ?? "",
+      vehicle_type: profile.vehicle_type ?? "Motor",
+      vehicle_plate: profile.vehicle_plate ?? "",
+    });
+  }, [driverProfile.data]);
+
+  async function saveDriverProfile() {
+    const profile = driverProfile.data;
+    if (!profile?.id || !user?.id) {
+      setErr("Profil driver belum tersedia. Hubungi superadmin untuk melengkapi data profil terlebih dahulu.");
+      return;
+    }
+    const fullName = profileForm.full_name.trim();
+    const phone = profileForm.phone.trim();
+    const vehicleType = profileForm.vehicle_type.trim();
+    const vehiclePlate = profileForm.vehicle_plate.trim().toUpperCase();
+    if (!fullName || !phone || !vehicleType || !vehiclePlate) {
+      setErr("Nama, nomor HP, jenis kendaraan, dan plat nomor wajib diisi.");
+      return;
+    }
+    setProfileSaving(true);
+    setErr("");
+    try {
+      const { error } = await supabase.from("driver_profiles").update({
+        full_name: fullName,
+        phone,
+        vehicle_type: vehicleType,
+        vehicle_plate: vehiclePlate,
+      }).eq("id", profile.id).eq("user_id", user.id);
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: ["my-driver-profile", user.id] });
+      await driverProfile.refetch();
+      setShowProfileEditor(false);
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : "Profil gagal disimpan. Jika izin perubahan ditolak, minta superadmin memperbarui kebijakan akses profil.");
+    } finally {
+      setProfileSaving(false);
+    }
+  }
 
   async function toggleOnline(val: boolean) {
     if (onlineSaving) return;
@@ -215,6 +263,54 @@ function DriverPage() {
             <span>{err}</span>
           </div>
         )}
+
+        {/* Profil Driver */}
+        <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            {driverProfile.data?.photo_selfie ? (
+              <img src={driverProfile.data.photo_selfie} alt="Foto profil driver" className="h-14 w-14 rounded-full border border-border object-cover" />
+            ) : (
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-lg font-bold text-muted-foreground">
+                {driverProfile.data?.full_name?.charAt(0)?.toUpperCase() || "D"}
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-sm font-bold text-foreground">{driverProfile.data?.full_name || "Profil driver belum lengkap"}</h2>
+              <p className="text-xs text-muted-foreground">{driverProfile.data?.vehicle_type || "Jenis kendaraan belum diisi"} · {driverProfile.data?.vehicle_plate || "Plat nomor belum diisi"}</p>
+              <p className="text-xs text-muted-foreground">{driverProfile.data?.phone || "Nomor HP belum diisi"}</p>
+            </div>
+            <button type="button" disabled={!driverProfile.data} onClick={() => setShowProfileEditor((open) => !open)} className={btnOutline}>
+              {showProfileEditor ? "Tutup" : "Edit Profil"}
+            </button>
+          </div>
+          {!driverProfile.data && !driverProfile.isLoading && (
+            <p className="mt-3 rounded-lg bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
+              Profil driver belum ditemukan. Minta superadmin membuat atau melengkapi profil sebelum mengaktifkan layanan.
+            </p>
+          )}
+          {showProfileEditor && driverProfile.data && (
+            <div className="mt-4 space-y-3 border-t border-border pt-4">
+              <label className="block text-xs font-semibold text-foreground">Nama lengkap
+                <input value={profileForm.full_name} onChange={(e) => setProfileForm({ ...profileForm, full_name: e.target.value })} maxLength={120} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
+              </label>
+              <label className="block text-xs font-semibold text-foreground">Nomor HP / WhatsApp
+                <input type="tel" value={profileForm.phone} onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })} maxLength={20} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
+              </label>
+              <label className="block text-xs font-semibold text-foreground">Jenis kendaraan
+                <select value={profileForm.vehicle_type} onChange={(e) => setProfileForm({ ...profileForm, vehicle_type: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                  <option value="Motor">Motor</option><option value="Mobil">Mobil</option>
+                </select>
+              </label>
+              <label className="block text-xs font-semibold text-foreground">Plat nomor
+                <input value={profileForm.vehicle_plate} onChange={(e) => setProfileForm({ ...profileForm, vehicle_plate: e.target.value.toUpperCase() })} maxLength={15} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
+              </label>
+              <p className="text-xs text-muted-foreground">NIK dan dokumen verifikasi tidak ditampilkan atau diubah dari formulir ini.</p>
+              <button type="button" disabled={profileSaving} onClick={() => void saveDriverProfile()} className={btnPrimary}>
+                {profileSaving ? "Menyimpan..." : "Simpan Perubahan"}
+              </button>
+            </div>
+          )}
+        </section>
 
         {/* 1. Bar Status Kerja & Saldo Cepat */}
         <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
