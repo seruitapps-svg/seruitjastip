@@ -24,6 +24,15 @@ export const Route = createFileRoute("/_authenticated/driver")({
 
 type DriverTab = "onbid" | "jastip" | "wallet";
 
+function getDriverErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
 function DriverPage() {
   const { user, isDriver, ready } = useAuth();
   const qc = useQueryClient();
@@ -84,18 +93,21 @@ function DriverPage() {
     setProfileSaving(true);
     setErr("");
     try {
-      const { error } = await supabase.from("driver_profiles").update({
+      const { data: updatedProfile, error } = await supabase.from("driver_profiles").update({
         full_name: fullName,
         phone,
         vehicle_type: vehicleType,
         vehicle_plate: vehiclePlate,
-      }).eq("id", profile.id).eq("user_id", user.id);
+      }).eq("id", profile.id).eq("user_id", user.id).select("id").maybeSingle();
       if (error) throw error;
+      if (!updatedProfile) {
+        throw new Error("Profil tidak tersimpan. Periksa izin UPDATE/RLS dan pastikan profil terhubung dengan akun login.");
+      }
       await qc.invalidateQueries({ queryKey: ["my-driver-profile", user.id] });
       await driverProfile.refetch();
       setShowProfileEditor(false);
     } catch (error) {
-      setErr(error instanceof Error ? error.message : "Profil gagal disimpan. Jika izin perubahan ditolak, minta superadmin memperbarui kebijakan akses profil.");
+      setErr(getDriverErrorMessage(error, "Profil gagal disimpan. Periksa izin akses database."));
     } finally {
       setProfileSaving(false);
     }
@@ -110,9 +122,13 @@ function DriverPage() {
       if (error) throw error;
       // Refresh from the database so the status indicator and order buttons stay in sync.
       await qc.invalidateQueries({ queryKey: ["my-driver-profile", user?.id] });
-      await driverProfile.refetch();
+      const refreshed = await driverProfile.refetch();
+      if (refreshed.error) throw refreshed.error;
+      if (!refreshed.data || refreshed.data.is_online !== val) {
+        throw new Error("Status online belum terkonfirmasi. Periksa profil driver dan izin database.");
+      }
     } catch (error) {
-      setErr(error instanceof Error ? error.message : "Status kerja gagal diperbarui. Periksa koneksi lalu coba lagi.");
+      setErr(getDriverErrorMessage(error, "Status kerja gagal diperbarui. Periksa koneksi lalu coba lagi."));
     } finally {
       setOnlineSaving(false);
     }
@@ -135,7 +151,7 @@ function DriverPage() {
         throw new Error("Status ojek belum terkonfirmasi. Periksa relasi profil driver dengan akun login.");
       }
     } catch (error) {
-      setErr(error instanceof Error ? error.message : "Pengaturan layanan ojek gagal diperbarui.");
+      setErr(getDriverErrorMessage(error, "Pengaturan layanan ojek gagal diperbarui."));
     } finally {
       setOjekSaving(false);
     }
