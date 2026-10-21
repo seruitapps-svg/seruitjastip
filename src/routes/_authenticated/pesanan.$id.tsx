@@ -44,6 +44,7 @@ function OrderDetail() {
   const [reviewText, setReviewText] = useState("");
   const [merchantReviewText, setMerchantReviewText] = useState("");
   const [ratingSent, setRatingSent] = useState(false);
+  const [driverPopupOpen, setDriverPopupOpen] = useState(false);
 
   const order = useQuery({
     queryKey: ["order", id],
@@ -80,6 +81,16 @@ function OrderDetail() {
   }, [id, qc]);
 
   const o = order.data;
+  useEffect(() => {
+    const currentOrder = order.data;
+    const isActiveForCustomer = !!currentOrder
+      && currentOrder.user_id === user?.id
+      && !!currentOrder.driver_id
+      && ["diambil", "dijemput", "diantar"].includes(currentOrder.status);
+    setDriverPopupOpen(isActiveForCustomer);
+  }, [order.data?.id, order.data?.user_id, order.data?.driver_id, order.data?.status, user?.id]);
+
+
   if (order.isLoading)
     return (
       <div className="min-h-screen bg-background">
@@ -304,8 +315,32 @@ function OrderDetail() {
           <h1 className="text-xl font-extrabold text-foreground">Pesanan #{o.code}</h1>
           <StatusBadge status={o.status} />
         </div>
-        {o.driver_id && ["diambil", "dijemput", "diantar"].includes(o.status) && (
-          <DriverInfoCard orderId={o.id} />
+        {isOwner && o.driver_id && ["diambil", "dijemput", "diantar"].includes(o.status) && !driverPopupOpen && (
+          <button
+            type="button"
+            onClick={() => setDriverPopupOpen(true)}
+            className="w-full rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-700 dark:text-emerald-300"
+          >
+            Lihat Profil Driver
+          </button>
+        )}
+        {isOwner && o.driver_id && ["diambil", "dijemput", "diantar"].includes(o.status) && driverPopupOpen && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="customer-driver-popup-title">
+            <section className="w-full max-w-md space-y-4 rounded-2xl border border-emerald-500/30 bg-card p-4 shadow-2xl">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-emerald-600">Driver ditugaskan</p>
+                  <h2 id="customer-driver-popup-title" className="mt-1 text-lg font-extrabold text-foreground">Profil Driver</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">Periksa identitas driver yang menangani pesanan Anda.</p>
+                </div>
+                <button type="button" aria-label="Tutup profil driver" onClick={() => setDriverPopupOpen(false)} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <DriverInfoCard orderId={o.id} />
+              <button type="button" onClick={() => setDriverPopupOpen(false)} className={btnPrimary + " w-full"}>Tutup</button>
+            </section>
+          </div>
         )}
         {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
 
