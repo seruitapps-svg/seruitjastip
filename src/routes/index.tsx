@@ -198,7 +198,7 @@ function Index() {
   });
 
   const selectedMenuTotal = (merchantProducts.data ?? []).reduce(
-    (total, product) => total + Number(product.price) * (selectedMenuQuantities[product.id] ?? 0),
+    (total, product) => total + Math.round(Number(product.price)) * (selectedMenuQuantities[product.id] ?? 0),
     0,
   );
 
