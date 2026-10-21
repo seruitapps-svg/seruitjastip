@@ -36,6 +36,7 @@ function OrderDetail() {
   const [busy, setBusy] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [showNavDetails, setShowNavDetails] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   const order = useQuery({
     queryKey: ["order", id],
@@ -320,9 +321,10 @@ function OrderDetail() {
             </div>
             {(o as any).item_receipt_url && (
               <div className="pt-2 text-right">
-                <a href={(o as any).item_receipt_url} target="_blank" rel="noreferrer" className="text-xs font-semibold text-primary underline">
-                  Lihat Foto Struk Pembelian ↗
-                </a>
+                <button type="button" onClick={() => setShowReceiptModal(true)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">
+                  <ReceiptText className="h-3.5 w-3.5" />
+                  Lihat Foto Struk Pembelian
+                </button>
               </div>
             )}
           </div>
@@ -388,6 +390,22 @@ function OrderDetail() {
         ) : (
           <p className="text-center text-xs text-muted-foreground">Chat tersedia setelah Anda mengambil order ini.</p>
         )}
+      {showReceiptModal && (o as any).item_receipt_url && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in">
+          <div className="relative max-h-[90vh] max-w-lg overflow-hidden rounded-2xl bg-card p-3 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <span className="text-xs font-bold text-foreground">Foto Struk Pembelian</span>
+              <button type="button" onClick={() => setShowReceiptModal(false)} className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Tutup">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="mt-2 flex max-h-[75vh] items-center justify-center overflow-auto rounded-xl bg-black/5">
+              <img src={(o as any).item_receipt_url} alt="Struk Pembelian" className="max-h-full max-w-full rounded-lg object-contain" />
+            </div>
+          </div>
+        </div>
+      )}
+
       </main>
     </div>
   );
