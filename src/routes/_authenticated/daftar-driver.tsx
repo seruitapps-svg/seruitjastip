@@ -25,6 +25,8 @@ type DriverForm = {
   phone: string;
   nik: string;
   vehicleType: string;
+  vehicleBrand: string;
+  vehicleModel: string;
   vehiclePlate: string;
 };
 
@@ -33,6 +35,8 @@ const INITIAL_FORM: DriverForm = {
   phone: "",
   nik: "",
   vehicleType: "Motor",
+  vehicleBrand: "",
+  vehicleModel: "",
   vehiclePlate: "",
 };
 
@@ -74,6 +78,8 @@ function DaftarDriver() {
       phone: profile.phone ?? "",
       nik: profile.nik ?? "",
       vehicleType: profile.vehicle_type ?? "Motor",
+      vehicleBrand: profile.vehicle_brand ?? "",
+      vehicleModel: profile.vehicle_model ?? "",
       vehiclePlate: profile.vehicle_plate ?? "",
     });
   }, [application.data]);
@@ -85,8 +91,8 @@ function DaftarDriver() {
       return;
     }
     const existingProfile = application.data;
-    if (!form.fullName.trim() || !form.phone.trim() || !form.nik.trim() || !form.vehicleType.trim() || !form.vehiclePlate.trim()) {
-      setErrorMessage("Nama, nomor HP, NIK, jenis kendaraan, dan plat nomor wajib diisi.");
+    if (!form.fullName.trim() || !form.phone.trim() || !form.nik.trim() || !form.vehicleType.trim() || !form.vehicleBrand.trim() || !form.vehicleModel.trim() || !form.vehiclePlate.trim()) {
+      setErrorMessage("Nama, nomor HP, NIK, jenis kendaraan, merk, tipe/model, dan plat nomor wajib diisi.");
       return;
     }
     if (!existingProfile && (!files.ktp || !files.sim || !files.vehicle || !files.selfie)) {
@@ -112,6 +118,8 @@ function DaftarDriver() {
         phone: form.phone.trim(),
         nik: form.nik.trim(),
         vehicle_type: form.vehicleType,
+        vehicle_brand: form.vehicleBrand.trim(),
+        vehicle_model: form.vehicleModel.trim(),
         vehicle_plate: form.vehiclePlate.trim().toUpperCase(),
         photo_ktp: ktpUrl,
         photo_sim: simUrl,
@@ -222,6 +230,30 @@ function DaftarDriver() {
                 <option value="Motor">Motor</option>
                 <option value="Mobil">Mobil</option>
               </select>
+            </div>
+            <div>
+              <label htmlFor="vehicleBrand" className="text-sm font-semibold text-foreground">Merk kendaraan</label>
+              <input
+                id="vehicleBrand"
+                required
+                maxLength={60}
+                value={form.vehicleBrand}
+                onChange={(event) => setForm({ ...form, vehicleBrand: event.target.value })}
+                className={inputClass}
+                placeholder="Contoh: Honda atau Daihatsu"
+              />
+            </div>
+            <div>
+              <label htmlFor="vehicleModel" className="text-sm font-semibold text-foreground">Tipe/model kendaraan</label>
+              <input
+                id="vehicleModel"
+                required
+                maxLength={60}
+                value={form.vehicleModel}
+                onChange={(event) => setForm({ ...form, vehicleModel: event.target.value })}
+                className={inputClass}
+                placeholder="Contoh: Vario atau Sigra"
+              />
             </div>
             <div>
               <label htmlFor="vehiclePlate" className="text-sm font-semibold text-foreground">Nomor polisi kendaraan</label>
