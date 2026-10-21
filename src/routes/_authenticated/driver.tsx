@@ -10,7 +10,7 @@ import { WalletPanel } from "@/components/wallet/WalletPanel";
 import { DriverEarningsSettings } from "@/components/driver/DriverEarningsSettings";
 import { DriverJastipTrips } from "@/components/jastip/DriverJastipTrips";
 import { formatRupiah } from "@/lib/config";
-import { Zap, Calendar, Wallet, Bike, AlertCircle, ChevronDown, ChevronUp, Power, Coffee } from "lucide-react";
+import { Zap, Calendar, Wallet, Bike, AlertCircle, ChevronDown, ChevronUp, Power, Coffee, KeyRound, X } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/driver")({
   head: () => ({
@@ -276,6 +276,56 @@ function DriverPage() {
     <div className="min-h-screen bg-background pb-16">
       <AppHeader />
 
+      {pinOrderId && (() => {
+        const pinOrder = active.find((order) => order.id === pinOrderId);
+        if (!pinOrder) return null;
+        return (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="driver-pickup-pin-title">
+            <section className="w-full max-w-md space-y-5 rounded-2xl border border-primary/30 bg-card p-5 shadow-2xl sm:p-6">
+              <div className="flex items-start gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <KeyRound className="h-6 w-6" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold uppercase tracking-wide text-primary">Verifikasi pengambilan</p>
+                  <h2 id="driver-pickup-pin-title" className="mt-1 text-lg font-extrabold text-foreground">Masukkan PIN Mitra Resto</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">Minta PIN 4 digit dari resto untuk melanjutkan ke pengantaran.</p>
+                </div>
+                <button type="button" aria-label="Tutup popup PIN" disabled={busy === pinOrderId} onClick={() => { setPinOrderId(null); setPickupPin(""); }} className="rounded-lg p-2 text-muted-foreground hover:bg-muted disabled:opacity-50">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="rounded-xl bg-muted/60 p-3">
+                <p className="text-xs text-muted-foreground">Kode pesanan</p>
+                <p className="mt-1 font-bold text-foreground">#{(pinOrder as any).code}</p>
+                <p className="mt-1 line-clamp-2 text-sm text-foreground">{pinOrder.item_detail}</p>
+              </div>
+              <label className="block text-sm font-semibold text-foreground">
+                PIN pengambilan
+                <input
+                  autoFocus
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={4}
+                  value={pickupPin}
+                  onChange={(event) => setPickupPin(event.target.value.replace(/\\D/g, "").slice(0, 4))}
+                  onKeyDown={(event) => { if (event.key === "Enter" && pickupPin.length === 4 && busy !== pinOrderId) { event.preventDefault(); void run(pinOrderId, async () => { const result = await supabase.rpc("driver_advance_order", { _order_id: pinOrderId, _pin: pickupPin }); if (!result.error) { setPinOrderId(null); setPickupPin(""); } return result; }); } }}
+                  placeholder="• • • •"
+                  className="mt-2 w-full rounded-xl border border-input bg-background px-4 py-4 text-center text-3xl font-extrabold tracking-[0.65em] text-foreground outline-none focus:ring-2 focus:ring-primary"
+                />
+              </label>
+              <p className="text-xs text-muted-foreground">PIN benar akan otomatis mengubah status menjadi Sedang Diantar. PIN salah tidak mengubah status pesanan.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <button type="button" disabled={busy === pinOrderId || pickupPin.length !== 4} onClick={() => void run(pinOrderId, async () => { const result = await supabase.rpc("driver_advance_order", { _order_id: pinOrderId, _pin: pickupPin }); if (!result.error) { setPinOrderId(null); setPickupPin(""); } return result; })} className={btnPrimary}>
+                  {busy === pinOrderId ? "Memverifikasi..." : "Verifikasi PIN"}
+                </button>
+                <button type="button" disabled={busy === pinOrderId} onClick={() => { setPinOrderId(null); setPickupPin(""); }} className={btnOutline}>Batal</button>
+              </div>
+            </section>
+          </div>
+        );
+      })()}
       <main className="mx-auto max-w-3xl space-y-5 px-4 py-5">
         {err && (
           <div className="flex items-center gap-2 rounded-xl bg-destructive/10 p-3 text-xs text-destructive">
@@ -447,35 +497,7 @@ function DriverPage() {
                                 : DRIVER_NEXT_LABEL[o.status]
                           : DRIVER_NEXT_LABEL[o.status]}
                       </button>
-                      {pinOrderId === o.id && (
-                        <div className="w-full space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
-                          <label className="block text-sm font-semibold text-foreground">
-                            PIN pengambilan dari Mitra Resto
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              maxLength={4}
-                              value={pickupPin}
-                              onChange={(event) => setPickupPin(event.target.value.replace(/\D/g, "").slice(0, 4))}
-                              placeholder="Masukkan 4 digit PIN"
-                              className="mt-2 w-full rounded-lg border border-input bg-background px-3 py-3 text-center text-xl font-bold tracking-[0.5em] text-foreground"
-                            />
-                          </label>
-                          <div className="grid grid-cols-2 gap-2">
-                            <button type="button" className={btnPrimary} disabled={busy === o.id || pickupPin.length !== 4}
-                              onClick={() => void run(o.id, async () => {
-                                const result = await supabase.rpc("driver_advance_order", { _order_id: o.id, _pin: pickupPin });
-                                if (!result.error) { setPinOrderId(null); setPickupPin(""); }
-                                return result;
-                              })}>
-                              {busy === o.id ? "Memverifikasi..." : "Verifikasi & Mulai Antar"}
-                            </button>
-                            <button type="button" className={btnOutline} disabled={busy === o.id}
-                              onClick={() => { setPinOrderId(null); setPickupPin(""); }}>Batal</button>
-                          </div>
-                          <p className="text-xs text-muted-foreground">PIN benar langsung mengubah status ke Sedang Diantar. PIN salah membuat status tetap.</p>
-                        </div>
-                      )}
+
                       <button
                         className={btnOutline}
                         onClick={() => navigate({ to: "/pesanan/$id", params: { id: o.id } })}
