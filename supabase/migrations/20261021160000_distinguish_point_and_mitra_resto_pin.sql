@@ -58,11 +58,16 @@ BEGIN
   END IF;
 
   -- Ojek keeps its own PIN-at-pickup lifecycle.
-  -- Only explicitly identified official Mitra Resto requires Mitra PIN at completion.
-  -- Point Resto and all other services do not use the Mitra Resto PIN rule.
+  -- Official Mitra Resto requires its PIN at completion; Point Resto skips that rule.
+  -- Other non-ojek services retain the existing PIN-at-completion behavior.
   pin_required :=
     (o.service = 'ojek' AND o.status = 'diambil')
-    OR (o.food_order_type = 'mitra' AND o.status = 'diantar');
+    OR (o.food_order_type = 'mitra' AND o.status = 'diantar')
+    OR (
+      o.service <> 'ojek'
+      AND o.food_order_type IS NULL
+      AND o.status = 'diantar'
+    );
 
   IF pin_required THEN
     IF _pin IS NULL OR _pin !~ '^[0-9]{4}$' THEN
