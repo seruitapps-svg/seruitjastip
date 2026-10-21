@@ -43,14 +43,14 @@ function DriverPage() {
       const { data, error } = await supabase
         .from("driver_profiles")
         .select("accepts_ojek, is_online")
-        .eq("user_id", user!.id)
+        .or(`user_id.eq.${user!.id},id.eq.${user!.id}`)
         .maybeSingle();
       if (error) throw error;
       return data as { accepts_ojek: boolean; is_online?: boolean } | null;
     },
   });
 
-  const isOnline = driverProfile.data?.is_online !== false;
+  const isOnline = driverProfile.data?.is_online === true;
 
   async function toggleOnline(val: boolean) {
     if (onlineSaving) return;
@@ -83,9 +83,7 @@ function DriverPage() {
       const refreshed = await driverProfile.refetch();
       if (refreshed.error) throw refreshed.error;
       if (!refreshed.data || refreshed.data.accepts_ojek !== val) {
-        throw new Error(
-          "Fungsi database belum menyimpan status ojek. Jalankan SQL perbaikan driver_toggle_ojek di Supabase, lalu coba lagi."
-        );
+        throw new Error("Status ojek belum terkonfirmasi. Periksa relasi profil driver dengan akun login.");
       }
     } catch (error) {
       setErr(error instanceof Error ? error.message : "Pengaturan layanan ojek gagal diperbarui.");
