@@ -377,10 +377,53 @@ function MitraDashboardPage() {
   }
 
   const canOperate = merchant.status === "approved";
+  const pendingMitraOrders = (ordersQuery.data ?? []).filter(
+    (order) =>
+      (order as any).food_order_type === "mitra" &&
+      (order as any).merchant_response === "pending" &&
+      order.status === "tersedia",
+  );
+  const activePopupOrder = pendingMitraOrders[0];
 
   return (
     <div className="min-h-screen bg-background pb-10">
       <AppHeader />
+      {canOperate && activePopupOrder && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="incoming-mitra-order-title">
+          <section className="w-full max-w-md space-y-4 rounded-2xl border border-amber-500/40 bg-card p-5 shadow-2xl">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-600">
+                <ShoppingBag className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-amber-600">Pesanan baru masuk</p>
+                <h2 id="incoming-mitra-order-title" className="text-lg font-extrabold text-foreground">Perlu keputusan resto</h2>
+              </div>
+            </div>
+            <div className="space-y-2 rounded-xl bg-muted/60 p-3">
+              <p className="text-xs text-muted-foreground">#{activePopupOrder.code} · {new Date(activePopupOrder.created_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}</p>
+              <p className="font-bold text-foreground">{activePopupOrder.sender_name}</p>
+              <p className="whitespace-pre-wrap break-words text-sm text-foreground">{activePopupOrder.item_detail}</p>
+              <p className="text-sm font-extrabold text-primary">{formatRupiah(Math.max(
+                Number(activePopupOrder.total ?? 0),
+                Number(activePopupOrder.shipping_fare ?? 0) +
+                  Number(activePopupOrder.consumer_service_fee ?? 0) +
+                  Number((activePopupOrder as any).item_cost ?? 0),
+              ))}</p>
+            </div>
+            <p className="text-xs text-muted-foreground">Popup ini akan tetap tampil di beranda sampai pesanan diterima atau ditolak. Jika ada beberapa pesanan, pesanan berikutnya akan muncul setelah keputusan diberikan pada pesanan ini.</p>
+            <div className="grid grid-cols-2 gap-3">
+              <Button type="button" disabled={respondingOrderId !== null} onClick={() => void respondToMitraOrder(activePopupOrder.id, "accept")} className="min-h-11">
+                {respondingOrderId === activePopupOrder.id ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Terima Pesanan
+              </Button>
+              <Button type="button" variant="destructive" disabled={respondingOrderId !== null} onClick={() => void respondToMitraOrder(activePopupOrder.id, "reject")} className="min-h-11">
+                Tolak Pesanan
+              </Button>
+            </div>
+          </section>
+        </div>
+      )}
       <main className="mx-auto max-w-4xl space-y-5 px-4 py-5">
         <section className="flex flex-col justify-between gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center">
           <div className="flex items-center gap-3">
