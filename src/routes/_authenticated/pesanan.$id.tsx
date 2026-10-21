@@ -344,7 +344,6 @@ function OrderDetail() {
                 </button>
               </div>
               <DriverInfoCard orderId={o.id} />
-              {user && <OrderChat orderId={o.id} myId={user.id} />}
               <button type="button" onClick={() => setDriverPopupOpen(false)} className={btnPrimary + " w-full"}>Tutup</button>
             </section>
           </div>
