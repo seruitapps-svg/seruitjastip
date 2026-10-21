@@ -344,6 +344,7 @@ function OrderDetail() {
                 </button>
               </div>
               <DriverInfoCard orderId={o.id} />
+              {user && <OrderChat orderId={o.id} myId={user.id} />}
               <button type="button" onClick={() => setDriverPopupOpen(false)} className={btnPrimary + " w-full"}>Tutup</button>
             </section>
           </div>
@@ -491,7 +492,9 @@ function OrderDetail() {
               )}
             </div>
             <div id="order-chat">
-              <OrderChat orderId={o.id} myId={user.id} />
+              {!(isOwner && o.driver_id && ["diambil", "dijemput", "diantar"].includes(o.status) && driverPopupOpen) && (
+                <OrderChat orderId={o.id} myId={user.id} />
+              )}
             </div>
           </>
         ) : (
