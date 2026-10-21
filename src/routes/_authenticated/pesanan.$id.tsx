@@ -294,7 +294,7 @@ function OrderDetail() {
               <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-5 shadow-xl">
                 <div>
                   <h2 id="pin-modal-title-nav" className="text-lg font-bold text-foreground">"Konfirmasi pengambilan di restoran"</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">"Masukkan PIN pengambilan dari mitra restoran atau pemesan untuk mengonfirmasi pengambilan pesanan."</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Masukkan PIN pengambilan dari mitra restoran atau pemesan untuk mengonfirmasi pengambilan pesanan.</p>
                 </div>
                 <label htmlFor="driver-confirmation-pin-nav" className="block text-sm font-medium text-foreground">PIN pengambilan restoran</label>
                 <input id="driver-confirmation-pin-nav" inputMode="numeric" autoComplete="one-time-code" maxLength={4} value={driverPinInput} onChange={(event) => setDriverPinInput(event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="••••" className="w-full rounded-xl border border-input bg-background px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-foreground" />
