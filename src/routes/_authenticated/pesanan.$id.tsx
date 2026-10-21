@@ -138,7 +138,7 @@ function OrderDetail() {
     if (needsPin) {
       const pin = window.prompt("Masukkan 4 digit PIN konfirmasi dari pemesan:");
       if (pin === null) return;
-      if (!/^\\d{4}$/.test(pin.trim())) {
+      if (!/^\d{4}$/.test(pin.trim())) {
         setErr("PIN harus tepat 4 angka.");
         return;
       }
