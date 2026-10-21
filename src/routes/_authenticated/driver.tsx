@@ -427,7 +427,15 @@ function DriverPage() {
                         disabled={busy === o.id}
                         onClick={() => run(o.id, async () => supabase.rpc("driver_advance_order", { _order_id: o.id }))}
                       >
-                        {DRIVER_NEXT_LABEL[o.status]}
+                        {o.service === "ojek"
+                          ? o.status === "diambil"
+                            ? "Penumpang sudah dijemput"
+                            : o.status === "dijemput"
+                              ? "Mulai antar penumpang"
+                              : o.status === "diantar"
+                                ? "Tandai perjalanan selesai"
+                                : DRIVER_NEXT_LABEL[o.status]
+                          : DRIVER_NEXT_LABEL[o.status]}
                       </button>
                       <button
                         className={btnOutline}
