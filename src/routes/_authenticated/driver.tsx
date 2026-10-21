@@ -53,7 +53,8 @@ function DriverPage() {
     },
   });
 
-  const isOnline = driverProfile.data?.is_online === true;\n  const hasDriverProfile = !!driverProfile.data;
+  const isOnline = driverProfile.data?.is_online === true;
+  const hasDriverProfile = !!driverProfile.data;
 
   useEffect(() => {
     const profile = driverProfile.data;
