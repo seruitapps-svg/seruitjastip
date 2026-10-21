@@ -68,3 +68,7 @@ CREATE POLICY "Superadmins update app branding assets" ON storage.objects FOR UP
  WITH CHECK (bucket_id = 'app-branding' AND public.has_role('superadmin'::public.app_role, auth.uid()));
 CREATE POLICY "Superadmins delete app branding assets" ON storage.objects FOR DELETE
  USING (bucket_id = 'app-branding' AND public.has_role('superadmin'::public.app_role, auth.uid()));
+
+GRANT SELECT ON public.app_branding TO anon, authenticated;
+GRANT SELECT ON public.app_announcements TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.announcement_reads TO authenticated;
