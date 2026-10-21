@@ -16,6 +16,10 @@ const schema = z
     serviceId: z.enum(["titip", "kirim", "belanja", "ojek"]),
     foodOrderType: z.enum(["point", "mitra"]).optional(),
     merchantId: z.string().uuid().optional(),
+    foodItems: z.array(z.object({
+      productId: z.string().uuid(),
+      quantity: z.number().int().min(1).max(99),
+    })).max(50).optional(),
     origin: point,
     destination: point,
     itemDetail: z.string().trim().min(3).max(500),
@@ -37,6 +41,14 @@ const schema = z
   .refine(
     (d) => !d.foodOrderType || (d.serviceId === "belanja" && Boolean(d.merchantId)),
     { message: "Identitas outlet Food & Drink tidak lengkap." },
+  )
+  .refine(
+    (d) => d.foodOrderType !== "mitra" || Boolean(d.foodItems?.length),
+    { message: "Pilih minimal satu menu Mitra Resto." },
+  )
+  .refine(
+    (d) => d.foodOrderType === "mitra" || !d.foodItems?.length,
+    { message: "Rincian menu hanya berlaku untuk Mitra Resto." },
   );
 
 export const createOrder = createServerFn({ method: "POST" })
@@ -57,7 +69,46 @@ export const createOrder = createServerFn({ method: "POST" })
       }
     }
 
-    // Harga dihitung ulang di server — angka dari browser tidak dipercaya.
+    // Harga menu Mitra Resto dihitung dari katalog database, bukan dari harga/subtotal browser.
+    let menuSubtotal = 0;
+    let canonicalItemDetail = data.itemDetail;
+    if (data.foodOrderType === "mitra") {
+      if (!data.merchantId || !data.foodItems?.length) {
+        throw new Error("Outlet dan menu Mitra Resto wajib dipilih.");
+      }
+      const productIds = data.foodItems.map((item) => item.productId);
+      if (new Set(productIds).size !== productIds.length) {
+        throw new Error("Daftar menu mengandung produk duplikat.");
+      }
+      const { data: products, error: productsError } = await context.supabase
+        .from("merchant_products")
+        .select("id, merchant_id, name, price, is_available")
+        .eq("merchant_id", data.merchantId)
+        .in("id", productIds);
+      if (productsError) {
+        console.error("Mitra menu validation failed:", productsError);
+        throw new Error("Gagal memvalidasi harga menu Mitra Resto.");
+      }
+      if (!products || products.length !== data.foodItems.length || products.some((product) => !product.is_available)) {
+        throw new Error("Ada menu yang sudah tidak tersedia. Muat ulang menu lalu coba kembali.");
+      }
+      const productById = new Map(products.map((product) => [product.id, product]));
+      const lines = data.foodItems.map((item) => {
+        const product = productById.get(item.productId);
+        if (!product || product.merchant_id !== data.merchantId || !Number.isFinite(Number(product.price)) || Number(product.price) < 0) {
+          throw new Error("Data menu Mitra Resto tidak valid.");
+        }
+        const lineTotal = Number(product.price) * item.quantity;
+        menuSubtotal += lineTotal;
+        return `${item.quantity}x ${product.name} @ Rp ${Number(product.price).toLocaleString("id-ID")} = Rp ${lineTotal.toLocaleString("id-ID")}`;
+      });
+      if (!Number.isSafeInteger(menuSubtotal) || menuSubtotal <= 0) {
+        throw new Error("Subtotal menu Mitra Resto tidak valid.");
+      }
+      canonicalItemDetail = lines.join("; ") + `. Total menu: Rp ${menuSubtotal.toLocaleString("id-ID")}.`;
+    }
+
+    // Harga rute dan biaya layanan dihitung ulang di server.
     const route = await fetchMotorRoute(data.origin, data.destination);
     const { data: settings, error: settingsError } = await context.supabase
       .from("app_settings")
@@ -84,8 +135,8 @@ export const createOrder = createServerFn({ method: "POST" })
       },
     );
 
-    const { data: row, error } = await context.supabase
-      .from("orders")
+    const { data: row, error } = await (context.supabase
+      .from("orders") as any)
       .insert({
         user_id: context.userId,
         service: data.serviceId,
@@ -100,7 +151,10 @@ export const createOrder = createServerFn({ method: "POST" })
         distance_meters: route.distanceMeters,
         duration_seconds: route.durationSeconds,
         encoded_polyline: route.encodedPolyline,
-        item_detail: data.itemDetail,
+        item_detail: canonicalItemDetail,
+        // item_cost is the existing transaction amount used by driver settlement.
+        // For Mitra Resto it stores the catalog subtotal; for other services it remains zero.
+        item_cost: data.foodOrderType === "mitra" ? menuSubtotal : 0,
         weight_kg: data.weightKg,
         length_cm: data.lengthCm,
         width_cm: data.widthCm,
