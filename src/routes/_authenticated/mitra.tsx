@@ -483,6 +483,13 @@ function MitraDashboardPage() {
                       </span>
                     </div>
                     <p className="whitespace-pre-wrap break-words text-sm text-foreground">{order.item_detail}</p>
+                    {(order as any).food_order_type === "mitra" && (order as any).confirmation_pin && ["diambil", "dijemput", "diantar"].includes(order.status) && (
+                      <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
+                        <p className="text-xs font-semibold text-muted-foreground">PIN Pengambilan untuk driver</p>
+                        <p className="mt-1 text-2xl font-extrabold tracking-[0.3em] text-emerald-700">{(order as any).confirmation_pin}</p>
+                        <p className="mt-1 text-[11px] text-muted-foreground">Cocokkan PIN saat driver mengambil pesanan di outlet.</p>
+                      </div>
+                    )}
                     <div className="space-y-1 rounded-lg bg-muted p-3 text-xs">
                       <div className="flex justify-between gap-3"><span className="text-muted-foreground">Subtotal menu</span><span className="font-semibold text-foreground">{formatRupiah(itemCost)}</span></div>
                       <div className="flex justify-between gap-3"><span className="text-muted-foreground">Ongkos kirim</span><span className="font-semibold text-foreground">{formatRupiah(order.shipping_fare)}</span></div>
