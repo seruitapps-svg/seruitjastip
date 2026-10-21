@@ -7,7 +7,7 @@ import { DriverTransactionBreakdown } from "./DriverTransactionBreakdown";
 export function StatusBadge({ status }: { status: OrderRow["status"] }) {
   return (
     <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_TONE[status]}`}>
-      {STATUS_LABEL[status]}
+      {status === "dijemput" ? "Penumpang sudah dijemput" : STATUS_LABEL[status]}
     </span>
   );
 }
