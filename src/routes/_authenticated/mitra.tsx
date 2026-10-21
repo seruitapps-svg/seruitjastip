@@ -44,6 +44,7 @@ function MitraDashboardPage() {
   const [productAvailable, setProductAvailable] = useState(true);
   const [productPhoto, setProductPhoto] = useState<File | null>(null);
   const [savingProduct, setSavingProduct] = useState(false);
+  const [respondingOrderId, setRespondingOrderId] = useState<string | null>(null);
 
 
   const merchantQuery = useQuery({
@@ -272,6 +273,30 @@ function MitraDashboardPage() {
     }
   }
 
+  async function respondToMitraOrder(orderId: string, decision: "accept" | "reject") {
+    if (!merchant || !user || respondingOrderId) return;
+    setRespondingOrderId(orderId);
+    setErrorMessage("");
+    setMessage("");
+    try {
+      const db = supabase as any;
+      const { error } = await db.rpc("merchant_respond_to_mitra_order", {
+        _order_id: orderId,
+        _decision: decision,
+      });
+      if (error) throw error;
+      setMessage(decision === "accept"
+        ? "Pesanan diterima. PIN pengambilan telah dibuat dan pesanan diteruskan ke pencarian driver."
+        : "Pesanan ditolak dan tidak diteruskan ke driver.");
+      await queryClient.invalidateQueries({ queryKey: ["mitra-orders", merchant.id] });
+      await queryClient.invalidateQueries({ queryKey: ["order", orderId] });
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Respons pesanan gagal disimpan.");
+    } finally {
+      setRespondingOrderId(null);
+    }
+  }
+
   async function saveProfile(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!merchant || !user || savingProfile) return;
@@ -483,6 +508,27 @@ function MitraDashboardPage() {
                       </span>
                     </div>
                     <p className="whitespace-pre-wrap break-words text-sm text-foreground">{order.item_detail}</p>
+                    {(order as any).food_order_type === "mitra" && (order as any).merchant_response === "pending" && order.status === "tersedia" && (
+                      <div className="space-y-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+                        <p className="text-sm font-semibold text-foreground">Pesanan menunggu keputusan resto</p>
+                        <p className="text-xs text-muted-foreground">Terima pesanan untuk membuat PIN pengambilan dan meneruskannya ke pencarian driver. Jika ditolak, pesanan tidak akan masuk ke driver.</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button type="button" disabled={respondingOrderId !== null} onClick={() => void respondToMitraOrder(order.id, "accept")}>
+                            {respondingOrderId === order.id ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Terima Pesanan
+                          </Button>
+                          <Button type="button" variant="destructive" disabled={respondingOrderId !== null} onClick={() => void respondToMitraOrder(order.id, "reject")}>
+                            Tolak Pesanan
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    {(order as any).food_order_type === "mitra" && (order as any).merchant_response === "accepted" && (
+                      <p className="rounded-lg bg-emerald-500/10 p-2 text-xs font-semibold text-emerald-700">Pesanan diterima — diteruskan ke pencarian driver.</p>
+                    )}
+                    {(order as any).food_order_type === "mitra" && (order as any).merchant_response === "rejected" && (
+                      <p className="rounded-lg bg-destructive/10 p-2 text-xs font-semibold text-destructive">Pesanan ditolak.</p>
+                    )}
                     {(order as any).food_order_type === "mitra" && (order as any).confirmation_pin && ["diambil", "dijemput", "diantar"].includes(order.status) && (
                       <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
                         <p className="text-xs font-semibold text-muted-foreground">PIN Pengambilan untuk driver</p>
