@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { MessageSquare, Phone, QrCode, Send, Navigation, X, ReceiptText, ExternalLink } from "lucide-react";
+import { MessageSquare, Phone, QrCode, Send, Navigation, X, ReceiptText, ExternalLink, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { RouteMap } from "@/components/order/RouteMap";
@@ -37,6 +37,13 @@ function OrderDetail() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [showNavDetails, setShowNavDetails] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [driverPinInput, setDriverPinInput] = useState("");
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [ratingValue, setRatingValue] = useState(5);
+  const [merchantRatingValue, setMerchantRatingValue] = useState(5);
+  const [reviewText, setReviewText] = useState("");
+  const [merchantReviewText, setMerchantReviewText] = useState("");
+  const [ratingSent, setRatingSent] = useState(false);
 
   const order = useQuery({
     queryKey: ["order", id],
@@ -114,6 +121,77 @@ function OrderDetail() {
     qc.invalidateQueries({ queryKey: ["wallet-page"] });
     qc.invalidateQueries({ queryKey: ["driver-jobs"] });
     qc.invalidateQueries({ queryKey: ["admin-financial-overview"] });
+  }
+
+  async function handleAdvanceClick() {
+    if (
+      o.status === "diantar" &&
+      (o.service === "belanja" || String(o.service) === "point_food") &&
+      itemCost === 0
+    ) {
+      const proceed = window.confirm(
+        "Perhatian: Nominal belanjaan masih Rp 0. Jika ada talangan belanjaan/makanan, simpan nominal terlebih dahulu. Tetap selesaikan tanpa talangan?"
+      );
+      if (!proceed) return;
+    }
+
+    if (o.status === "diantar") {
+      setDriverPinInput("");
+      setShowPinModal(true);
+      return;
+    }
+
+    await act(() => supabase.rpc("driver_advance_order", { _order_id: o.id }));
+  }
+
+  async function confirmCompleteOrder() {
+    const pin = driverPinInput.trim();
+    if (!/^[0-9]{4}$/.test(pin)) {
+      setErr("Masukkan 4 digit PIN dari pelanggan.");
+      return;
+    }
+
+    setBusy(true);
+    setErr("");
+    const { error } = await (supabase as any).rpc("driver_advance_order", {
+      _order_id: o.id,
+      _pin: pin,
+    });
+    setBusy(false);
+
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+
+    setShowPinModal(false);
+    setDriverPinInput("");
+    qc.invalidateQueries({ queryKey: ["order", id] });
+    qc.invalidateQueries({ queryKey: ["order-history", id] });
+    qc.invalidateQueries({ queryKey: ["wallet"] });
+    qc.invalidateQueries({ queryKey: ["driver-wallet-earnings"] });
+    qc.invalidateQueries({ queryKey: ["wallet-page"] });
+    qc.invalidateQueries({ queryKey: ["driver-jobs"] });
+    qc.invalidateQueries({ queryKey: ["admin-financial-overview"] });
+  }
+
+  async function submitRating() {
+    setBusy(true);
+    setErr("");
+    const { error } = await (supabase as any).rpc("submit_order_rating", {
+      _order_id: id,
+      _driver_rating: ratingValue,
+      _driver_review: reviewText.trim() || null,
+      _merchant_rating: (o as any).merchant_id ? merchantRatingValue : null,
+      _merchant_review: (o as any).merchant_id ? merchantReviewText.trim() || null : null,
+    });
+    setBusy(false);
+
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    setRatingSent(true);
   }
 
   const row = (k: string, v: string) => (
@@ -201,11 +279,7 @@ function OrderDetail() {
                 className={btnPrimary}
                 disabled={busy}
                 onClick={() => {
-                  if (o.status === "diantar" && (o.service === "belanja" || String(o.service) === "point_food") && itemCost === 0) {
-                    const proceed = window.confirm("Nominal belanjaan masih Rp 0. Tetap selesaikan pesanan tanpa talangan?");
-                    if (!proceed) return;
-                  }
-                  act(() => supabase.rpc("driver_advance_order", { _order_id: o.id }));
+                  void handleAdvanceClick();
                 }}
               >
                 {DRIVER_NEXT_LABEL[o.status]}
@@ -214,6 +288,25 @@ function OrderDetail() {
               <button type="button" onClick={() => setIsNavigating(false)} className={btnPrimary}>Kembali ke pesanan</button>
             )}
           </div>
+          {showPinModal && isMyDriver && o.status === "diantar" && (
+            <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="pin-modal-title-nav">
+              <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-5 shadow-xl">
+                <div>
+                  <h2 id="pin-modal-title-nav" className="text-lg font-bold text-foreground">Konfirmasi PIN pelanggan</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">Minta 4 digit PIN kepada pelanggan saat pesanan diserahkan.</p>
+                </div>
+                <label htmlFor="driver-confirmation-pin-nav" className="block text-sm font-medium text-foreground">PIN 4 digit</label>
+                <input id="driver-confirmation-pin-nav" inputMode="numeric" autoComplete="one-time-code" maxLength={4} value={driverPinInput} onChange={(event) => setDriverPinInput(event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="••••" className="w-full rounded-xl border border-input bg-background px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-foreground" />
+                {err && <p className="text-sm text-destructive">{err}</p>}
+                <div className="flex gap-2">
+                  <button type="button" disabled={busy} onClick={() => { setShowPinModal(false); setDriverPinInput(""); setErr(""); }} className="flex-1 rounded-xl border border-border px-3 py-2.5 text-sm font-semibold text-foreground">Batal</button>
+                  <button type="button" disabled={busy || driverPinInput.length !== 4} onClick={() => void confirmCompleteOrder()} className={`flex-1 ${btnPrimary}`}>
+                    {busy ? "Memverifikasi..." : "Konfirmasi selesai"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           {err && <p className="mt-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{err}</p>}
         </div>
       </div>
@@ -229,7 +322,7 @@ function OrderDetail() {
           <StatusBadge status={o.status} />
         </div>
         {o.driver_id && ["diambil", "dijemput", "diantar"].includes(o.status) && (
-          <DriverInfoCard driverId={o.driver_id} />
+          <DriverInfoCard orderId={o.id} />
         )}
         {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
 
@@ -244,17 +337,7 @@ function OrderDetail() {
               className={btnPrimary}
               disabled={busy}
               onClick={() => {
-                if (
-                  o.status === "diantar" &&
-                  (o.service === "belanja" || String(o.service) === "point_food") &&
-                  itemCost === 0
-                ) {
-                  const proceed = window.confirm(
-                    "Perhatian: Nominal belanjaan masih Rp 0. Jika ada talangan belanjaan/makanan, harap simpan nominal terlebih dahulu agar masuk ke tagihan konsumen. Tetap selesaikan tanpa talangan?"
-                  );
-                  if (!proceed) return;
-                }
-                act(() => supabase.rpc("driver_advance_order", { _order_id: o.id }));
+                void handleAdvanceClick();
               }}
             >
               {DRIVER_NEXT_LABEL[o.status]}
@@ -390,6 +473,78 @@ function OrderDetail() {
         ) : (
           <p className="text-center text-xs text-muted-foreground">Chat tersedia setelah Anda mengambil order ini.</p>
         )}
+        {isOwner && (o as any).confirmation_pin && ["diambil", "dijemput", "diantar"].includes(o.status) && (
+          <section className="rounded-2xl border-2 border-dashed border-emerald-500/40 bg-emerald-50/50 p-4 text-center dark:bg-emerald-950/20">
+            <p className="text-xs font-medium text-muted-foreground">PIN Konfirmasi Pengantaran</p>
+            <p className="my-1 text-3xl font-extrabold tracking-widest text-emerald-600">{(o as any).confirmation_pin}</p>
+            <p className="text-[11px] text-muted-foreground">
+              Berikan 4 angka PIN ini kepada driver saat menerima pesanan demi keamanan transaksi.
+            </p>
+          </section>
+        )}
+
+        {isOwner && o.status === "selesai" && !ratingSent && (
+          <section className="space-y-4 rounded-2xl border border-border bg-card p-4">
+            <div>
+              <h2 className="text-base font-bold text-foreground">Beri penilaian</h2>
+              <p className="mt-1 text-xs text-muted-foreground">Bagikan pengalaman setelah pesanan selesai.</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-foreground">Rating driver</p>
+              <div className="flex gap-2" role="group" aria-label="Rating driver">
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <button key={value} type="button" onClick={() => setRatingValue(value)} aria-label={`${value} bintang untuk driver`} aria-pressed={ratingValue === value} className="rounded-md p-1">
+                    <Star className={`h-7 w-7 ${value <= ratingValue ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`} />
+                  </button>
+                ))}
+              </div>
+              <textarea value={reviewText} onChange={(event) => setReviewText(event.target.value)} maxLength={1000} rows={2} placeholder="Ulasan driver (opsional)" className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground" />
+            </div>
+            {(o as any).merchant_id && (
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-foreground">Rating restoran/merchant</p>
+                <div className="flex gap-2" role="group" aria-label="Rating restoran">
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <button key={value} type="button" onClick={() => setMerchantRatingValue(value)} aria-label={`${value} bintang untuk restoran`} aria-pressed={merchantRatingValue === value} className="rounded-md p-1">
+                      <Star className={`h-7 w-7 ${value <= merchantRatingValue ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`} />
+                    </button>
+                  ))}
+                </div>
+                <textarea value={merchantReviewText} onChange={(event) => setMerchantReviewText(event.target.value)} maxLength={1000} rows={2} placeholder="Ulasan restoran (opsional)" className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground" />
+              </div>
+            )}
+            <button type="button" disabled={busy} onClick={() => void submitRating()} className={btnPrimary}>
+              {busy ? "Mengirim..." : "Kirim penilaian"}
+            </button>
+          </section>
+        )}
+
+        {isOwner && o.status === "selesai" && ratingSent && (
+          <section className="rounded-2xl border border-emerald-500/20 bg-card p-4 text-sm font-medium text-emerald-700">
+            Terima kasih! Penilaian kamu berhasil dikirim.
+          </section>
+        )}
+
+        {showPinModal && isMyDriver && o.status === "diantar" && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="pin-modal-title">
+            <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-5 shadow-xl">
+              <div>
+                <h2 id="pin-modal-title" className="text-lg font-bold text-foreground">Konfirmasi PIN pelanggan</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Minta 4 digit PIN kepada pelanggan saat pesanan diserahkan.</p>
+              </div>
+              <label htmlFor="driver-confirmation-pin" className="block text-sm font-medium text-foreground">PIN 4 digit</label>
+              <input id="driver-confirmation-pin" inputMode="numeric" autoComplete="one-time-code" maxLength={4} value={driverPinInput} onChange={(event) => setDriverPinInput(event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="••••" className="w-full rounded-xl border border-input bg-background px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-foreground" />
+              {err && <p className="text-sm text-destructive">{err}</p>}
+              <div className="flex gap-2">
+                <button type="button" disabled={busy} onClick={() => { setShowPinModal(false); setDriverPinInput(""); setErr(""); }} className="flex-1 rounded-xl border border-border px-3 py-2.5 text-sm font-semibold text-foreground">Batal</button>
+                <button type="button" disabled={busy || driverPinInput.length !== 4} onClick={() => void confirmCompleteOrder()} className={`flex-1 ${btnPrimary}`}>
+                  {busy ? "Memverifikasi..." : "Konfirmasi selesai"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       {showReceiptModal && (o as any).item_receipt_url && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in">
           <div className="relative max-h-[90vh] max-w-lg overflow-hidden rounded-2xl bg-card p-3 shadow-2xl">
