@@ -428,7 +428,7 @@ function DriverPage() {
                         onClick={() => {
                           void run(o.id, async () => {
                             const foodType = (o as any).food_order_type;
-                            const needsPin = foodType === "mitra" && o.status === "diantar";
+                            const needsPin = foodType === "mitra" && o.status === "dijemput";
                             if (needsPin) {
                               const pin = window.prompt("Masukkan 4 digit PIN konfirmasi dari pemesan:");
                               if (pin === null) return;

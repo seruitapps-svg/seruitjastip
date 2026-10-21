@@ -136,7 +136,7 @@ function OrderDetail() {
     }
 
     const foodType = (o as any).food_order_type;
-    const needsPin = foodType === "mitra" && o.status === "diantar";
+    const needsPin = foodType === "mitra" && o.status === "dijemput";
     if (needsPin) {
       setDriverPinInput("");
       setErr("");
@@ -253,7 +253,10 @@ function OrderDetail() {
                 {o.service === "kirim" && row("Penerima", `${o.recipient_name} (${o.recipient_wa})`)}
                 {row("Ongkos Kirim", formatRupiah(o.shipping_fare))}
                 {row("Biaya Layanan", formatRupiah(o.consumer_service_fee))}
-                {(o.service === "belanja" || itemCost > 0) && row("Biaya belanja/talangan", itemCost > 0 ? formatRupiah(itemCost) : "Menunggu struk driver")}
+                {(o.service === "belanja" || itemCost > 0) && row(
+                  (o as any).food_order_type === "mitra" ? "Subtotal Menu Mitra Resto" : (o as any).food_order_type === "point" ? "Harga Makanan (Point Resto)" : "Biaya belanja/talangan",
+                  itemCost > 0 ? formatRupiah(itemCost) : "Menunggu harga driver",
+                )}
                 <div className="flex justify-between gap-4 border-t border-border pt-3 font-extrabold">
                   <span>Total Tagihan</span><span className="text-primary">{formatRupiah(finalTotal)}</span>
                 </div>
@@ -372,7 +375,7 @@ function OrderDetail() {
             {row("Biaya Layanan Aplikasi", formatRupiah(o.consumer_service_fee))}
             {(o.service === "belanja" || Number((o as any).item_cost ?? 0) > 0) && (
               <div className="flex justify-between gap-4 text-sm">
-                <span className="text-muted-foreground">Belanjaan (Talangan Struk)</span>
+                <span className="text-muted-foreground">{(o as any).food_order_type === "mitra" ? "Subtotal Menu Mitra Resto" : (o as any).food_order_type === "point" ? "Harga Makanan (Point Resto)" : "Belanjaan (Talangan Struk)"}</span>
                 <span className="max-w-[65%] text-right font-medium text-foreground">
                   {Number((o as any).item_cost ?? 0) > 0 ? formatRupiah(Number((o as any).item_cost)) : "Menunggu struk driver"}
                 </span>
@@ -382,7 +385,7 @@ function OrderDetail() {
               <span className="text-foreground">Total Tagihan</span>
               <span className="text-primary">{formatRupiah(finalTotal)}</span>
             </div>
-            {(o as any).item_receipt_url && (
+            {(o as any).item_receipt_url && (o as any).food_order_type !== "mitra" && (
               <div className="pt-2 text-right">
                 <button type="button" onClick={() => setShowReceiptModal(true)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">
                   <ReceiptText className="h-3.5 w-3.5" />
@@ -391,7 +394,7 @@ function OrderDetail() {
               </div>
             )}
           </div>
-          {isMyDriver && (o.service === "belanja" || String(o.service) === "point_food") && (o as any).food_order_type !== "mitra" && (
+          {isMyDriver && (o.service === "belanja" || String(o.service) === "point_food" || (o.service === "food" && (o as any).food_order_type === "point")) && (o as any).food_order_type !== "mitra" && (
             <DriverItemCostCard
               order={o}
               onSuccess={() => {
@@ -455,19 +458,19 @@ function OrderDetail() {
         )}
         {isOwner && (o as any).confirmation_pin && (o as any).food_order_type === "mitra" && ["diambil", "dijemput", "diantar"].includes(o.status) && (
           <section className="rounded-2xl border-2 border-dashed border-emerald-500/40 bg-emerald-50/50 p-4 text-center dark:bg-emerald-950/20">
-            <p className="text-xs font-medium text-muted-foreground">PIN Konfirmasi Pengantaran</p>
+            <p className="text-xs font-medium text-muted-foreground">PIN Konfirmasi Pengambilan</p>
             <p className="my-1 text-3xl font-extrabold tracking-widest text-emerald-600">{(o as any).confirmation_pin}</p>
             <p className="text-[11px] text-muted-foreground">
-              Berikan 4 angka PIN ini kepada driver saat menerima pesanan demi keamanan transaksi.
+              Berikan 4 angka PIN ini kepada driver saat driver mengambil pesanan di outlet demi keamanan transaksi.
             </p>
           </section>
         )}
 
-        {showPinModal && isMyDriver && (o as any).food_order_type === "mitra" && o.status === "diantar" && (
+        {showPinModal && isMyDriver && (o as any).food_order_type === "mitra" && o.status === "dijemput" && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="mitra-pin-modal-title">
             <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-5 shadow-xl">
               <div>
-                <h2 id="mitra-pin-modal-title" className="text-lg font-bold text-foreground">Konfirmasi penjemputan Mitra Resto</h2>
+                <h2 id="mitra-pin-modal-title" className="text-lg font-bold text-foreground">Konfirmasi pengambilan Mitra Resto</h2>
                 <p className="mt-1 text-sm text-muted-foreground">Masukkan nomor antrean/PIN 4 digit yang ditampilkan kepada pemesan untuk memverifikasi pesanan Mitra Resto Resmi.</p>
               </div>
               <label htmlFor="mitra-confirmation-pin" className="block text-sm font-medium text-foreground">PIN nomor antrean</label>

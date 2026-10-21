@@ -198,7 +198,7 @@ function Index() {
   });
 
   const selectedMenuTotal = (merchantProducts.data ?? []).reduce(
-    (total, product) => total + Number(product.price) * (selectedMenuQuantities[product.id] ?? 0),
+    (total, product) => total + Math.round(Number(product.price)) * (selectedMenuQuantities[product.id] ?? 0),
     0,
   );
 
@@ -535,6 +535,12 @@ function Index() {
           notes: o.notes,
           foodOrderType: selectedService === "food" ? foodType : undefined,
           merchantId: selectedService === "food" ? selectedRestoId : undefined,
+          foodItems:
+            selectedService === "food" && foodType === "mitra"
+              ? Object.entries(selectedMenuQuantities)
+                  .filter(([, quantity]) => quantity > 0)
+                  .map(([productId, quantity]) => ({ productId, quantity }))
+              : undefined,
         },
       });
       navigate({ to: "/pesanan/$id", params: { id: res.id } });

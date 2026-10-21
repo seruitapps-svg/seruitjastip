@@ -6,12 +6,18 @@ export function DriverTransactionBreakdown({ order }: { order: OrderRow }) {
   const cash = order.payment_method === "cod";
   const cancelled = ["dibatalkan", "ditolak"].includes(order.status);
   const itemCost = Number((order as any).item_cost ?? 0);
+  const foodOrderType = (order as any).food_order_type as "point" | "mitra" | null | undefined;
+  const isMitraResto = foodOrderType === "mitra";
+  const finalTotal = Math.max(
+    Number(order.total ?? 0),
+    Number(order.shipping_fare ?? 0) + Number(order.consumer_service_fee ?? 0) + itemCost,
+  );
 
   const rows: [string, string][] = [
     ["Ongkos Kirim", formatRupiah(order.shipping_fare)],
     ["Biaya Layanan Konsumen", formatRupiah(order.consumer_service_fee)],
-    ...(itemCost > 0 ? [["Talangan Belanja (100% kembali)", formatRupiah(itemCost)] as [string, string]] : []),
-    ["Total Tagihan Konsumen", formatRupiah(order.total)],
+    ...(itemCost > 0 ? [[isMitraResto ? "Subtotal Menu Mitra Resto" : "Talangan Belanja (100% kembali)", formatRupiah(itemCost)] as [string, string]] : []),
+    ["Total Tagihan Konsumen", formatRupiah(finalTotal)],
     [legacy ? "Komisi Driver" : `Komisi Ongkir (${Number(order.commission_percent)}%)`, `−${formatRupiah(order.driver_commission)}`],
     ["Ongkir Bersih Driver", formatRupiah(order.driver_net_earnings)],
     [
