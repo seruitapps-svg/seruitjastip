@@ -372,7 +372,7 @@ function OrderDetail() {
             {row("Biaya Layanan Aplikasi", formatRupiah(o.consumer_service_fee))}
             {(o.service === "belanja" || Number((o as any).item_cost ?? 0) > 0) && (
               <div className="flex justify-between gap-4 text-sm">
-                <span className="text-muted-foreground">Belanjaan (Talangan Struk)</span>
+                <span className="text-muted-foreground">{(o as any).food_order_type === "mitra" ? "Subtotal Menu Mitra Resto" : (o as any).food_order_type === "point" ? "Harga Makanan (Point Resto)" : "Belanjaan (Talangan Struk)"}</span>
                 <span className="max-w-[65%] text-right font-medium text-foreground">
                   {Number((o as any).item_cost ?? 0) > 0 ? formatRupiah(Number((o as any).item_cost)) : "Menunggu struk driver"}
                 </span>
@@ -382,7 +382,7 @@ function OrderDetail() {
               <span className="text-foreground">Total Tagihan</span>
               <span className="text-primary">{formatRupiah(finalTotal)}</span>
             </div>
-            {(o as any).item_receipt_url && (
+            {(o as any).item_receipt_url && (o as any).food_order_type !== "mitra" && (
               <div className="pt-2 text-right">
                 <button type="button" onClick={() => setShowReceiptModal(true)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">
                   <ReceiptText className="h-3.5 w-3.5" />
@@ -391,7 +391,7 @@ function OrderDetail() {
               </div>
             )}
           </div>
-          {isMyDriver && (o.service === "belanja" || String(o.service) === "point_food") && (o as any).food_order_type !== "mitra" && (
+          {isMyDriver && (o.service === "belanja" || String(o.service) === "point_food" || (o.service === "food" && (o as any).food_order_type === "point")) && (o as any).food_order_type !== "mitra" && (
             <DriverItemCostCard
               order={o}
               onSuccess={() => {
