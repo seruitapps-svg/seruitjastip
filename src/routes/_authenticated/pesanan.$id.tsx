@@ -514,7 +514,7 @@ function OrderDetail() {
                 <p className="mt-1 text-sm text-muted-foreground">Minta 4 digit PIN kepada pelanggan saat pesanan diserahkan.</p>
               </div>
               <label htmlFor="driver-confirmation-pin" className="block text-sm font-medium text-foreground">PIN 4 digit</label>
-              <input id="driver-confirmation-pin" inputMode="numeric" autoComplete="one-time-code" maxLength={4} value={driverPinInput} onChange={(event) => setDriverPinInput(event.target.value.replace(/\\D/g, "").slice(0, 4))} placeholder="••••" className="w-full rounded-xl border border-input bg-background px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-foreground" />
+              <input id="driver-confirmation-pin" inputMode="numeric" autoComplete="one-time-code" maxLength={4} value={driverPinInput} onChange={(event) => setDriverPinInput(event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="••••" className="w-full rounded-xl border border-input bg-background px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-foreground" />
               {err && <p className="text-sm text-destructive">{err}</p>}
               <div className="flex gap-2">
                 <button type="button" disabled={busy} onClick={() => { setShowPinModal(false); setDriverPinInput(""); setErr(""); }} className="flex-1 rounded-xl border border-border px-3 py-2.5 text-sm font-semibold text-foreground">Batal</button>
