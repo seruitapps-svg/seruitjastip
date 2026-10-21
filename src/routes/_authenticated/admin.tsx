@@ -15,6 +15,7 @@ import { AdminModeSettings } from "@/components/admin/AdminModeSettings";
 import { AdminPointResto } from "@/components/admin/AdminPointResto";
 import { AdminRestoMitra } from "@/components/admin/AdminRestoMitra";
 import { DriverAgreementsPanel } from "@/components/admin/DriverAgreementsPanel";
+import { MerchantAgreementsPanel } from "@/components/admin/MerchantAgreementsPanel";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -537,7 +538,7 @@ function AdminPage() {
           </>
         )}
 
-        {category === "pengguna" && subTab === "agreements" && <DriverAgreementsPanel />}
+        {category === "pengguna" && subTab === "agreements" && <div className="space-y-6"><DriverAgreementsPanel /><MerchantAgreementsPanel /></div>}
 
         {category === "pengaturan" && subTab === "tarif" && <AdminModeSettings />}
         {category === "pengaturan" && subTab === "pengumuman" && (
