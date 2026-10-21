@@ -1,8 +1,10 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Bike, ChevronDown, LogOut, ShoppingBag, Store, UserRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { AppAnnouncements } from "@/components/AppAnnouncements";
 
 export function AppHeader() {
   const { user, isAdmin, isDriver, isMitra, isCustomerOnly, testRole, setSimulation } = useAuth();
@@ -10,6 +12,8 @@ export function AppHeader() {
   const queryClient = useQueryClient();
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
+  const branding = useQuery({ queryKey: ["app-branding"], queryFn: async () => { const { data, error } = await (supabase as any).from("app_branding").select("app_name,logo_url,favicon_url").eq("id", 1).maybeSingle(); if (error) return null; return data as { app_name: string; logo_url: string | null; favicon_url: string | null } | null; }, staleTime: 60000 });
+  useEffect(() => { const url = branding.data?.favicon_url; if (!url) return; let icon = document.querySelector<HTMLLinkElement>("link[rel=icon]"); if (!icon) { icon = document.createElement("link"); icon.rel = "icon"; document.head.appendChild(icon); } icon.href = url; }, [branding.data?.favicon_url]);
 
   const isDriverPage = currentPath.startsWith("/driver");
   const isMitraPage = currentPath.startsWith("/mitra");
@@ -53,10 +57,14 @@ export function AppHeader() {
       <div className="mx-auto flex max-w-3xl items-center gap-2 px-4 py-2.5">
         {/* Logo Mider */}
         <Link to="/" className="flex shrink-0 items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Bike className="h-5 w-5 text-primary-foreground" />
+          <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-primary">
+            {branding.data?.logo_url ? (
+              <img src={branding.data.logo_url} alt="" className="h-full w-full object-contain bg-card" />
+            ) : (
+              <Bike className="h-5 w-5 text-primary-foreground" />
+            )}
           </div>
-          <span className="text-lg font-bold tracking-tight text-foreground">Mider</span>
+          <span className="text-lg font-bold tracking-tight text-foreground">{branding.data?.app_name || "Mider"}</span>
         </Link>
 
         {user ? (
@@ -228,6 +236,7 @@ export function AppHeader() {
           </div>
         )}
       </div>
+      <AppAnnouncements />
     </header>
   );
 }
