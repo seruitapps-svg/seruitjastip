@@ -253,7 +253,10 @@ function OrderDetail() {
                 {o.service === "kirim" && row("Penerima", `${o.recipient_name} (${o.recipient_wa})`)}
                 {row("Ongkos Kirim", formatRupiah(o.shipping_fare))}
                 {row("Biaya Layanan", formatRupiah(o.consumer_service_fee))}
-                {(o.service === "belanja" || itemCost > 0) && row("Biaya belanja/talangan", itemCost > 0 ? formatRupiah(itemCost) : "Menunggu struk driver")}
+                {(o.service === "belanja" || itemCost > 0) && row(
+                  (o as any).food_order_type === "mitra" ? "Subtotal Menu Mitra Resto" : (o as any).food_order_type === "point" ? "Harga Makanan (Point Resto)" : "Biaya belanja/talangan",
+                  itemCost > 0 ? formatRupiah(itemCost) : "Menunggu harga driver",
+                )}
                 <div className="flex justify-between gap-4 border-t border-border pt-3 font-extrabold">
                   <span>Total Tagihan</span><span className="text-primary">{formatRupiah(finalTotal)}</span>
                 </div>
