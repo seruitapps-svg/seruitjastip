@@ -43,8 +43,6 @@ function DriverPage() {
   const [onlineSaving, setOnlineSaving] = useState(false);
   const [ojekSaving, setOjekSaving] = useState(false);
   const [err, setErr] = useState("");
-  const [pickupPinOrder, setPickupPinOrder] = useState<{ id: string; code: string } | null>(null);
-  const [pickupPinInput, setPickupPinInput] = useState("");
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileForm, setProfileForm] = useState({ full_name: "", phone: "", vehicle_type: "Motor", vehicle_plate: "" });
@@ -228,39 +226,6 @@ function DriverPage() {
       supabase.removeChannel(ch);
     };
   }, [isDriver, qc]);
-
-  async function confirmPickupPin() {
-    const order = pickupPinOrder;
-    const pin = pickupPinInput.trim();
-    if (!order || !/^[0-9]{4}$/.test(pin)) {
-      setErr("Masukkan 4 digit PIN dari pemesan.");
-      return;
-    }
-    if (busy !== null) return;
-
-    setBusy(order.id);
-    setErr("");
-    try {
-      const { error } = await (supabase as any).rpc("driver_advance_order", {
-        _order_id: order.id,
-        _pin: pin,
-      });
-      if (error) throw error;
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["pool"] }),
-        qc.invalidateQueries({ queryKey: ["driver-jobs"] }),
-        qc.invalidateQueries({ queryKey: ["driver-wallet-header"] }),
-        qc.invalidateQueries({ queryKey: ["wallet"] }),
-        qc.invalidateQueries({ queryKey: ["driver-wallet-earnings"] }),
-      ]);
-      setPickupPinOrder(null);
-      setPickupPinInput("");
-    } catch (error) {
-      setErr(getDriverErrorMessage(error, "Penjemputan gagal dikonfirmasi."));
-    } finally {
-      setBusy(null);
-    }
-  }
 
   async function run(id: string, fn: () => Promise<{ error: { message: string } | null }>, openAfter = false) {
     if (busy) return;
@@ -461,26 +426,18 @@ function DriverPage() {
                         className={btnPrimary}
                         disabled={busy === o.id}
                         onClick={() => {
-                          if (String(o.service) === "point_food" && o.status === "diambil") {
-                            setErr("");
-                            setPickupPinInput("");
-                            setPickupPinOrder({ id: o.id, code: o.code });
-                            return;
-                          }
                           void run(o.id, async () => supabase.rpc("driver_advance_order", { _order_id: o.id, _pin: null }));
                         }}
                       >
-                        {String(o.service) === "point_food" && o.status === "diambil"
-                          ? "Konfirmasi pengambilan di restoran"
-                          : o.service === "ojek"
-                            ? o.status === "diambil"
-                              ? "Konfirmasi penjemputan"
-                              : o.status === "dijemput"
-                                ? "Mulai antar penumpang"
-                                : o.status === "diantar"
-                                  ? "Tandai perjalanan selesai"
-                                  : DRIVER_NEXT_LABEL[o.status]
-                            : DRIVER_NEXT_LABEL[o.status]}
+                        {o.service === "ojek"
+                          ? o.status === "diambil"
+                            ? "Konfirmasi penjemputan"
+                            : o.status === "dijemput"
+                              ? "Mulai antar penumpang"
+                              : o.status === "diantar"
+                                ? "Tandai perjalanan selesai"
+                                : DRIVER_NEXT_LABEL[o.status]
+                          : DRIVER_NEXT_LABEL[o.status]}
                       </button>
                       <button
                         className={btnOutline}
@@ -494,26 +451,6 @@ function DriverPage() {
               </div>
             ))}
           </section>
-        )}
-
-        {pickupPinOrder && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="pickup-pin-title">
-            <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-5 shadow-xl">
-              <div>
-                <h2 id="pickup-pin-title" className="text-lg font-bold text-foreground">Konfirmasi pengambilan di restoran</h2>
-                <p className="mt-1 text-sm text-muted-foreground">Minta PIN pengambilan dari mitra restoran atau pemesan, lalu masukkan untuk mengonfirmasi pengambilan order #{pickupPinOrder.code}.</p>
-              </div>
-              <label htmlFor="driver-pickup-pin" className="block text-sm font-medium text-foreground">PIN pengambilan restoran</label>
-              <input id="driver-pickup-pin" inputMode="numeric" autoComplete="one-time-code" maxLength={4} value={pickupPinInput} onChange={(event) => setPickupPinInput(event.target.value.replace(/\\D/g, "").slice(0, 4))} placeholder="••••" className="w-full rounded-xl border border-input bg-background px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-foreground" />
-              {err && <p className="text-sm text-destructive">{err}</p>}
-              <div className="flex gap-2">
-                <button type="button" disabled={busy !== null} onClick={() => { setPickupPinOrder(null); setPickupPinInput(""); setErr(""); }} className="flex-1 rounded-xl border border-border px-3 py-2.5 text-sm font-semibold text-foreground">Batal</button>
-                <button type="button" disabled={busy !== null || pickupPinInput.length !== 4} onClick={() => void confirmPickupPin()} className={`flex-1 ${btnPrimary}`}>
-                  {busy === pickupPinOrder.id ? "Memverifikasi..." : "Konfirmasi penjemputan"}
-                </button>
-              </div>
-            </div>
-          </div>
         )}
 
         {/* 3. Switcher Tab Menu */}
