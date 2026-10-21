@@ -135,28 +135,15 @@ function OrderDetail() {
       if (!proceed) return;
     }
 
-    const needsRestaurantPickupPin = String(o.service) === "point_food" && o.status === "diambil";
-    if (needsRestaurantPickupPin) {
-      setDriverPinInput("");
-      setShowPinModal(true);
-      return;
-    }
-
     await act(() => supabase.rpc("driver_advance_order", { _order_id: o.id, _pin: null }));
   }
 
   async function confirmCompleteOrder() {
     const pin = driverPinInput.trim();
-    if (!/^[0-9]{4}$/.test(pin)) {
-      setErr("Masukkan 4 digit PIN pengambilan dari mitra restoran atau pemesan.");
-      return;
-    }
-
     setBusy(true);
     setErr("");
-    const { error } = await (supabase as any).rpc("driver_advance_order", {
+    const { error } = await supabase.rpc("driver_advance_order", {
       _order_id: o.id,
-      _pin: pin,
     });
     setBusy(false);
 
@@ -289,7 +276,7 @@ function OrderDetail() {
               <button type="button" onClick={() => setIsNavigating(false)} className={btnPrimary}>Kembali ke pesanan</button>
             )}
           </div>
-          {showPinModal && isMyDriver && String(o.service) === "point_food" && o.status === "diambil" && (
+          {false && showPinModal && isMyDriver && String(o.service) === "point_food" && o.status === "diambil" && (
             <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="pin-modal-title-nav">
               <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-5 shadow-xl">
                 <div>
