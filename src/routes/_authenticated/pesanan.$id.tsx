@@ -245,7 +245,7 @@ function OrderDetail() {
               </div>
               <div className="space-y-3 text-sm">
                 {row("Status", STATUS_LABEL[o.status])}
-                {row("Layanan", SERVICE_NAME[o.service] ?? o.service)}
+                {row("Layanan", (o as any).food_order_type === "mitra" ? "Mitra Resto Resmi" : (o as any).food_order_type === "point" ? "Point Resto" : SERVICE_NAME[o.service] ?? o.service)}
                 {row("Dari", o.origin_address)}
                 {row("Ke", o.dest_address)}
                 {row("Jarak", `${(o.distance_meters / 1000).toFixed(1)} km · ±${Math.round(o.duration_seconds / 60)} menit`)}
@@ -357,7 +357,7 @@ function OrderDetail() {
             encodedPolyline={o.encoded_polyline}
             className="h-52 w-full rounded-xl border border-border"
           />
-          {row("Layanan", SERVICE_NAME[o.service] ?? o.service)}
+          {row("Layanan", (o as any).food_order_type === "mitra" ? "Mitra Resto Resmi" : (o as any).food_order_type === "point" ? "Point Resto" : SERVICE_NAME[o.service] ?? o.service)}
           {row("Dari", o.origin_address)}
           {row("Ke", o.dest_address)}
           {row("Jarak", `${(o.distance_meters / 1000).toFixed(1)} km · ±${Math.round(o.duration_seconds / 60)} menit`)}
@@ -391,7 +391,7 @@ function OrderDetail() {
               </div>
             )}
           </div>
-          {isMyDriver && (o.service === "belanja" || String(o.service) === "point_food") && (
+          {isMyDriver && (o.service === "belanja" || String(o.service) === "point_food") && (o as any).food_order_type !== "mitra" && (
             <DriverItemCostCard
               order={o}
               onSuccess={() => {
