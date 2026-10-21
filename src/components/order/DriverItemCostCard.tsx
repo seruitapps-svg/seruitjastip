@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Receipt, Upload, Loader2, CheckCircle2, Image as ImageIcon, Camera } from "lucide-react";
+import { Receipt, Upload, Loader2, CheckCircle2, Image as ImageIcon, Camera, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatRupiah } from "@/lib/config";
 import { uploadCompressedMedia } from "@/lib/image-compressor";
@@ -18,18 +18,17 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-  const [noReceiptAvailable, setNoReceiptAvailable] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const isEditable = ["diambil", "dijemput", "diantar"].includes(order.status);
   const detailText = (order.item_detail || "").toLowerCase();
-  const isLikelyFood =
+  const isPointResto =
     order.service === "food" ||
     order.service === "point_food" ||
     detailText.includes("point resto") ||
-    detailText.includes("porsi") ||
     detailText.includes("resto") ||
-    detailText.includes("makan") ||
-    detailText.includes("minum");
+    detailText.includes("warung");
+  const isJastipBelanja = order.service === "belanja" && !isPointResto;
 
   async function handleSave(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -42,8 +41,8 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
       return;
     }
 
-    if (!isLikelyFood && !noReceiptAvailable && parsed > 0 && !file && !currentReceipt) {
-      setError("Lampirkan foto struk kasir, atau centang pilihan 'Warung/toko tidak menyediakan struk'.");
+    if (isJastipBelanja && !file && !currentReceipt) {
+      setError("Jastip Belanja wajib melampirkan foto struk kasir.");
       return;
     }
 
@@ -100,14 +99,14 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
       <div className="flex items-center gap-2">
         <Receipt className="h-5 w-5 text-primary" />
         <h3 className="text-sm font-bold text-foreground">
-          {isLikelyFood ? "Harga Makanan (Point Resto)" : "Talangan Belanja"}
+          {isPointResto ? "Harga Makanan (Point Resto)" : "Talangan Jastip Belanja"}
         </h3>
       </div>
 
       <p className="text-xs text-muted-foreground">
-        {isLikelyFood
-          ? "Masukkan harga makanan riil dari warung/resto. Foto struk bersifat opsional."
-          : "Masukkan harga barang belanjaan riil sesuai struk kasir."}
+        {isPointResto
+          ? "Masukkan harga makanan riil dari resto/warung. Foto struk bersifat opsional."
+          : "Masukkan harga riil barang belanjaan. Foto struk kasir wajib dilampirkan."}
       </p>
 
       {currentCost > 0 && (
@@ -118,16 +117,16 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
       )}
 
       {currentReceipt && (
-        <a href={currentReceipt} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary underline">
-          <ImageIcon className="h-3.5 w-3.5" /> Lihat Foto Struk Terunggah
-        </a>
+        <button type="button" onClick={() => setShowPreviewModal(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20">
+          <ImageIcon className="h-3.5 w-3.5" /> Lihat Foto Struk di Transaksi
+        </button>
       )}
 
       {isEditable ? (
         <form onSubmit={handleSave} className="space-y-3 pt-1">
           <div>
             <label htmlFor={`item-cost-${order.id}`} className="text-xs font-semibold text-foreground">
-              Nominal {isLikelyFood ? "Harga Makanan" : "Belanja"} (Rp)
+              Nominal {isPointResto ? "Harga Makanan" : "Belanjaan"} (Rp)
             </label>
             <input
               id={`item-cost-${order.id}`}
@@ -144,7 +143,7 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
           <div>
             <div className="flex items-center justify-between">
               <label htmlFor={`item-receipt-${order.id}`} className="text-xs font-semibold text-foreground">
-                Foto Struk Kasir {isLikelyFood || noReceiptAvailable ? "(Opsional)" : "(Wajib)"}
+                Foto Struk Kasir {isPointResto ? "(Opsional)" : "(Wajib)"}
               </label>
               <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
                 <Camera className="h-3 w-3" /> Kamera / Galeri
@@ -160,17 +159,6 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
             />
           </div>
 
-          <label className="flex cursor-pointer items-center gap-2 pt-1 text-xs text-foreground">
-            <input
-              type="checkbox"
-              checked={noReceiptAvailable}
-              onChange={(e) => setNoReceiptAvailable(e.target.checked)}
-              className="rounded border-border text-primary focus:ring-primary"
-              disabled={loading}
-            />
-            <span>Warung / toko tidak menyediakan struk cetak</span>
-          </label>
-
           {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
           {successMsg && (
             <p role="status" className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600">
@@ -185,6 +173,22 @@ export function DriverItemCostCard({ order, onSuccess }: Props) {
         </form>
       ) : (
         <p className="text-xs italic text-muted-foreground">Data belanja terkunci karena status pesanan sudah selesai.</p>
+      )}
+
+      {showPreviewModal && currentReceipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in">
+          <div className="relative max-h-[90vh] max-w-lg overflow-hidden rounded-2xl bg-card p-3 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <span className="text-xs font-bold text-foreground">Foto Struk Pembelian</span>
+              <button type="button" onClick={() => setShowPreviewModal(false)} className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Tutup foto">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="mt-2 flex max-h-[75vh] items-center justify-center overflow-auto rounded-xl bg-black/5">
+              <img src={currentReceipt} alt="Foto struk belanja" className="max-h-full max-w-full rounded-lg object-contain" />
+            </div>
+          </div>
+        </div>
       )}
     </section>
   );
