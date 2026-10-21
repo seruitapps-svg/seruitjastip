@@ -37,8 +37,6 @@ function OrderDetail() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [showNavDetails, setShowNavDetails] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
-  const [driverPinInput, setDriverPinInput] = useState("");
-  const [showPinModal, setShowPinModal] = useState(false);
   const [ratingValue, setRatingValue] = useState(5);
   const [merchantRatingValue, setMerchantRatingValue] = useState(5);
   const [reviewText, setReviewText] = useState("");
@@ -136,31 +134,6 @@ function OrderDetail() {
     }
 
     await act(() => supabase.rpc("driver_advance_order", { _order_id: o.id, _pin: null }));
-  }
-
-  async function confirmCompleteOrder() {
-    const pin = driverPinInput.trim();
-    setBusy(true);
-    setErr("");
-    const { error } = await supabase.rpc("driver_advance_order", {
-      _order_id: o.id,
-    });
-    setBusy(false);
-
-    if (error) {
-      setErr(error.message);
-      return;
-    }
-
-    setShowPinModal(false);
-    setDriverPinInput("");
-    qc.invalidateQueries({ queryKey: ["order", id] });
-    qc.invalidateQueries({ queryKey: ["order-history", id] });
-    qc.invalidateQueries({ queryKey: ["wallet"] });
-    qc.invalidateQueries({ queryKey: ["driver-wallet-earnings"] });
-    qc.invalidateQueries({ queryKey: ["wallet-page"] });
-    qc.invalidateQueries({ queryKey: ["driver-jobs"] });
-    qc.invalidateQueries({ queryKey: ["admin-financial-overview"] });
   }
 
   async function submitRating() {
@@ -276,7 +249,7 @@ function OrderDetail() {
               <button type="button" onClick={() => setIsNavigating(false)} className={btnPrimary}>Kembali ke pesanan</button>
             )}
           </div>
-          {false && showPinModal && isMyDriver && String(o.service) === "point_food" && o.status === "diambil" && (
+          {false && isMyDriver && String(o.service) === "point_food" && o.status === "diambil" && (
             <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="pin-modal-title-nav">
               <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-5 shadow-xl">
                 <div>
@@ -513,7 +486,7 @@ function OrderDetail() {
           </section>
         )}
 
-        {showPinModal && isMyDriver && String(o.service) === "point_food" && o.status === "diambil" && (
+        {false && isMyDriver && String(o.service) === "point_food" && o.status === "diambil" && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="pin-modal-title">
             <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-5 shadow-xl">
               <div>
