@@ -37,8 +37,10 @@ CREATE POLICY "Users read published announcements" ON public.app_announcements F
  audience = 'all'
  OR (audience = 'driver' AND public.has_role('driver'::public.app_role, auth.uid()))
  OR (audience = 'mitra' AND public.has_role('mitra'::public.app_role, auth.uid()))
- OR (audience = 'user' AND auth.uid() IS NOT NULL AND public.has_role('user'::public.app_role, auth.uid())
-     AND NOT public.has_role('driver'::public.app_role, auth.uid()) AND NOT public.has_role('mitra'::public.app_role, auth.uid()))
+ OR (audience = 'user' AND auth.uid() IS NOT NULL
+     AND NOT public.has_role('driver'::public.app_role, auth.uid())
+     AND NOT public.has_role('mitra'::public.app_role, auth.uid())
+     AND NOT public.has_role('superadmin'::public.app_role, auth.uid()))
  ));
 CREATE POLICY "Superadmins manage announcements" ON public.app_announcements FOR ALL
  USING (public.has_role('superadmin'::public.app_role, auth.uid()))
