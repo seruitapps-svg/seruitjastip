@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Store, ShoppingBag, MapPin, ToggleLeft, ToggleRight, ImagePlus, Save, LoaderCircle, Plus, Pencil, Trash2, X, UtensilsCrossed } from "lucide-react";
+import { Store, ShoppingBag, MapPin, ToggleLeft, ToggleRight, ImagePlus, Save, LoaderCircle, Plus, Pencil, Trash2, X, UtensilsCrossed, ChevronUp } from "lucide-react";
+import { MapLocationPicker } from "@/components/MapLocationPicker";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -21,7 +22,10 @@ export const Route = createFileRoute("/_authenticated/mitra")({
 function MitraDashboardPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [name, setName] = useState("");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [openingHours, setOpeningHours] = useState("");
@@ -72,6 +76,16 @@ function MitraDashboardPage() {
   });
 
   const products = productsQuery.data ?? [];
+
+  useEffect(() => {
+    if (!merchant) return;
+    setName(merchant.name ?? "");
+    setAddress(merchant.address ?? "");
+    setPhone(merchant.phone_wa ?? "");
+    setOpeningHours(merchant.opening_hours ?? "");
+    setLatitude(merchant.latitude != null ? Number(merchant.latitude) : null);
+    setLongitude(merchant.longitude != null ? Number(merchant.longitude) : null);
+  }, [merchant?.id, merchant?.updated_at]);
 
   function resetProductEditor() {
     setProductEditorOpen(false);
@@ -246,6 +260,7 @@ function MitraDashboardPage() {
         address: address.trim(),
         phone_wa: phone.trim() || null,
         opening_hours: openingHours.trim() || null,
+        ...(latitude !== null && longitude !== null ? { latitude, longitude } : {}),
         ...(imageUrl ? { image_url: imageUrl } : {}),
       };
       const { error } = await supabase
@@ -256,6 +271,7 @@ function MitraDashboardPage() {
       if (error) throw error;
 
       setPhoto(null);
+      setIsEditingProfile(false);
       await queryClient.invalidateQueries({ queryKey: ["my-merchant-profile", user.id] });
       setMessage("Profil resto berhasil disimpan.");
     } catch (error) {
@@ -339,16 +355,36 @@ function MitraDashboardPage() {
         {errorMessage && <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{errorMessage}</div>}
 
         <section className="rounded-2xl border border-border bg-card p-5">
-          <div className="mb-4">
-            <h2 className="text-base font-bold text-foreground">Profil dan Foto Resto</h2>
-            <p className="mt-1 text-xs text-muted-foreground">Perbarui informasi yang ditampilkan kepada pelanggan. Foto dikompresi ke WebP sebelum diunggah.</p>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-foreground">Informasi Profil Resto</h2>
+              <p className="mt-1 text-xs text-muted-foreground">Data alamat dan jam operasional yang dilihat pelanggan.</p>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={() => setIsEditingProfile(!isEditingProfile)} className="gap-1.5">
+              {isEditingProfile ? <ChevronUp className="h-4 w-4" /> : <Pencil className="h-3.5 w-3.5" />}
+              {isEditingProfile ? "Tutup Form" : "Edit Profil"}
+            </Button>
           </div>
-          <form onSubmit={saveProfile} className="space-y-4">
+          {!isEditingProfile && (
+            <div className="mt-4 grid gap-3 rounded-xl bg-muted/40 p-4 text-xs text-muted-foreground sm:grid-cols-2">
+              <div><span className="font-semibold text-foreground">Alamat Outlet:</span><p className="mt-0.5 text-foreground">{merchant.address || "Belum ditentukan"}</p>
+                {merchant.latitude != null && merchant.longitude != null && <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-600"><MapPin className="h-3 w-3" /> Titik koordinat tersimpan</p>}
+              </div>
+              <div><span className="font-semibold text-foreground">Kontak & Operasional:</span><p className="mt-0.5 text-foreground">WhatsApp: {merchant.phone_wa || "-"}</p><p className="text-foreground">Jam Buka: {merchant.opening_hours || "Setiap Hari"}</p></div>
+            </div>
+          )}
+          {isEditingProfile && (
+          <form onSubmit={saveProfile} className="mt-4 space-y-4 border-t border-border pt-4">
             <label className="block text-sm font-medium text-foreground">Nama resto *
               <input required maxLength={120} value={name} onChange={(event) => setName(event.target.value)} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" />
             </label>
-            <label className="block text-sm font-medium text-foreground">Alamat *
-              <textarea required rows={3} maxLength={500} value={address} onChange={(event) => setAddress(event.target.value)} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" />
+            <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3.5">
+              <label className="block text-sm font-bold text-foreground">Titik Lokasi Resto di Google Maps *</label>
+              <p className="text-xs text-muted-foreground">Ketuk peta atau geser pin ke lokasi resto Anda. Alamat akan terisi otomatis.</p>
+              <MapLocationPicker value={latitude !== null && longitude !== null ? { lat: latitude, lng: longitude } : null} onChange={(point) => { setLatitude(point.lat); setLongitude(point.lng); }} onAddressChange={(detectedAddress) => { if (detectedAddress) setAddress(detectedAddress); }} />
+            </div>
+            <label className="block text-sm font-medium text-foreground">Alamat Lengkap / Patokan *
+              <textarea required rows={3} maxLength={500} value={address} onChange={(event) => setAddress(event.target.value)} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="Alamat terisi otomatis dari peta atau sesuaikan patokan..." />
             </label>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm font-medium text-foreground">WhatsApp resto
@@ -369,7 +405,9 @@ function MitraDashboardPage() {
               {savingProfile ? "Menyimpan..." : "Simpan Profil"}
             </Button>
             {!canOperate && <p className="text-xs text-muted-foreground">Profil bisa diedit setelah pengajuan disetujui admin.</p>}
+            <Button type="button" variant="outline" onClick={() => setIsEditingProfile(false)} disabled={savingProfile}>Batal</Button>
           </form>
+          )}
         </section>
 
         <section className="rounded-2xl border border-border bg-card p-5">
