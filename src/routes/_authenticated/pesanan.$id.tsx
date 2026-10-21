@@ -133,7 +133,7 @@ function OrderDetail() {
       if (!proceed) return;
     }
 
-    await act(() => supabase.rpc("driver_advance_order", { _order_id: o.id, _pin: null }));
+    await act(() => supabase.rpc("driver_advance_order", { _order_id: o.id }));
   }
 
   async function submitRating() {
