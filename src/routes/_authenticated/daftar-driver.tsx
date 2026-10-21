@@ -275,6 +275,42 @@ function DaftarDriver() {
               />
             </div>
 
+            <div className="space-y-3 rounded-xl border border-border p-3">
+              <div>
+                <h2 className="text-sm font-bold text-foreground">Dokumen foto wajib</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Pilih foto yang jelas. Foto akan dikompresi sebelum diunggah. Untuk memperbarui profil, pilih hanya foto yang ingin diganti; foto yang tidak dipilih tetap dipertahankan.
+                </p>
+              </div>
+              {([
+                { key: "ktp", label: "Foto KTP" },
+                { key: "sim", label: "Foto SIM" },
+                { key: "vehicle", label: "Foto motor/kendaraan" },
+                { key: "selfie", label: "Swafoto driver" },
+              ] as const).map((item) => (
+                <div key={item.key}>
+                  <label htmlFor={`driver-photo-${item.key}`} className="text-sm font-semibold text-foreground">
+                    {item.label}
+                  </label>
+                  <input
+                    id={`driver-photo-${item.key}`}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    required={!application.data}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] ?? null;
+                      setFiles((current) => ({ ...current, [item.key]: file }));
+                    }}
+                    className={inputClass}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {files[item.key]?.name ?? (application.data ? "Kosongkan jika tidak ingin mengganti foto" : "Belum ada foto dipilih")}
+                  </p>
+                </div>
+              ))}
+            </div>
+
             <section className="space-y-3 rounded-xl border border-border p-3">
               <div>
                 <h2 className="text-base font-extrabold text-foreground">Perjanjian Kemitraan Driver Mider</h2>
@@ -333,42 +369,6 @@ function DaftarDriver() {
                 <span>Saya telah membaca, memahami, dan menyetujui Perjanjian Kemitraan Driver Mider di atas.</span>
               </label>
             </section>
-
-            <div className="space-y-3 rounded-xl border border-border p-3">
-              <div>
-                <h2 className="text-sm font-bold text-foreground">Dokumen foto wajib</h2>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Pilih foto yang jelas. Foto akan dikompresi sebelum diunggah. Untuk memperbarui profil, pilih hanya foto yang ingin diganti; foto yang tidak dipilih tetap dipertahankan.
-                </p>
-              </div>
-              {([
-                { key: "ktp", label: "Foto KTP" },
-                { key: "sim", label: "Foto SIM" },
-                { key: "vehicle", label: "Foto motor/kendaraan" },
-                { key: "selfie", label: "Swafoto driver" },
-              ] as const).map((item) => (
-                <div key={item.key}>
-                  <label htmlFor={`driver-photo-${item.key}`} className="text-sm font-semibold text-foreground">
-                    {item.label}
-                  </label>
-                  <input
-                    id={`driver-photo-${item.key}`}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    required={!application.data}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] ?? null;
-                      setFiles((current) => ({ ...current, [item.key]: file }));
-                    }}
-                    className={inputClass}
-                  />
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {files[item.key]?.name ?? (application.data ? "Kosongkan jika tidak ingin mengganti foto" : "Belum ada foto dipilih")}
-                  </p>
-                </div>
-              ))}
-            </div>
 
             {errorMessage && (
               <p role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
