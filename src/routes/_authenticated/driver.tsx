@@ -46,14 +46,14 @@ function DriverPage() {
       const { data, error } = await supabase
         .from("driver_profiles")
         .select("id, user_id, full_name, phone, vehicle_type, vehicle_plate, photo_selfie, accepts_ojek, is_online")
-        .or(`user_id.eq.${user!.id},id.eq.${user!.id}`)
+        .eq("user_id", user!.id)
         .maybeSingle();
       if (error) throw error;
       return data as { id: string; user_id: string; full_name: string; phone: string; vehicle_type: string; vehicle_plate: string; photo_selfie?: string | null; accepts_ojek: boolean; is_online?: boolean } | null;
     },
   });
 
-  const isOnline = driverProfile.data?.is_online === true;
+  const isOnline = driverProfile.data?.is_online === true;\n  const hasDriverProfile = !!driverProfile.data;
 
   useEffect(() => {
     const profile = driverProfile.data;
@@ -69,7 +69,7 @@ function DriverPage() {
   async function saveDriverProfile() {
     const profile = driverProfile.data;
     if (!profile?.id || !user?.id) {
-      setErr("Profil driver belum tersedia. Hubungi superadmin untuk melengkapi data profil terlebih dahulu.");
+      setErr("Profil belum tersedia. Lengkapi pendaftaran driver terlebih dahulu melalui tombol Daftar/Lengkapi Profil.");
       return;
     }
     const fullName = profileForm.full_name.trim();
@@ -279,7 +279,7 @@ function DriverPage() {
               <p className="text-xs text-muted-foreground">{driverProfile.data?.vehicle_type || "Jenis kendaraan belum diisi"} · {driverProfile.data?.vehicle_plate || "Plat nomor belum diisi"}</p>
               <p className="text-xs text-muted-foreground">{driverProfile.data?.phone || "Nomor HP belum diisi"}</p>
             </div>
-            <button type="button" disabled={!driverProfile.data} onClick={() => setShowProfileEditor((open) => !open)} className={btnOutline}>
+            <button type="button" disabled={!driverProfile.data || driverProfile.isLoading} onClick={() => setShowProfileEditor((open) => !open)} className={btnOutline}>
               {showProfileEditor ? "Tutup" : "Edit Profil"}
             </button>
           </div>
@@ -318,7 +318,7 @@ function DriverPage() {
             {/* Toggle Siap Kerja / Istirahat */}
             <button
               onClick={() => void toggleOnline(!isOnline)}
-              disabled={driverProfile.isLoading || onlineSaving}
+              disabled={driverProfile.isLoading || !hasDriverProfile || onlineSaving}
               className={`flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
                 isOnline
                   ? "bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25 dark:text-emerald-400"
@@ -344,7 +344,7 @@ function DriverPage() {
             {/* Toggle Ojek Penumpang */}
             <button
               onClick={() => void toggleOjek(!driverProfile.data?.accepts_ojek)}
-              disabled={driverProfile.isLoading || ojekSaving}
+              disabled={driverProfile.isLoading || !hasDriverProfile || ojekSaving}
               className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
                 driverProfile.data?.accepts_ojek
                   ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
