@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -82,14 +82,31 @@ function DaftarDriver() {
     },
   });
 
+  useEffect(() => {
+    const profile = application.data;
+    if (!profile) return;
+    setForm({
+      fullName: profile.full_name ?? "",
+      phone: profile.phone ?? "",
+      nik: profile.nik ?? "",
+      vehicleType: profile.vehicle_type ?? "Motor",
+      vehiclePlate: profile.vehicle_plate ?? "",
+    });
+  }, [application.data]);
+
   async function submitApplication(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user) {
       setErrorMessage("Silakan masuk terlebih dahulu.");
       return;
     }
-    if (!files.ktp || !files.sim || !files.vehicle || !files.selfie) {
-      setErrorMessage("Semua 4 foto wajib diunggah: KTP, SIM, kendaraan, dan swafoto.");
+    const existingProfile = application.data;
+    if (!form.fullName.trim() || !form.phone.trim() || !form.nik.trim() || !form.vehicleType.trim() || !form.vehiclePlate.trim()) {
+      setErrorMessage("Nama, nomor HP, NIK, jenis kendaraan, dan plat nomor wajib diisi.");
+      return;
+    }
+    if (!existingProfile && (!files.ktp || !files.sim || !files.vehicle || !files.selfie)) {
+      setErrorMessage("Untuk profil baru, semua 4 foto wajib diunggah: KTP, SIM, kendaraan, dan swafoto.");
       return;
     }
 
@@ -99,13 +116,13 @@ function DaftarDriver() {
 
     try {
       const [ktpUrl, simUrl, vehicleUrl, selfieUrl] = await Promise.all([
-        uploadDriverPhoto(user.id, "ktp", files.ktp),
-        uploadDriverPhoto(user.id, "sim", files.sim),
-        uploadDriverPhoto(user.id, "vehicle", files.vehicle),
-        uploadDriverPhoto(user.id, "selfie", files.selfie),
+        files.ktp ? uploadDriverPhoto(user.id, "ktp", files.ktp) : Promise.resolve(existingProfile?.photo_ktp ?? null),
+        files.sim ? uploadDriverPhoto(user.id, "sim", files.sim) : Promise.resolve(existingProfile?.photo_sim ?? null),
+        files.vehicle ? uploadDriverPhoto(user.id, "vehicle", files.vehicle) : Promise.resolve(existingProfile?.photo_vehicle ?? null),
+        files.selfie ? uploadDriverPhoto(user.id, "selfie", files.selfie) : Promise.resolve(existingProfile?.photo_selfie ?? null),
       ]);
 
-      const { error } = await supabase.from("driver_profiles").insert({
+      const profilePayload = {
         user_id: user.id,
         full_name: form.fullName.trim(),
         phone: form.phone.trim(),
@@ -116,13 +133,20 @@ function DaftarDriver() {
         photo_sim: simUrl,
         photo_vehicle: vehicleUrl,
         photo_selfie: selfieUrl,
-      });
+      };
 
-      if (error) throw error;
+      const result = existingProfile
+        ? await supabase.from("driver_profiles").update(profilePayload).eq("user_id", user.id).select("id").maybeSingle()
+        : await supabase.from("driver_profiles").insert(profilePayload).select("id").maybeSingle();
 
-      setSuccessMessage("Pendaftaran dan foto berhasil dikirim!");
-      setForm(INITIAL_FORM);
-      setFiles({ ktp: null, sim: null, vehicle: null, selfie: null });
+      if (result.error) throw result.error;
+      if (!result.data) {
+        throw new Error("Data profil tidak tersimpan. Periksa izin akses driver_profiles di Supabase.");
+      }
+
+      setSuccessMessage(existingProfile
+        ? "Kelengkapan profil berhasil diperbarui."
+        : "Pendaftaran dan foto berhasil dikirim!");
       await queryClient.invalidateQueries({ queryKey: ["my-driver-application", user.id] });
       await application.refetch();
     } catch (error) {
@@ -148,41 +172,13 @@ function DaftarDriver() {
 
         {isDriver && (
           <div className="rounded-xl border border-green-300 bg-green-50 p-4 text-sm text-green-900">
-            Akun Anda sudah terdaftar sebagai driver. Buka menu Driver untuk melanjutkan.
+            Akun Anda sudah terdaftar sebagai driver. Anda dapat melengkapi atau memperbarui data dan dokumen profil di bawah ini.
           </div>
         )}
 
         {application.isLoading || !ready ? (
           <div className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">
             Memuat data pendaftaran…
-          </div>
-        ) : application.data ? (
-          <div className="space-y-3 rounded-xl border border-border bg-card p-4">
-            {(() => {
-              const status = STATUS_COPY[application.data.status];
-              return (
-                <div className={`rounded-lg border p-4 ${status.className}`}>
-                  <h2 className="font-bold">{status.title}</h2>
-                  <p className="mt-1 text-sm">{status.description}</p>
-                </div>
-              );
-            })()}
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between gap-4">
-                <span className="text-muted-foreground">Nama</span>
-                <span className="text-right font-medium text-foreground">{application.data.full_name}</span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-muted-foreground">Nomor HP</span>
-                <span className="text-right font-medium text-foreground">{application.data.phone}</span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-muted-foreground">Kendaraan</span>
-                <span className="text-right font-medium text-foreground">
-                  {application.data.vehicle_type} · {application.data.vehicle_plate}
-                </span>
-              </div>
-            </div>
           </div>
         ) : (
           <form onSubmit={submitApplication} className="space-y-4 rounded-2xl border border-border bg-card p-4">
@@ -260,7 +256,7 @@ function DaftarDriver() {
               <div>
                 <h2 className="text-sm font-bold text-foreground">Dokumen foto wajib</h2>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Pilih foto yang jelas. Foto akan dikompresi sebelum diunggah.
+                  Pilih foto yang jelas. Foto akan dikompresi sebelum diunggah. Untuk memperbarui profil, pilih hanya foto yang ingin diganti; foto yang tidak dipilih tetap dipertahankan.
                 </p>
               </div>
               {([
@@ -286,7 +282,7 @@ function DaftarDriver() {
                     className={inputClass}
                   />
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {files[item.key]?.name ?? "Belum ada foto dipilih"}
+                    {files[item.key]?.name ?? (application.data ? "Kosongkan jika tidak ingin mengganti foto" : "Belum ada foto dipilih")}
                   </p>
                 </div>
               ))}
@@ -304,13 +300,13 @@ function DaftarDriver() {
             )}
             <button
               type="submit"
-              disabled={saving || isDriver}
+              disabled={saving}
               className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {saving ? "Mengirim pendaftaran…" : "Kirim pendaftaran"}
+              {saving ? "Menyimpan…" : application.data ? "Simpan perubahan profil" : "Kirim pendaftaran"}
             </button>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Data Anda akan diperiksa oleh admin sebelum akun driver diaktifkan.
+              Data dan dokumen yang diperbarui akan tersimpan pada profil driver akun ini. Status verifikasi yang ada tidak diubah oleh formulir ini.
             </p>
           </form>
         )}
