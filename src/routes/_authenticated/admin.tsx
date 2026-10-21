@@ -16,6 +16,7 @@ import { AdminPointResto } from "@/components/admin/AdminPointResto";
 import { AdminRestoMitra } from "@/components/admin/AdminRestoMitra";
 import { DriverAgreementsPanel } from "@/components/admin/DriverAgreementsPanel";
 import { MerchantAgreementsPanel } from "@/components/admin/MerchantAgreementsPanel";
+import { AdminAppSettings } from "@/components/admin/AdminAppSettings";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -37,7 +38,7 @@ function AdminPage() {
   const { isAdmin, ready } = useAuth();
   const qc = useQueryClient();
   const [category, setCategory] = useState<"operasional" | "pengguna" | "pengaturan" | "keuangan">("operasional");
-  const [subTab, setSubTab] = useState<"order" | "point_resto" | "resto_mitra" | "driver_approval" | "akun" | "topup" | "tarif" | "pengumuman" | "agreements">("order");
+  const [subTab, setSubTab] = useState<"order" | "point_resto" | "resto_mitra" | "driver_approval" | "akun" | "topup" | "tarif" | "pengumuman" | "app_settings" | "agreements">("order");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("menunggu_verifikasi");
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
@@ -459,7 +460,7 @@ function AdminPage() {
           </>}
           {category === "pengaturan" && <>
             <button className={tabCls(subTab === "tarif")} onClick={() => setSubTab("tarif")}>Tarif & Layanan</button>
-            <button className={tabCls(subTab === "pengumuman")} onClick={() => setSubTab("pengumuman")}>Pengumuman</button>
+            <button className={tabCls(subTab === "app_settings")} onClick={() => setSubTab("app_settings")}>Identitas & Pengumuman</button>
           </>}
         </div>
         {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
@@ -539,6 +540,8 @@ function AdminPage() {
         )}
 
         {category === "pengguna" && subTab === "agreements" && <div className="space-y-6"><DriverAgreementsPanel /><MerchantAgreementsPanel /></div>}
+
+        {category === "pengaturan" && subTab === "app_settings" && <AdminAppSettings />}
 
         {category === "pengaturan" && subTab === "tarif" && (
           <section className="space-y-3">
