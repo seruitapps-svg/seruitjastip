@@ -18,7 +18,7 @@ export function OrderCard({ order, actions, driverView = false }: { order: Order
       <div className="flex items-start justify-between gap-2">
         <Link to="/pesanan/$id" params={{ id: order.id }} className="min-w-0">
           <div className="text-xs text-muted-foreground">
-            #{order.code} · {SERVICE_NAME[order.service]} ·{" "}
+            #{order.code} · {(order as any).food_order_type === "mitra" ? "Mitra Resto Resmi" : (order as any).food_order_type === "point" ? "Point Resto" : SERVICE_NAME[order.service]} ·{" "}
             {new Date(order.created_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
           </div>
           <div className="mt-1 truncate text-sm font-semibold text-foreground">{order.origin_address}</div>
