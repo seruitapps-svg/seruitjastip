@@ -386,7 +386,7 @@ function AdminPage() {
           {[
             { id: "operasional" as const, icon: "📦", title: "Operasional", detail: "Pesanan masuk dan verifikasi driver" },
             { id: "pengguna" as const, icon: "👥", title: "Pengguna & Driver", detail: "Akun, saldo, dan permintaan top-up" },
-            { id: "pengaturan" as const, icon: "⚙️", title: "Pengaturan & Konten", detail: "Tarif, komisi, mode layanan, dan pengumuman" },
+            { id: "pengaturan" as const, icon: "⚙️", title: "Pengaturan Sistem", detail: "Tarif, komisi, layanan, dan konten aplikasi" },
             { id: "keuangan" as const, icon: "💰", title: "Ringkasan Keuangan", detail: "Dana titipan, pendapatan, dan keamanan kas" },
           ].map((item) => (
             <button
@@ -458,8 +458,8 @@ function AdminPage() {
             <button className={tabCls(subTab === "agreements")} onClick={() => setSubTab("agreements")}>Perjanjian Driver</button>
           </>}
           {category === "pengaturan" && <>
-            <button className={tabCls(subTab === "tarif")} onClick={() => setSubTab("tarif")}>Tarif & Komisi</button>
-            <button className={tabCls(subTab === "pengumuman")} onClick={() => setSubTab("pengumuman")}>Pengumuman Web</button>
+            <button className={tabCls(subTab === "tarif")} onClick={() => setSubTab("tarif")}>Tarif & Layanan</button>
+            <button className={tabCls(subTab === "pengumuman")} onClick={() => setSubTab("pengumuman")}>Pengumuman</button>
           </>}
         </div>
         {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
@@ -540,7 +540,15 @@ function AdminPage() {
 
         {category === "pengguna" && subTab === "agreements" && <div className="space-y-6"><DriverAgreementsPanel /><MerchantAgreementsPanel /></div>}
 
-        {category === "pengaturan" && subTab === "tarif" && <AdminModeSettings />}
+        {category === "pengaturan" && subTab === "tarif" && (
+          <section className="space-y-3">
+            <div className="rounded-xl border border-border bg-muted/20 p-4">
+              <h2 className="text-sm font-extrabold text-foreground">Pengaturan Tarif & Layanan</h2>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Kelola tarif, komisi, biaya layanan, dan pantau jadwal Jastip dari satu tempat. Perubahan di sini tetap menggunakan pengaturan aplikasi yang sudah ada.</p>
+            </div>
+            <AdminModeSettings />
+          </section>
+        )}
         {category === "pengaturan" && subTab === "pengumuman" && (
           <div className="space-y-4 rounded-2xl border border-border bg-card p-5">
             <h3 className="font-bold text-foreground">Pengumuman Front-End (Banner Atas)</h3>
