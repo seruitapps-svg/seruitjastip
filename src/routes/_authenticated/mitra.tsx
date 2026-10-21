@@ -46,6 +46,7 @@ function MitraDashboardPage() {
   const [savingProduct, setSavingProduct] = useState(false);
   const [respondingOrderId, setRespondingOrderId] = useState<string | null>(null);
   const [showTransactionHistory, setShowTransactionHistory] = useState(false);
+  const [activeDashboardSection, setActiveDashboardSection] = useState<"profile" | "orders" | "history" | "products">("orders");
 
 
   const merchantQuery = useQuery({
@@ -459,6 +460,25 @@ function MitraDashboardPage() {
         {message && <div role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-700">{message}</div>}
         {errorMessage && <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{errorMessage}</div>}
 
+                <section className="rounded-2xl border border-border bg-card p-4">
+          <h2 className="mb-3 text-sm font-bold text-foreground">Menu Dashboard</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <button type="button" onClick={() => setActiveDashboardSection("orders")} className={`flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center transition-colors ${activeDashboardSection === "orders" ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-foreground hover:bg-accent"}`}>
+              <ShoppingBag className="h-6 w-6" /><span className="text-xs font-semibold">Pesanan Masuk</span>
+            </button>
+            <button type="button" onClick={() => { setActiveDashboardSection("history"); setShowTransactionHistory(true); }} className={`flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center transition-colors ${activeDashboardSection === "history" ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-foreground hover:bg-accent"}`}>
+              <ChevronUp className="h-6 w-6 rotate-180" /><span className="text-xs font-semibold">Riwayat Transaksi</span>
+            </button>
+            <button type="button" onClick={() => setActiveDashboardSection("products")} className={`flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center transition-colors ${activeDashboardSection === "products" ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-foreground hover:bg-accent"}`}>
+              <UtensilsCrossed className="h-6 w-6" /><span className="text-xs font-semibold">Produk / Menu</span>
+            </button>
+            <button type="button" onClick={() => setActiveDashboardSection("profile")} className={`flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center transition-colors ${activeDashboardSection === "profile" ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-foreground hover:bg-accent"}`}>
+              <Store className="h-6 w-6" /><span className="text-xs font-semibold">Profil Resto</span>
+            </button>
+          </div>
+        </section>
+
+{activeDashboardSection === "profile" && (
         <section className="rounded-2xl border border-border bg-card p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -515,6 +535,10 @@ function MitraDashboardPage() {
           )}
         </section>
 
+        
+        )}
+
+        {activeDashboardSection === "orders" && (
         <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
           <div className="flex items-start gap-3">
             <ShoppingBag className="mt-0.5 h-5 w-5 text-primary" />
@@ -597,6 +621,10 @@ function MitraDashboardPage() {
           )}
         </section>
 
+        
+        )}
+
+        {activeDashboardSection === "history" && (
         <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
           <button
             type="button"
@@ -649,6 +677,10 @@ function MitraDashboardPage() {
           )}
         </section>
 
+        
+        )}
+
+        {activeDashboardSection === "products" && (
         <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-start gap-3">
@@ -742,7 +774,10 @@ function MitraDashboardPage() {
             </div>
           )}
         </section>
-      </main>
+
+        )}
+
+              </main>
     </div>
   );
 }
