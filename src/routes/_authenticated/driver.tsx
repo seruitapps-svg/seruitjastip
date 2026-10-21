@@ -47,6 +47,7 @@ function DriverPage() {
   const [pickupPin, setPickupPin] = useState("");
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
+  const [driverProfilePopupDismissed, setDriverProfilePopupDismissed] = useState(false);
   const [profileForm, setProfileForm] = useState({ full_name: "", phone: "", vehicle_type: "Motor", vehicle_plate: "" });
 
   // Profil driver (status online & accepts_ojek)
@@ -272,9 +273,56 @@ function DriverPage() {
   const done = mine.data?.filter((o) => o.status === "selesai") ?? [];
   const availableOrders = pool.data?.filter((o) => driverProfile.data?.accepts_ojek !== false || o.service !== "ojek") ?? [];
 
+  // Tampilkan identitas driver selama masih ada pesanan aktif, untuk semua jenis layanan.
+  useEffect(() => {
+    if (active.length === 0) {
+      setDriverProfilePopupDismissed(false);
+      return;
+    }
+    if (!driverProfilePopupDismissed) return;
+    const timer = window.setTimeout(() => setDriverProfilePopupDismissed(false), 5000);
+    return () => window.clearTimeout(timer);
+  }, [active.length, driverProfilePopupDismissed]);
+
   return (
     <div className="min-h-screen bg-background pb-16">
       <AppHeader />
+
+      {active.length > 0 && hasDriverProfile && !driverProfilePopupDismissed && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 p-4" role="dialog" aria-modal="true" aria-labelledby="driver-active-profile-title">
+          <section className="w-full max-w-sm space-y-4 rounded-2xl border border-primary/30 bg-card p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-primary">Pesanan diterima</p>
+                <h2 id="driver-active-profile-title" className="mt-1 text-lg font-extrabold text-foreground">Profil Driver</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Identitas driver untuk pesanan yang sedang berjalan.</p>
+              </div>
+              <button type="button" aria-label="Tutup profil driver sementara" onClick={() => setDriverProfilePopupDismissed(true)} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex items-center gap-4 rounded-xl bg-muted/50 p-4">
+              {driverProfile.data?.photo_selfie ? (
+                <img src={driverProfile.data.photo_selfie} alt="Foto driver" className="h-20 w-20 shrink-0 rounded-full border border-border object-cover" />
+              ) : (
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-primary/10 text-2xl font-extrabold text-primary">
+                  {(driverProfile.data?.full_name || "D").trim().charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="min-w-0 space-y-1">
+                <p className="break-words text-base font-extrabold text-foreground">{driverProfile.data?.full_name || "Nama belum diisi"}</p>
+                <p className="break-words text-sm text-muted-foreground">{driverProfile.data?.phone || "Nomor HP belum diisi"}</p>
+                <p className="text-sm font-semibold text-foreground">{driverProfile.data?.vehicle_type || "Kendaraan belum diisi"}</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{driverProfile.data?.vehicle_plate || "Plat nomor belum diisi"}</p>
+              </div>
+            </div>
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
+              Popup ini akan muncul kembali selama masih ada pesanan aktif.
+            </div>
+            <Button type="button" className="w-full" onClick={() => setDriverProfilePopupDismissed(true)}>Tutup sementara</Button>
+          </section>
+        </div>
+      )}
 
       {pinOrderId && (() => {
         const pinOrder = active.find((order) => order.id === pinOrderId);
