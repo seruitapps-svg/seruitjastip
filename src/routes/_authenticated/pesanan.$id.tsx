@@ -122,6 +122,7 @@ function OrderDetail() {
   const cleanPhone = (phone: string) => phone.replace(/\D/g, "").replace(/^0/, "62");
   const emergencyMessage = `Halo, saya kurir Mider mengantarkan pesanan dari ${o.sender_name}. Saya sudah di lokasi.`;
   const itemCost = Number((o as any).item_cost ?? 0);
+  const isFoodDrinkOrder = o.service === "food" || String(o.service) === "point_food" || ["point", "mitra"].includes(String((o as any).food_order_type ?? ""));
   const calculatedTotal = (o.shipping_fare || 0) + (o.consumer_service_fee || 0) + itemCost;
   const finalTotal = Math.max(o.total || 0, calculatedTotal);
 
@@ -407,7 +408,7 @@ function OrderDetail() {
           {row("Ke", o.dest_address)}
           {row("Jarak", `${(o.distance_meters / 1000).toFixed(1)} km · ±${Math.round(o.duration_seconds / 60)} menit`)}
           {row(o.service === "belanja" ? "Belanjaan" : "Barang", o.item_detail)}
-          {row("Paket", `${o.weight_kg} kg · ${o.length_cm}×${o.width_cm}×${o.height_cm} cm`)}
+          {!isFoodDrinkOrder && row("Paket", `${o.weight_kg} kg · ${o.length_cm}×${o.width_cm}×${o.height_cm} cm`)}
           {row("Pemesan", `${o.sender_name} (${o.sender_wa})`)}
           {o.service === "kirim" && row("Penerima", `${o.recipient_name} (${o.recipient_wa})`)}
           {o.notes && row("Catatan", o.notes)}
