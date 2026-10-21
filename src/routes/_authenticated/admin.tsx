@@ -14,6 +14,7 @@ import { AdminFinancialOverview } from "@/components/admin/AdminFinancialOvervie
 import { AdminModeSettings } from "@/components/admin/AdminModeSettings";
 import { AdminPointResto } from "@/components/admin/AdminPointResto";
 import { AdminRestoMitra } from "@/components/admin/AdminRestoMitra";
+import { DriverAgreementsPanel } from "@/components/admin/DriverAgreementsPanel";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -35,7 +36,7 @@ function AdminPage() {
   const { isAdmin, ready } = useAuth();
   const qc = useQueryClient();
   const [category, setCategory] = useState<"operasional" | "pengguna" | "pengaturan" | "keuangan">("operasional");
-  const [subTab, setSubTab] = useState<"order" | "point_resto" | "resto_mitra" | "driver_approval" | "akun" | "topup" | "tarif" | "pengumuman">("order");
+  const [subTab, setSubTab] = useState<"order" | "point_resto" | "resto_mitra" | "driver_approval" | "akun" | "topup" | "tarif" | "pengumuman" | "agreements">("order");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("menunggu_verifikasi");
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
@@ -364,6 +365,7 @@ function AdminPage() {
           {category === "pengguna" && <>
             <button className={tabCls(subTab === "akun")} onClick={() => setSubTab("akun")}>Daftar Akun & Saldo</button>
             <button className={tabCls(subTab === "topup")} onClick={() => setSubTab("topup")}>Permintaan Top-up</button>
+            <button className={tabCls(subTab === "agreements")} onClick={() => setSubTab("agreements")}>Perjanjian Driver</button>
           </>}
           {category === "pengaturan" && <>
             <button className={tabCls(subTab === "tarif")} onClick={() => setSubTab("tarif")}>Tarif & Komisi</button>
@@ -445,6 +447,8 @@ function AdminPage() {
             ))}
           </>
         )}
+
+        {category === "pengguna" && subTab === "agreements" && <DriverAgreementsPanel />}
 
         {category === "pengaturan" && subTab === "tarif" && <AdminModeSettings />}
         {category === "pengaturan" && subTab === "pengumuman" && (
