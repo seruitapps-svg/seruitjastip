@@ -31,6 +31,8 @@ function DriverPage() {
   const [activeTab, setActiveTab] = useState<DriverTab>("onbid");
   const [showDoneOrders, setShowDoneOrders] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [onlineSaving, setOnlineSaving] = useState(false);
+  const [ojekSaving, setOjekSaving] = useState(false);
   const [err, setErr] = useState("");
 
   // Profil driver (status online & accepts_ojek)
@@ -51,23 +53,36 @@ function DriverPage() {
   const isOnline = driverProfile.data?.is_online !== false;
 
   async function toggleOnline(val: boolean) {
+    if (onlineSaving) return;
+    setOnlineSaving(true);
     setErr("");
-    const { error } = await supabase.rpc("driver_toggle_online", { _enabled: val });
-    if (error) {
-      setErr(error.message);
-      return;
+    try {
+      const { error } = await supabase.rpc("driver_toggle_online", { _enabled: val });
+      if (error) throw error;
+      // Refresh from the database so the status indicator and order buttons stay in sync.
+      await qc.invalidateQueries({ queryKey: ["my-driver-profile", user?.id] });
+      await driverProfile.refetch();
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : "Status kerja gagal diperbarui. Periksa koneksi lalu coba lagi.");
+    } finally {
+      setOnlineSaving(false);
     }
-    qc.invalidateQueries({ queryKey: ["my-driver-profile"] });
   }
 
   async function toggleOjek(val: boolean) {
+    if (ojekSaving) return;
+    setOjekSaving(true);
     setErr("");
-    const { error } = await supabase.rpc("driver_toggle_ojek", { _enabled: val });
-    if (error) {
-      setErr(error.message);
-      return;
+    try {
+      const { error } = await supabase.rpc("driver_toggle_ojek", { _enabled: val });
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: ["my-driver-profile", user?.id] });
+      await driverProfile.refetch();
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : "Pengaturan layanan ojek gagal diperbarui. Periksa koneksi lalu coba lagi.");
+    } finally {
+      setOjekSaving(false);
     }
-    qc.invalidateQueries({ queryKey: ["my-driver-profile"] });
   }
 
   // Ringkasan saldo cepat
@@ -141,18 +156,26 @@ function DriverPage() {
   }, [isDriver, qc]);
 
   async function run(id: string, fn: () => Promise<{ error: { message: string } | null }>, openAfter = false) {
+    if (busy) return;
     setBusy(id);
     setErr("");
-    const { error } = await fn();
-    setBusy(null);
-    if (error) return setErr(error.message);
+    try {
+      const { error } = await fn();
+      if (error) throw error;
 
-    qc.invalidateQueries({ queryKey: ["pool"] });
-    qc.invalidateQueries({ queryKey: ["driver-jobs"] });
-    qc.invalidateQueries({ queryKey: ["driver-wallet-header"] });
-    qc.invalidateQueries({ queryKey: ["wallet"] });
-    qc.invalidateQueries({ queryKey: ["driver-wallet-earnings"] });
-    if (openAfter) navigate({ to: "/pesanan/$id", params: { id } });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["pool"] }),
+        qc.invalidateQueries({ queryKey: ["driver-jobs"] }),
+        qc.invalidateQueries({ queryKey: ["driver-wallet-header"] }),
+        qc.invalidateQueries({ queryKey: ["wallet"] }),
+        qc.invalidateQueries({ queryKey: ["driver-wallet-earnings"] }),
+      ]);
+      if (openAfter) navigate({ to: "/pesanan/$id", params: { id } });
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : "Aksi gagal diproses. Periksa koneksi lalu coba lagi.");
+    } finally {
+      setBusy(null);
+    }
   }
 
   if (ready && !isDriver) {
@@ -191,8 +214,8 @@ function DriverPage() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3">
             {/* Toggle Siap Kerja / Istirahat */}
             <button
-              onClick={() => toggleOnline(!isOnline)}
-              disabled={driverProfile.isLoading}
+              onClick={() => void toggleOnline(!isOnline)}
+              disabled={driverProfile.isLoading || onlineSaving}
               className={`flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
                 isOnline
                   ? "bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25 dark:text-emerald-400"
@@ -205,20 +228,20 @@ function DriverPage() {
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
                   </span>
-                  <span>Siap Kerja (Online)</span>
+                  <span>{onlineSaving ? "Memperbarui status..." : "Siap Kerja (Online)"}</span>
                 </>
               ) : (
                 <>
                   <Coffee className="h-3.5 w-3.5" />
-                  <span>Istirahat (Offline)</span>
+                  <span>{onlineSaving ? "Memperbarui status..." : "Istirahat (Offline)"}</span>
                 </>
               )}
             </button>
 
             {/* Toggle Ojek Penumpang */}
             <button
-              onClick={() => toggleOjek(!driverProfile.data?.accepts_ojek)}
-              disabled={driverProfile.isLoading}
+              onClick={() => void toggleOjek(!driverProfile.data?.accepts_ojek)}
+              disabled={driverProfile.isLoading || ojekSaving}
               className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
                 driverProfile.data?.accepts_ojek
                   ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
@@ -226,7 +249,7 @@ function DriverPage() {
               }`}
             >
               <Bike className="h-3.5 w-3.5" />
-              <span>Ojek: {driverProfile.data?.accepts_ojek ? "Aktif" : "Mati"}</span>
+              <span>{ojekSaving ? "Menyimpan..." : `Ojek: ${driverProfile.data?.accepts_ojek ? "Aktif" : "Mati"}`}</span>
             </button>
           </div>
 
@@ -351,12 +374,12 @@ function DriverPage() {
                     actions={
                       <button
                         className={btnPrimary}
-                        disabled={busy === o.id || !isOnline}
+                        disabled={busy === o.id || busy !== null || !isOnline}
                         onClick={() =>
                           run(o.id, async () => supabase.rpc("driver_take_order", { _order_id: o.id }), true)
                         }
                       >
-                        {isOnline ? "Ambil Order Ini" : "Sedang Istirahat"}
+                        {busy === o.id ? "Memproses..." : isOnline ? "Ambil Order Ini" : "Sedang Istirahat"}
                       </button>
                     }
                   />
