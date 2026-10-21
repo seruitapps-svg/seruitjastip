@@ -74,39 +74,21 @@ function DriverPage() {
     setOjekSaving(true);
     setErr("");
     try {
-      // Update the logged-in driver's own profile directly, and request the
-      // changed value back. A successful RPC response alone did not guarantee
-      // that accepts_ojek had actually changed in the deployed database.
-      const { data: updatedProfile, error: updateError } = await supabase
-        .from("driver_profiles")
-        .update({ accepts_ojek: val })
-        .eq("user_id", user.id)
-        .select("accepts_ojek")
-        .maybeSingle();
-
-      if (updateError) {
-        throw new Error(`Gagal menyimpan status ojek: ${updateError.message}`);
-      }
-
-      if (!updatedProfile) {
-        throw new Error(
-          "Profil driver tidak berhasil diperbarui. Periksa izin UPDATE/RLS pada tabel driver_profiles di Supabase."
-        );
-      }
-
-      if (updatedProfile.accepts_ojek !== val) {
-        throw new Error("Database belum menyimpan status ojek yang dipilih. Coba muat ulang halaman.");
-      }
+      // The SECURITY DEFINER RPC updates only the authenticated driver's own profile.
+      // Do not fall back to a direct table UPDATE because driver_profiles RLS may deny it.
+      const { error } = await supabase.rpc("driver_toggle_ojek", { _enabled: val });
+      if (error) throw new Error(`Gagal mengubah status ojek: ${error.message}`);
 
       await qc.invalidateQueries({ queryKey: ["my-driver-profile", user.id] });
       const refreshed = await driverProfile.refetch();
       if (refreshed.error) throw refreshed.error;
-
-      if (refreshed.data?.accepts_ojek !== val) {
-        throw new Error("Status ojek belum cocok dengan data terbaru. Muat ulang halaman dan coba lagi.");
+      if (!refreshed.data || refreshed.data.accepts_ojek !== val) {
+        throw new Error(
+          "Fungsi database belum menyimpan status ojek. Jalankan SQL perbaikan driver_toggle_ojek di Supabase, lalu coba lagi."
+        );
       }
     } catch (error) {
-      setErr(error instanceof Error ? error.message : "Pengaturan layanan ojek gagal diperbarui. Periksa koneksi lalu coba lagi.");
+      setErr(error instanceof Error ? error.message : "Pengaturan layanan ojek gagal diperbarui.");
     } finally {
       setOjekSaving(false);
     }
