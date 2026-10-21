@@ -31,6 +31,16 @@ function MitraDashboardPage() {
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [openingHours, setOpeningHours] = useState("");
+  const [operatingMode, setOperatingMode] = useState<"manual" | "automatic">("manual");
+  const [operatingSchedule, setOperatingSchedule] = useState<Record<string, { open: boolean; start: string; end: string }>>({
+    "1": { open: true, start: "08:00", end: "21:00" },
+    "2": { open: true, start: "08:00", end: "21:00" },
+    "3": { open: true, start: "08:00", end: "21:00" },
+    "4": { open: true, start: "08:00", end: "21:00" },
+    "5": { open: true, start: "08:00", end: "21:00" },
+    "6": { open: true, start: "08:00", end: "21:00" },
+    "0": { open: true, start: "08:00", end: "21:00" },
+  });
   const [photo, setPhoto] = useState<File | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [changingStatus, setChangingStatus] = useState(false);
@@ -119,6 +129,10 @@ function MitraDashboardPage() {
     setAddress(merchant.address ?? "");
     setPhone(merchant.phone_wa ?? "");
     setOpeningHours(merchant.opening_hours ?? "");
+    setOperatingMode((merchant as any).operating_mode === "automatic" ? "automatic" : "manual");
+    if ((merchant as any).operating_schedule && typeof (merchant as any).operating_schedule === "object") {
+      setOperatingSchedule((current) => ({ ...current, ...(merchant as any).operating_schedule }));
+    }
     setLatitude(merchant.latitude != null ? Number(merchant.latitude) : null);
     setLongitude(merchant.longitude != null ? Number(merchant.longitude) : null);
   }, [merchant?.id, merchant?.updated_at]);
@@ -319,13 +333,15 @@ function MitraDashboardPage() {
         name: name.trim(),
         address: address.trim(),
         phone_wa: phone.trim() || null,
-        opening_hours: openingHours.trim() || null,
+        opening_hours: operatingMode === "automatic"
+          ? Object.entries(operatingSchedule).filter(([, day]) => day.open).map(([day, value]) => `${({ "1": "Sen", "2": "Sel", "3": "Rab", "4": "Kam", "5": "Jum", "6": "Sab", "0": "Min" } as Record<string, string>)[day]} ${value.start}-${value.end}`).join(", ") || "Tidak ada jadwal buka"
+          : openingHours.trim() || null,
         ...(latitude !== null && longitude !== null ? { latitude, longitude } : {}),
         ...(imageUrl ? { image_url: imageUrl } : {}),
       };
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("merchants")
-        .update(changes)
+        .update({ ...changes, operating_mode: operatingMode, operating_schedule: operatingSchedule })
         .eq("id", merchant.id)
         .eq("user_id", user.id);
       if (error) throw error;
@@ -446,9 +462,9 @@ function MitraDashboardPage() {
               <p className="mt-1 text-xs text-muted-foreground">Status pengajuan: <strong>{merchant.status || "belum diketahui"}</strong></p>
             </div>
           </div>
-          <Button variant="outline" size="sm" disabled={!canOperate || changingStatus} onClick={() => void toggleStatus()} className="gap-2">
+          <Button variant="outline" size="sm" disabled={!canOperate || changingStatus || (merchant as any).operating_mode === "automatic"} onClick={() => void toggleStatus()} className="gap-2">
             {changingStatus ? <LoaderCircle className="h-5 w-5 animate-spin" /> : merchant.is_open ? <ToggleRight className="h-5 w-5 text-emerald-600" /> : <ToggleLeft className="h-5 w-5" />}
-            <span>{merchant.is_open ? "Resto Buka" : "Resto Tutup"}</span>
+            <span>{(merchant as any).operating_mode === "automatic" ? (merchant.is_open ? "Otomatis: Buka" : "Otomatis: Tutup") : merchant.is_open ? "Resto Buka" : "Resto Tutup"}</span>
           </Button>
         </section>
 
@@ -515,9 +531,44 @@ function MitraDashboardPage() {
               <label className="block text-sm font-medium text-foreground">WhatsApp resto
                 <input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="08xxxxxxxxxx" />
               </label>
-              <label className="block text-sm font-medium text-foreground">Jam operasional
-                <input value={openingHours} onChange={(event) => setOpeningHours(event.target.value)} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="08:00 - 21:00" />
-              </label>
+              <div className="space-y-3 rounded-xl border border-border p-3">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Pengaturan Jam Operasional</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Pilih cara mengatur status buka dan tutup resto.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setOperatingMode("manual")} className={`rounded-lg border p-3 text-left ${operatingMode === "manual" ? "border-primary bg-primary/10" : "border-border"}`}>
+                    <span className="block text-sm font-bold text-foreground">Manual</span>
+                    <span className="mt-1 block text-xs text-muted-foreground">Buka/tutup sendiri</span>
+                  </button>
+                  <button type="button" onClick={() => setOperatingMode("automatic")} className={`rounded-lg border p-3 text-left ${operatingMode === "automatic" ? "border-primary bg-primary/10" : "border-border"}`}>
+                    <span className="block text-sm font-bold text-foreground">Otomatis</span>
+                    <span className="mt-1 block text-xs text-muted-foreground">Ikuti jadwal</span>
+                  </button>
+                </div>
+                {operatingMode === "manual" ? (
+                  <p className="text-xs text-muted-foreground">Setelah disimpan, gunakan tombol status resto di bagian atas dashboard untuk membuka atau menutup resto.</p>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Centang hari buka dan pilih jamnya. Jadwal menggunakan waktu lokal perangkat/server.</p>
+                    {[
+                      ["1", "Senin"], ["2", "Selasa"], ["3", "Rabu"], ["4", "Kamis"], ["5", "Jumat"], ["6", "Sabtu"], ["0", "Minggu"],
+                    ].map(([day, label]) => {
+                      const schedule = operatingSchedule[day] ?? { open: false, start: "08:00", end: "21:00" };
+                      return (
+                        <div key={day} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 rounded-lg bg-muted/40 p-2">
+                          <label className="flex items-center gap-2 text-sm text-foreground">
+                            <input type="checkbox" checked={schedule.open} onChange={(event) => setOperatingSchedule((current) => ({ ...current, [day]: { ...schedule, open: event.target.checked } }))} className="h-4 w-4 accent-primary" />
+                            {label}
+                          </label>
+                          <input aria-label={`Jam buka ${label}`} type="time" value={schedule.start} disabled={!schedule.open} onChange={(event) => setOperatingSchedule((current) => ({ ...current, [day]: { ...schedule, start: event.target.value } }))} className="w-[6.4rem] rounded-lg border border-input bg-background px-2 py-2 text-xs disabled:opacity-40" />
+                          <input aria-label={`Jam tutup ${label}`} type="time" value={schedule.end} disabled={!schedule.open} onChange={(event) => setOperatingSchedule((current) => ({ ...current, [day]: { ...schedule, end: event.target.value } }))} className="w-[6.4rem] rounded-lg border border-input bg-background px-2 py-2 text-xs disabled:opacity-40" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
             <label className="block rounded-xl border border-dashed border-border p-4 text-sm font-medium text-foreground">
               <span className="flex items-center gap-2"><ImagePlus className="h-4 w-4" /> Ganti foto outlet atau logo</span>
