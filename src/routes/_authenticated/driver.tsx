@@ -284,9 +284,13 @@ function DriverPage() {
             </button>
           </div>
           {!driverProfile.data && !driverProfile.isLoading && (
-            <p className="mt-3 rounded-lg bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
-              Profil driver belum ditemukan. Minta superadmin membuat atau melengkapi profil sebelum mengaktifkan layanan.
-            </p>
+            <div className="mt-3 rounded-xl bg-amber-500/10 p-4 text-xs text-amber-700 dark:text-amber-400">
+              <p className="font-semibold">Profil driver belum ditemukan</p>
+              <p className="mt-1">Anda bisa mengisi data diri dan dokumen sendiri melalui formulir pendaftaran driver.</p>
+              <a href="/daftar-driver" className="mt-3 inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground">
+                Daftar / Lengkapi Profil
+              </a>
+            </div>
           )}
           {showProfileEditor && driverProfile.data && (
             <div className="mt-4 space-y-3 border-t border-border pt-4">
