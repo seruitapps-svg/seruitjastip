@@ -210,7 +210,9 @@ export function DriverJastipTrips({ driverId }: { driverId: string }) {
                       </div>
                       {(b.recipient_name || b.shop_name) && (
                         <div className="text-muted-foreground">
-                          {b.recipient_name ? `Penerima: ${b.recipient_name}` : ""}
+                          {b.service_type === "nebeng"
+                            ? b.recipient_name ? `Penumpang: ${b.recipient_name}` : ""
+                            : b.recipient_name ? `Penerima: ${b.recipient_name}` : ""}
                           {b.recipient_name && b.shop_name ? " · " : ""}
                           {b.shop_name ? `Toko: ${b.shop_name}` : ""}
                         </div>
@@ -218,14 +220,14 @@ export function DriverJastipTrips({ driverId }: { driverId: string }) {
                       <div className="flex flex-wrap gap-2 pt-1 text-[11px]">
                         {b.pickup_lat != null && b.pickup_lng != null ? (
                           <a href={`https://www.google.com/maps/dir/?api=1&destination=${b.pickup_lat},${b.pickup_lng}`} target="_blank" rel="noreferrer" className="rounded bg-accent px-2 py-1 text-accent-foreground hover:underline">
-                            📍 Ambil: {b.pickup_address || "-"}
+                            {b.service_type === "nebeng" ? "📍 Jemput: " : "📍 Ambil: "}{b.pickup_address || "-"}
                           </a>
                         ) : <span className="text-muted-foreground">📍 Jemput: {b.pickup_address || "-"}</span>}
                         {b.dropoff_lat != null && b.dropoff_lng != null ? (
                           <a href={`https://www.google.com/maps/dir/?api=1&destination=${b.dropoff_lat},${b.dropoff_lng}`} target="_blank" rel="noreferrer" className="rounded bg-accent px-2 py-1 text-accent-foreground hover:underline">
-                            🏁 Antar: {b.dropoff_address || "-"}
+                            {b.service_type === "nebeng" ? "🏁 Tujuan: " : "🏁 Antar: "}{b.dropoff_address || "-"}
                           </a>
-                        ) : <span className="text-muted-foreground">🏁 Antar: {b.dropoff_address || "-"}</span>}
+                        ) : <span className="text-muted-foreground">{b.service_type === "nebeng" ? "🏁 Tujuan: " : "🏁 Antar: "}{b.dropoff_address || "-"}</span>}
                       </div>
                       {b.service_type === "belanja" && b.shop_name && <div className="text-muted-foreground">Detail toko: {b.shop_name}{b.shop_wa ? ` · ${b.shop_wa}` : ""}</div>}
                       {(b.recipient_wa || b.shop_wa) && wa && (
