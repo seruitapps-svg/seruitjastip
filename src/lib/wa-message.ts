@@ -63,9 +63,15 @@ export function buildWaMessage(
   lines.push(
     `Total estimasi: *${formatRupiah(price.total)}*`,
     "",
-    `Barang: ${order.itemDetail}`,
-    `Berat: ${order.weightKg} kg | Dimensi: ${order.lengthCm}x${order.widthCm}x${order.heightCm} cm`,
   );
+  if (order.serviceId === "ojek") {
+    lines.push(`Layanan: ${order.itemDetail}`);
+  } else {
+    lines.push(
+      `Barang: ${order.itemDetail}`,
+      `Berat: ${order.weightKg} kg | Dimensi: ${order.lengthCm}x${order.widthCm}x${order.heightCm} cm`,
+    );
+  }
   if (order.serviceId === "belanja") {
     lines.push("Dana talangan driver maks Rp 100.000 (dibayar balik user).");
   }
