@@ -8,13 +8,8 @@ export type Role = "superadmin" | "driver" | "mitra" | "user";
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
-  const [testRole, setTestRole] = useState<Role | null>(null);
 
   useEffect(() => {
-    const storedRole = window.localStorage.getItem("seruit_test_role") as Role | null;
-    if (storedRole === "superadmin" || storedRole === "driver" || storedRole === "mitra" || storedRole === "user") {
-      setTestRole(storedRole);
-    }
 
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user ?? null);
@@ -41,20 +36,8 @@ export function useAuth() {
 
   const actualRoles = rolesQuery.data ?? [];
   const isActualAdmin = actualRoles.includes("superadmin");
-  const activeRole = isActualAdmin ? testRole : null;
-
-  const setSimulation = (role: Role | null) => {
-    if (role) {
-      window.localStorage.setItem("seruit_test_role", role);
-    } else {
-      window.localStorage.removeItem("seruit_test_role");
-    }
-    setTestRole(role);
-    window.location.reload();
-  };
-
-  const isDriver = activeRole ? activeRole === "driver" : actualRoles.includes("driver");
-  const isMitra = activeRole ? activeRole === "mitra" : actualRoles.includes("mitra");
+  const isDriver = !isActualAdmin && actualRoles.includes("driver");
+  const isMitra = !isActualAdmin && actualRoles.includes("mitra");
   const isCustomerOnly = !isDriver && !isMitra && !isActualAdmin;
 
   return {
@@ -65,7 +48,5 @@ export function useAuth() {
     isDriver,
     isMitra,
     isCustomerOnly,
-    testRole: isActualAdmin ? testRole : null,
-    setSimulation,
   };
 }
