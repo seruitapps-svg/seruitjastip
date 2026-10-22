@@ -76,6 +76,20 @@ function MitraDashboardPage() {
   });
 
   const merchant = merchantQuery.data;
+
+  const pickupPinsQuery = useQuery({
+    queryKey: ["mitra-pickup-pins", merchant?.id],
+    enabled: !!merchant?.id && merchant.status === "approved",
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("order_pickup_pins")
+        .select("order_id, pin")
+        .eq("merchant_id", merchant!.id);
+      if (error) throw error;
+      return data as { order_id: string; pin: string }[];
+    },
+  });
+
   const ordersQuery = useQuery({
     queryKey: ["mitra-orders", merchant?.id],
     enabled: !!merchant?.id && merchant?.status === "approved",
@@ -305,6 +319,7 @@ function MitraDashboardPage() {
         ? "Pesanan diterima. PIN pengambilan telah dibuat dan pesanan diteruskan ke pencarian driver."
         : "Pesanan ditolak dan tidak diteruskan ke driver.");
       await queryClient.invalidateQueries({ queryKey: ["mitra-orders", merchant.id] });
+      await queryClient.invalidateQueries({ queryKey: ["mitra-pickup-pins", merchant.id] });
       await queryClient.invalidateQueries({ queryKey: ["order", orderId] });
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Respons pesanan gagal disimpan.");
@@ -651,13 +666,16 @@ function MitraDashboardPage() {
                     {(order as any).food_order_type === "mitra" && (order as any).merchant_response === "rejected" && (
                       <p className="rounded-lg bg-destructive/10 p-2 text-xs font-semibold text-destructive">Pesanan ditolak.</p>
                     )}
-                    {(order as any).food_order_type === "mitra" && (order as any).merchant_response === "accepted" && (order as any).confirmation_pin && (
-                      <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
-                        <p className="text-xs font-semibold text-muted-foreground">PIN Pengambilan — dibuat saat resto menerima pesanan</p>
-                        <p className="mt-1 text-2xl font-extrabold tracking-[0.3em] text-emerald-700">{(order as any).confirmation_pin}</p>
-                        <p className="mt-1 text-[11px] text-muted-foreground">Cocokkan PIN saat driver mengambil pesanan di outlet.</p>
-                      </div>
-                    )}
+                    {(() => {
+                      const pickupPin = pickupPinsQuery.data?.find((item) => item.order_id === order.id)?.pin;
+                      return (order as any).food_order_type === "mitra" && (order as any).merchant_response === "accepted" && pickupPin ? (
+                        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
+                          <p className="text-xs font-semibold text-muted-foreground">PIN pengambilan untuk driver</p>
+                          <p className="mt-1 text-2xl font-extrabold tracking-[0.3em] text-emerald-700">{pickupPin}</p>
+                          <p className="mt-1 text-[11px] text-muted-foreground">Berikan PIN ini kepada driver saat pesanan diserahkan.</p>
+                        </div>
+                      ) : null;
+                    })()}
                     <div className="space-y-1 rounded-lg bg-muted p-3 text-xs">
                       <div className="flex justify-between gap-3"><span className="text-muted-foreground">Subtotal menu</span><span className="font-semibold text-foreground">{formatRupiah(itemCost)}</span></div>
                       <div className="flex justify-between gap-3"><span className="text-muted-foreground">Ongkos kirim</span><span className="font-semibold text-foreground">{formatRupiah(order.shipping_fare)}</span></div>
