@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Store, ShoppingBag, MapPin, ToggleLeft, ToggleRight, ImagePlus, Save, LoaderCircle, Plus, Pencil, Trash2, X, UtensilsCrossed, ChevronUp } from "lucide-react";
+import { Store, ShoppingBag, MapPin, ToggleLeft, ToggleRight, ImagePlus, Save, LoaderCircle, Plus, Pencil, Trash2, X, UtensilsCrossed, ChevronUp, Wallet, ArrowDownToLine, Clock3, CircleDollarSign } from "lucide-react";
 import { MapLocationPicker } from "@/components/MapLocationPicker";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -56,7 +56,7 @@ function MitraDashboardPage() {
   const [savingProduct, setSavingProduct] = useState(false);
   const [respondingOrderId, setRespondingOrderId] = useState<string | null>(null);
   const [showTransactionHistory, setShowTransactionHistory] = useState(false);
-  const [activeDashboardSection, setActiveDashboardSection] = useState<"profile" | "orders" | "history" | "products">("orders");
+  const [activeDashboardSection, setActiveDashboardSection] = useState<"profile" | "orders" | "history" | "products" | "earnings">("orders");
 
 
   const merchantQuery = useQuery({
@@ -120,6 +120,55 @@ function MitraDashboardPage() {
       void supabase.removeChannel(channel);
     };
   }, [merchant?.id, merchant?.status, queryClient]);
+
+  const merchantEarningsQuery = useQuery({
+    queryKey: ["mitra-earnings", merchant?.id],
+    enabled: !!merchant?.id && merchant?.status === "approved",
+    queryFn: async () => {
+      const db = supabase as any;
+      const [earningsResult, withdrawalsResult] = await Promise.all([
+        db.from("merchant_earnings").select("id, order_id, gross_amount, commission_amount, net_amount, status, created_at").eq("merchant_id", merchant!.id).order("created_at", { ascending: false }),
+        db.from("merchant_withdrawal_requests").select("id, amount, status, created_at, admin_note, processed_at").eq("merchant_id", merchant!.id).order("created_at", { ascending: false }),
+      ]);
+      if (earningsResult.error) throw earningsResult.error;
+      if (withdrawalsResult.error) throw withdrawalsResult.error;
+      return { earnings: earningsResult.data ?? [], withdrawals: withdrawalsResult.data ?? [] };
+    },
+  });
+
+  const merchantEarnings = merchantEarningsQuery.data?.earnings ?? [];
+  const merchantWithdrawals = merchantEarningsQuery.data?.withdrawals ?? [];
+  const totalNetEarnings = merchantEarnings
+    .filter((entry: any) => entry.status !== "void")
+    .reduce((sum: number, entry: any) => sum + Number(entry.net_amount ?? 0), 0);
+  const pendingWithdrawalTotal = merchantWithdrawals
+    .filter((entry: any) => ["pending", "approved", "processing"].includes(entry.status))
+    .reduce((sum: number, entry: any) => sum + Number(entry.amount ?? 0), 0);
+  const paidWithdrawalTotal = merchantWithdrawals
+    .filter((entry: any) => entry.status === "paid")
+    .reduce((sum: number, entry: any) => sum + Number(entry.amount ?? 0), 0);
+  const availableEarnings = Math.max(0, totalNetEarnings - pendingWithdrawalTotal - paidWithdrawalTotal);
+
+  async function requestMerchantWithdrawal() {
+    if (!merchant || !user || !canOperate || availableEarnings <= 0) return;
+    const rawAmount = window.prompt(`Saldo tersedia ${formatRupiah(availableEarnings)}. Masukkan nominal pencairan (Rp):`);
+    if (rawAmount === null) return;
+    const amount = Number(rawAmount.replace(/[^0-9]/g, ""));
+    if (!Number.isSafeInteger(amount) || amount <= 0 || amount > availableEarnings) {
+      setErrorMessage("Nominal pencairan harus berupa angka bulat positif dan tidak melebihi saldo tersedia.");
+      return;
+    }
+    setErrorMessage("");
+    setMessage("");
+    try {
+      const { error } = await (supabase as any).rpc("merchant_request_withdrawal", { _amount: amount });
+      if (error) throw error;
+      setMessage("Permintaan pencairan terkirim. Saldo masuk status menunggu verifikasi.");
+      await queryClient.invalidateQueries({ queryKey: ["mitra-earnings", merchant.id] });
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Permintaan pencairan gagal dikirim.");
+    }
+  }
 
   const productsQuery = useQuery({
     queryKey: ["merchant-products", merchant?.id],
@@ -503,7 +552,10 @@ function MitraDashboardPage() {
             <button type="button" onClick={() => setActiveDashboardSection("products")} className={`flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center transition-colors ${activeDashboardSection === "products" ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-foreground hover:bg-accent"}`}>
               <UtensilsCrossed className="h-6 w-6" /><span className="text-xs font-semibold">Produk / Menu</span>
             </button>
-            <button type="button" onClick={() => setActiveDashboardSection("profile")} className={`flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center transition-colors ${activeDashboardSection === "profile" ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-foreground hover:bg-accent"}`}>
+            <button type="button" onClick={() => setActiveDashboardSection("earnings")} className={`flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center transition-colors ${activeDashboardSection === "earnings" ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground hover:bg-accent"}`}>
+      <Wallet className="h-5 w-5" /><span className="text-xs font-semibold">Penghasilan</span>
+    </button>
+    <button type="button" onClick={() => setActiveDashboardSection("profile")} className={`flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center transition-colors ${activeDashboardSection === "profile" ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-foreground hover:bg-accent"}`}>
               <Store className="h-6 w-6" /><span className="text-xs font-semibold">Profil Resto</span>
             </button>
           </div>
@@ -747,6 +799,70 @@ function MitraDashboardPage() {
         </section>
 
         
+        )}
+
+        {activeDashboardSection === "earnings" && (
+          <section className="space-y-5 rounded-2xl border border-border bg-card p-5">
+            <div className="flex items-start gap-3">
+              <Wallet className="mt-0.5 h-6 w-6 text-primary" />
+              <div><h2 className="text-base font-bold text-foreground">Penghasilan Mitra</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Ringkasan penjualan, saldo yang tersedia, dan status pencairan.</p>
+              </div>
+            </div>
+            {merchantEarningsQuery.isLoading ? (
+              <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"><LoaderCircle className="h-4 w-4 animate-spin" /> Memuat saldo...</div>
+            ) : merchantEarningsQuery.error ? (
+              <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                Data penghasilan belum dapat dimuat. Pastikan SQL tabel penghasilan sudah dijalankan di Supabase. Detail: {merchantEarningsQuery.error.message}
+                <Button variant="outline" size="sm" className="mt-2" onClick={() => void merchantEarningsQuery.refetch()}>Coba lagi</Button>
+              </div>
+            ) : (
+              <>
+                <div className="rounded-2xl bg-primary p-5 text-primary-foreground">
+                  <p className="text-sm opacity-90">Saldo dapat dicairkan</p>
+                  <p className="mt-2 text-3xl font-extrabold">{formatRupiah(availableEarnings)}</p>
+                  <p className="mt-2 text-xs opacity-80">Saldo dihitung dari penghasilan bersih dikurangi pencairan menunggu dan yang sudah dibayar.</p>
+                  <Button type="button" onClick={() => void requestMerchantWithdrawal()} disabled={!canOperate || availableEarnings <= 0} className="mt-4 gap-2 bg-background text-foreground hover:bg-background/90">
+                    <ArrowDownToLine className="h-4 w-4" /> Ajukan Pencairan
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border border-border p-4"><p className="text-xs text-muted-foreground">Total penghasilan bersih</p><p className="mt-2 text-lg font-extrabold text-foreground">{formatRupiah(totalNetEarnings)}</p></div>
+                  <div className="rounded-xl border border-border p-4"><p className="text-xs text-muted-foreground">Pencairan diproses</p><p className="mt-2 text-lg font-extrabold text-amber-600">{formatRupiah(pendingWithdrawalTotal)}</p></div>
+                  <div className="rounded-xl border border-border p-4"><p className="text-xs text-muted-foreground">Sudah dicairkan</p><p className="mt-2 text-lg font-extrabold text-emerald-700">{formatRupiah(paidWithdrawalTotal)}</p></div>
+                </div>
+                <div className="space-y-3">
+                  <h3 className="font-bold text-foreground">Rincian penghasilan</h3>
+                  {merchantEarnings.length === 0 ? <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Belum ada catatan penghasilan yang tervalidasi.</p> : (
+                    <div className="space-y-2">{merchantEarnings.map((entry: any) => (
+                      <article key={entry.id} className="rounded-xl border border-border p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div><p className="text-sm font-semibold text-foreground">Pesanan #{String(entry.order_id).slice(0, 8)}</p><p className="mt-1 text-xs text-muted-foreground">{new Date(entry.created_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}</p></div>
+                          <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${entry.status === "available" ? "bg-emerald-500/10 text-emerald-700" : entry.status === "held" ? "bg-amber-500/10 text-amber-700" : "bg-muted text-muted-foreground"}`}>{entry.status === "available" ? "Tersedia" : entry.status === "held" ? "Ditahan" : entry.status === "paid" ? "Sudah dibayar" : entry.status === "void" ? "Dibatalkan" : entry.status}</span>
+                        </div>
+                        <div className="mt-3 space-y-1 text-xs">
+                          <div className="flex justify-between gap-3"><span className="text-muted-foreground">Nilai penjualan menu</span><span className="font-medium text-foreground">{formatRupiah(entry.gross_amount)}</span></div>
+                          <div className="flex justify-between gap-3"><span className="text-muted-foreground">Komisi platform</span><span className="font-medium text-foreground">−{formatRupiah(entry.commission_amount)}</span></div>
+                          <div className="flex justify-between gap-3 border-t border-border pt-2 text-sm"><span className="font-bold text-foreground">Penghasilan bersih</span><span className="font-extrabold text-primary">{formatRupiah(entry.net_amount)}</span></div>
+                        </div>
+                      </article>
+                    ))}</div>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <h3 className="font-bold text-foreground">Riwayat pencairan</h3>
+                  {merchantWithdrawals.length === 0 ? <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Belum ada permintaan pencairan.</p> : (
+                    <div className="space-y-2">{merchantWithdrawals.map((withdrawal: any) => (
+                      <article key={withdrawal.id} className="flex items-start justify-between gap-3 rounded-xl border border-border p-3">
+                        <div><p className="font-bold text-foreground">{formatRupiah(withdrawal.amount)}</p><p className="mt-1 text-xs text-muted-foreground">{new Date(withdrawal.created_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}</p>{withdrawal.admin_note && <p className="mt-1 text-xs text-muted-foreground">Catatan: {withdrawal.admin_note}</p>}</div>
+                        <span className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${withdrawal.status === "paid" ? "bg-emerald-500/10 text-emerald-700" : withdrawal.status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-amber-500/10 text-amber-700"}`}>{withdrawal.status === "paid" ? "Dibayar" : withdrawal.status === "rejected" ? "Ditolak" : withdrawal.status === "pending" ? "Menunggu" : withdrawal.status === "approved" || withdrawal.status === "processing" ? "Diproses" : withdrawal.status}</span>
+                      </article>
+                    ))}</div>
+                  )}
+                </div>
+              </>
+            )}
+          </section>
         )}
 
         {activeDashboardSection === "products" && (
