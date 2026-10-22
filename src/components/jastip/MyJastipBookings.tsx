@@ -40,8 +40,8 @@ function DriverReveal({ bookingId }: { bookingId: string }) {
   if (!q.data) return null;
   return (
     <div className="mt-2 rounded-lg bg-accent p-2 text-xs text-accent-foreground">
-      Driver: <b>{q.data.full_name}</b> · {q.data.vehicle_type} {q.data.vehicle_plate} ·{" "}
-      <a className="underline" href={"https://wa.me/" + q.data.phone.replace(/\D/g, "").replace(/^0/, "62")} target="_blank" rel="noreferrer">{q.data.phone}</a>
+      Driver: <b>{q.data.full_name}</b> · {q.data.vehicle_type} <strong className="tracking-wide text-foreground">{q.data.vehicle_plate}</strong>
+      <p className="mt-1 text-[11px] text-muted-foreground">💬 Komunikasi pengantaran dilakukan melalui chat aplikasi untuk keamanan pesanan Anda.</p>
     </div>
   );
 }
