@@ -254,17 +254,19 @@ function DriverPage() {
     }
   }
 
+  const active = mine.data?.filter((o) => ["diambil", "dijemput", "diantar"].includes(o.status)) ?? [];
+  const done = mine.data?.filter((o) => o.status === "selesai") ?? [];
+  const availableOrders = pool.data?.filter((o) => driverProfile.data?.accepts_ojek !== false || o.service !== "ojek") ?? [];
+
+  // Hook harus dipanggil tanpa syarat dan sebelum early return agar urutan hook React tetap konsisten.
+  useEffect(() => {
+    setDriverProfilePopupOpen(active.length > 0 && hasDriverProfile);
+  }, [active.length, hasDriverProfile]);
+
   if (ready && !isDriver) {
     return (
       <div className="min-h-screen bg-background">
         <AppHeader />
-      {active.length > 0 && hasDriverProfile && !driverProfilePopupOpen && (
-        <div className="mx-auto max-w-4xl px-4 pt-3">
-          <Button type="button" variant="outline" className="gap-2" onClick={() => setDriverProfilePopupOpen(true)}>
-            <Bike className="h-4 w-4" /> Lihat Profil Driver
-          </Button>
-        </div>
-      )}
         <div className="mx-auto max-w-md px-4 py-16 text-center">
           <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground/60" />
           <h2 className="mt-4 text-base font-bold text-foreground">Halaman Khusus Driver</h2>
@@ -276,22 +278,23 @@ function DriverPage() {
     );
   }
 
-  const active = mine.data?.filter((o) => ["diambil", "dijemput", "diantar"].includes(o.status)) ?? [];
-  const done = mine.data?.filter((o) => o.status === "selesai") ?? [];
-  const availableOrders = pool.data?.filter((o) => driverProfile.data?.accepts_ojek !== false || o.service !== "ojek") ?? [];
-
-  // Buka popup sekali saat pesanan aktif terdeteksi; driver dapat membukanya lagi lewat tombol profil.
-  useEffect(() => {
-    if (active.length > 0 && hasDriverProfile) {
-      setDriverProfilePopupOpen(true);
-    } else {
-      setDriverProfilePopupOpen(false);
-    }
-  }, [active.length > 0, hasDriverProfile]);
-
   return (
     <div className="min-h-screen bg-background pb-16">
       <AppHeader />
+
+      {/* Tombol pintasan buka profil driver saat order aktif */}
+      {active.length > 0 && hasDriverProfile && !driverProfilePopupOpen && (
+        <div className="mx-auto max-w-3xl px-4 pt-3">
+          <button
+            type="button"
+            onClick={() => setDriverProfilePopupOpen(true)}
+            className="flex items-center gap-2 rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground shadow-sm hover:bg-muted"
+          >
+            <Bike className="h-4 w-4 text-primary" />
+            <span>Lihat Profil Driver</span>
+          </button>
+        </div>
+      )}
 
       {active.length > 0 && hasDriverProfile && driverProfilePopupOpen && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 p-4" role="dialog" aria-modal="true" aria-labelledby="driver-active-profile-title">
@@ -324,7 +327,7 @@ function DriverPage() {
             <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
               Tutup popup ini kapan saja. Buka kembali melalui tombol Profil Driver di dashboard.
             </div>
-            <Button type="button" className="w-full" onClick={() => setDriverProfilePopupOpen(false)}>Tutup</Button>
+            <button type="button" className={btnPrimary + " w-full py-2.5"} onClick={() => setDriverProfilePopupOpen(false)}>Tutup</button>
           </section>
         </div>
       )}
