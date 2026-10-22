@@ -112,15 +112,37 @@ function OrderDetail() {
   const isMyDriver = o.driver_id === user?.id;
   const canChat = isOwner || isMyDriver || isAdmin;
   const orderWithShopContact = o as typeof o & { shop_wa?: string | null };
-  const emergencyPhone = isMyDriver
-    ? o.service === "kirim"
-      ? o.recipient_wa
-      : o.service === "belanja"
-        ? orderWithShopContact.shop_wa ?? null
-        : null
-    : null;
+  const isShipmentForOther = (o.service === "kirim" || o.service === "pickup") && Boolean(o.recipient_wa);
+  const isShopPurchase = (o.service === "belanja" || String((o as any).food_order_type) === "point") && Boolean(orderWithShopContact.shop_wa);
+  const isOrderForOther = Boolean(
+    o.recipient_wa &&
+    (o.recipient_wa !== o.sender_wa || o.service === "ojek" || o.service === "car")
+  ) || Boolean(o.notes?.toLowerCase().includes("orang lain") || o.notes?.toLowerCase().includes("penumpang lain"));
+
+  let allowedExternalContact: { phone: string; label: string; message: string } | null = null;
+  if (isMyDriver) {
+    if (isShipmentForOther && o.recipient_wa) {
+      allowedExternalContact = {
+        phone: o.recipient_wa,
+        label: `WhatsApp Penerima Paket (${o.recipient_name || "Penerima"})`,
+        message: `Halo ${o.recipient_name || ""}, saya kurir Mider mengantarkan paket kiriman dari ${o.sender_name}. Saya sudah di lokasi antar.`,
+      };
+    } else if (isShopPurchase && orderWithShopContact.shop_wa) {
+      allowedExternalContact = {
+        phone: orderWithShopContact.shop_wa,
+        label: "WhatsApp Toko / Resto",
+        message: "Halo, saya kurir Mider ingin konfirmasi pesanan belanjaan pelanggan.",
+      };
+    } else if (isOrderForOther && o.recipient_wa) {
+      allowedExternalContact = {
+        phone: o.recipient_wa,
+        label: `WhatsApp Penumpang (${o.recipient_name || "Penumpang"})`,
+        message: `Halo ${o.recipient_name || ""}, saya driver Mider menjemput perjalanan Anda. Saya sudah di titik jemput.`,
+      };
+    }
+  }
+
   const cleanPhone = (phone: string) => phone.replace(/\D/g, "").replace(/^0/, "62");
-  const emergencyMessage = `Halo, saya kurir Mider mengantarkan pesanan dari ${o.sender_name}. Saya sudah di lokasi.`;
   const itemCost = Number((o as any).item_cost ?? 0);
   const isFoodDrinkOrder = o.service === "food" || String(o.service) === "point_food" || ["point", "mitra"].includes(String((o as any).food_order_type ?? ""));
   const calculatedTotal = (o.shipping_fare || 0) + (o.consumer_service_fee || 0) + itemCost;
@@ -267,7 +289,7 @@ function OrderDetail() {
                 {row("Dari", o.origin_address)}
                 {row("Ke", o.dest_address)}
                 {row("Jarak", `${(o.distance_meters / 1000).toFixed(1)} km · ±${Math.round(o.duration_seconds / 60)} menit`)}
-                {row("Pemesan", `${o.sender_name} (${o.sender_wa})`)}
+                {row("Pemesan", isMyDriver ? `${o.sender_name} (Komunikasi via Chat Aplikasi)` : `${o.sender_name}${isOwner || isAdmin ? ` (${o.sender_wa})` : ""}`)}
                 {o.service === "kirim" && row("Penerima", `${o.recipient_name} (${o.recipient_wa})`)}
                 {(o.service === "kirim" || o.service === "pickup") && (
                   <>
@@ -423,11 +445,15 @@ function OrderDetail() {
           )}
           {!isFoodDrinkOrder && o.service !== "ojek" && row("Paket", `${o.weight_kg} kg · ${o.length_cm}×${o.width_cm}×${o.height_cm} cm`)}
           {row(
-            o.service === "ojek" && (o.notes?.toLowerCase().includes("lain") || o.recipient_name)
-              ? "Nama Penumpang"
-              : "Pemesan",
-            `${o.sender_name} (${o.sender_wa})`,
+            o.service === "ojek" && (o.notes?.toLowerCase().includes("lain") || o.recipient_name) ? "Nama Penumpang" : "Pemesan",
+            isMyDriver && !isOrderForOther
+              ? `${o.sender_name} (Komunikasi via Chat Aplikasi)`
+              : isOrderForOther && o.recipient_name
+              ? `${o.sender_name} (Dipesankan untuk: ${o.recipient_name})`
+              : `${o.sender_name}${isOwner || isAdmin ? ` (${o.sender_wa})` : ""}`,
           )}
+          {(o.service === "kirim" || o.service === "pickup") && o.recipient_name && row("Penerima Paket", `${o.recipient_name} (${o.recipient_wa || "-"})`)}
+          {isOrderForOther && o.service !== "kirim" && o.recipient_name && row("Kontak Penumpang Lain", `${o.recipient_name} (${o.recipient_wa || "-"})`)}
           {o.service === "kirim" && row("Penerima", `${o.recipient_name} (${o.recipient_wa})`)}
           {o.notes && row("Catatan", o.notes)}
           {row("Pembayaran", o.payment_method === "cod" ? "COD (tunai ke driver)" : "Transfer (QRIS)")}
@@ -499,14 +525,9 @@ function OrderDetail() {
               <a href="#order-chat" className={btnPrimary}>
                 <span className="inline-flex items-center gap-2"><MessageSquare className="h-4 w-4" />Buka Chat Aplikasi</span>
               </a>
-              {emergencyPhone && cleanPhone(emergencyPhone) && (
-                <a
-                  href={`https://wa.me/${cleanPhone(emergencyPhone)}?text=${encodeURIComponent(emergencyMessage)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-accent"
-                >
-                  <Phone className="h-4 w-4" />WhatsApp darurat
+              {allowedExternalContact && cleanPhone(allowedExternalContact.phone) && (
+                <a href={`https://wa.me/${cleanPhone(allowedExternalContact.phone)}?text=${encodeURIComponent(allowedExternalContact.message)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20">
+                  <Phone className="h-4 w-4" />{allowedExternalContact.label}
                 </a>
               )}
             </div>
