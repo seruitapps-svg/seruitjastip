@@ -4,10 +4,21 @@ import { formatRupiah } from "@/lib/config";
 import { SERVICE_NAME, STATUS_LABEL, STATUS_TONE, type OrderRow } from "@/lib/order-status";
 import { DriverTransactionBreakdown } from "./DriverTransactionBreakdown";
 
-export function StatusBadge({ status }: { status: OrderRow["status"] }) {
+export function StatusBadge({ status, service }: { status: OrderRow["status"]; service?: string }) {
+  const label =
+    service === "ojek"
+      ? status === "diambil"
+        ? "Driver menuju jemput"
+        : status === "dijemput"
+        ? "Penumpang sudah dijemput"
+        : status === "diantar"
+        ? "Dalam perjalanan"
+        : STATUS_LABEL[status]
+      : STATUS_LABEL[status];
+
   return (
     <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_TONE[status]}`}>
-      {status === "dijemput" ? "Penumpang sudah dijemput" : STATUS_LABEL[status]}
+      {label}
     </span>
   );
 }
@@ -24,13 +35,7 @@ export function OrderCard({ order, actions, driverView = false }: { order: Order
           <div className="mt-1 truncate text-sm font-semibold text-foreground">{order.origin_address}</div>
           <div className="truncate text-sm text-muted-foreground">→ {order.dest_address}</div>
         </Link>
-        {order.service === "ojek" && order.status === "dijemput" ? (
-          <span className="rounded-full bg-primary/15 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
-            Penumpang sudah dijemput
-          </span>
-        ) : (
-          <StatusBadge status={order.status} />
-        )}
+        <StatusBadge status={order.status} service={order.service} />
       </div>
       <div className="mt-2 flex items-center justify-between text-sm">
         <span className="text-muted-foreground">
