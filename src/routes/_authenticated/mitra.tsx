@@ -139,7 +139,10 @@ function MitraDashboardPage() {
   const merchantEarnings = merchantEarningsQuery.data?.earnings ?? [];
   const merchantWithdrawals = merchantEarningsQuery.data?.withdrawals ?? [];
   const totalNetEarnings = merchantEarnings
-    .filter((entry: any) => entry.status !== "void")
+    .filter((entry: any) => ["available", "held"].includes(entry.status))
+    .reduce((sum: number, entry: any) => sum + Number(entry.net_amount ?? 0), 0);
+  const availableLedgerEarnings = merchantEarnings
+    .filter((entry: any) => entry.status === "available")
     .reduce((sum: number, entry: any) => sum + Number(entry.net_amount ?? 0), 0);
   const pendingWithdrawalTotal = merchantWithdrawals
     .filter((entry: any) => ["pending", "approved", "processing"].includes(entry.status))
@@ -147,7 +150,7 @@ function MitraDashboardPage() {
   const paidWithdrawalTotal = merchantWithdrawals
     .filter((entry: any) => entry.status === "paid")
     .reduce((sum: number, entry: any) => sum + Number(entry.amount ?? 0), 0);
-  const availableEarnings = Math.max(0, totalNetEarnings - pendingWithdrawalTotal - paidWithdrawalTotal);
+  const availableEarnings = Math.max(0, availableLedgerEarnings - pendingWithdrawalTotal - paidWithdrawalTotal);
 
   async function requestMerchantWithdrawal() {
     if (!merchant || !user || !canOperate || availableEarnings <= 0) return;
