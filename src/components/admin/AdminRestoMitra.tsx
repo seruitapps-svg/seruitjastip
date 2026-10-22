@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, CircleUserRound, Clock3, MapPin, Plus, Search, Store, ToggleLeft, ToggleRight, Users, X } from "lucide-react";
+import { CheckCircle2, CircleUserRound, Clock3, MapPin, Plus, Search, Trash2, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { MapLocationPicker } from "@/components/MapLocationPicker";
@@ -95,6 +95,29 @@ export function AdminRestoMitra() {
       await refresh();
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Gagal memperbarui status mitra.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function deletePartner(partner: Partner) {
+    const confirmed = window.confirm(
+      `Hapus data mitra resto "${partner.name}"? Tindakan ini menghapus data mitra dari daftar dan tidak dapat dibatalkan. Akun pemilik dan riwayat pesanan tidak dihapus.`,
+    );
+    if (!confirmed) return;
+
+    setBusy(partner.id);
+    setFormError("");
+    try {
+      const { error } = await supabase.from("merchants").delete().eq("id", partner.id);
+      if (error) throw error;
+      await refresh();
+    } catch (error) {
+      setFormError(
+        error instanceof Error
+          ? `Gagal menghapus mitra "${partner.name}": ${error.message}`
+          : "Gagal menghapus data mitra. Periksa izin akses dan relasi data di database.",
+      );
     } finally {
       setBusy(null);
     }
@@ -195,6 +218,9 @@ export function AdminRestoMitra() {
                     {status === "pending" && <Button type="button" variant="outline" size="sm" disabled={busy !== null} onClick={() => void setPartnerStatus(partner, "rejected")}>Tolak</Button>}
                     {status === "approved" && <Button type="button" variant="outline" size="sm" disabled={busy !== null} onClick={() => void setPartnerStatus(partner, "inactive")}>{busy === partner.id ? "Memproses..." : "Nonaktifkan"}</Button>}
                     {(status === "inactive" || status === "rejected") && <Button type="button" variant="outline" size="sm" disabled={busy !== null} onClick={() => void setPartnerStatus(partner, "approved")}>Aktifkan kembali</Button>}
+                    <Button type="button" variant="destructive" size="sm" className="gap-1.5" disabled={busy !== null} onClick={() => void deletePartner(partner)} aria-label={`Hapus mitra ${partner.name}`}>
+                      <Trash2 className="h-3.5 w-3.5" /> {busy === partner.id ? "Memproses..." : "Hapus"}
+                    </Button>
                   </div>
                 </div>
               </article>
