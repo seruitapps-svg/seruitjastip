@@ -143,3 +143,16 @@
     font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   }
 }
+
+/* Paksa sembunyikan badge "Edit with Lovable" di seluruh halaman publik. */
+#lovable-badge,
+#lovable-badge,
+a#lovable-badge,
+[id*="lovable-badge"],
+[data-lovable-badge],
+.lovable-badge {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
