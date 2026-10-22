@@ -345,7 +345,7 @@ function DriverPage() {
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-bold uppercase tracking-wide text-primary">Verifikasi pengambilan</p>
                   <h2 id="driver-pickup-pin-title" className="mt-1 text-lg font-extrabold text-foreground">Masukkan PIN Mitra Resto</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">Minta PIN 4 digit dari resto untuk melanjutkan ke pengantaran.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Masukkan PIN dari resto untuk mengonfirmasi barang sudah diterima. Anda bisa menutup popup sementara untuk membuka petunjuk arah.</p>
                 </div>
                 <button type="button" aria-label="Tutup popup PIN" disabled={busy === pinOrderId} onClick={() => { setPinOrderId(null); setPickupPin(""); }} className="rounded-lg p-2 text-muted-foreground hover:bg-muted disabled:opacity-50">
                   <X className="h-5 w-5" />
@@ -535,7 +535,7 @@ function DriverPage() {
                         className={btnPrimary}
                         disabled={busy === o.id}
                         onClick={() => {
-                          if ((o as any).food_order_type === "mitra" && ["diambil", "dijemput"].includes(o.status)) {
+                          if ((o as any).food_order_type === "mitra" && o.status === "diambil") {
                             setPickupPin("");
                             setPinOrderId(o.id);
                             return;
@@ -543,15 +543,17 @@ function DriverPage() {
                           void run(o.id, async () => supabase.rpc("driver_advance_order", { _order_id: o.id }));
                         }}
                       >
-                        {o.service === "ojek"
-                          ? o.status === "diambil"
-                            ? "Konfirmasi penjemputan penumpang"
-                            : o.status === "dijemput"
-                              ? "Mulai antar penumpang"
-                              : o.status === "diantar"
-                                ? "Tandai perjalanan selesai"
-                                : DRIVER_NEXT_LABEL[o.status]
-                          : DRIVER_NEXT_LABEL[o.status]}
+                        {(o as any).food_order_type === "mitra" && o.status === "diambil"
+                          ? "Konfirmasi pickup"
+                          : o.service === "ojek"
+                            ? o.status === "diambil"
+                              ? "Konfirmasi penjemputan penumpang"
+                              : o.status === "dijemput"
+                                ? "Mulai antar penumpang"
+                                : o.status === "diantar"
+                                  ? "Tandai perjalanan selesai"
+                                  : DRIVER_NEXT_LABEL[o.status]
+                            : DRIVER_NEXT_LABEL[o.status]}
                       </button>
 
                       <button
