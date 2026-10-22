@@ -164,8 +164,9 @@ export const createOrder = createServerFn({ method: "POST" })
         height_cm: data.heightCm,
         sender_name: data.senderName,
         sender_wa: data.senderWa,
-        recipient_name: data.serviceId === "kirim" ? data.recipientName : "",
-        recipient_wa: data.serviceId === "kirim" ? data.recipientWa : "",
+        // Simpan data pihak ketiga jika diisi (untuk orang lain / kirim paket)
+        recipient_name: data.recipientName?.trim() || "",
+        recipient_wa: data.recipientWa?.trim() || "",
         payment_method: data.paymentMethod,
         notes: data.notes,
         base_fare: price.baseFare,
