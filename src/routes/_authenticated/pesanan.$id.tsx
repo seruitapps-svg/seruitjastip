@@ -154,7 +154,7 @@ function OrderDetail() {
     }
 
     const foodType = (o as any).food_order_type;
-    const needsPin = foodType === "mitra" && o.status === "dijemput";
+    const needsPin = foodType === "mitra" && o.status === "diambil";
     if (needsPin) {
       setDriverPinInput("");
       setErr("");
@@ -501,24 +501,14 @@ function OrderDetail() {
         ) : (
           <p className="text-center text-xs text-muted-foreground">Chat tersedia setelah Anda mengambil order ini.</p>
         )}
-        {(isOwner || isAdmin) && (o as any).confirmation_pin && (o as any).food_order_type === "mitra" && ["diambil", "dijemput", "diantar"].includes(o.status) && (
-          <section className="rounded-2xl border-2 border-dashed border-emerald-500/40 bg-emerald-50/50 p-4 text-center dark:bg-emerald-950/20">
-            <p className="text-xs font-medium text-muted-foreground">PIN Konfirmasi Pengambilan</p>
-            <p className="my-1 text-3xl font-extrabold tracking-widest text-emerald-600">{(o as any).confirmation_pin}</p>
-            <p className="text-[11px] text-muted-foreground">
-              Berikan 4 angka PIN ini kepada driver saat driver mengambil pesanan di outlet demi keamanan transaksi.
-            </p>
-          </section>
-        )}
-
-        {showPinModal && isMyDriver && (o as any).food_order_type === "mitra" && o.status === "dijemput" && (
+{showPinModal && isMyDriver && (o as any).food_order_type === "mitra" && o.status === "diambil" && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="mitra-pin-modal-title">
             <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-5 shadow-xl">
               <div>
                 <h2 id="mitra-pin-modal-title" className="text-lg font-bold text-foreground">Konfirmasi pengambilan Mitra Resto</h2>
-                <p className="mt-1 text-sm text-muted-foreground">Masukkan nomor antrean/PIN 4 digit yang ditampilkan kepada pemesan untuk memverifikasi pesanan Mitra Resto Resmi.</p>
+                <p className="mt-1 text-sm text-muted-foreground">Masukkan PIN 4 digit dari resto untuk mengonfirmasi barang sudah diterima. Anda bisa menutup popup sementara untuk membuka petunjuk arah.</p>
               </div>
-              <label htmlFor="mitra-confirmation-pin" className="block text-sm font-medium text-foreground">PIN nomor antrean</label>
+              <label htmlFor="mitra-confirmation-pin" className="block text-sm font-medium text-foreground">PIN pengambilan dari resto</label>
               <input id="mitra-confirmation-pin" inputMode="numeric" autoComplete="one-time-code" maxLength={4} value={driverPinInput} onChange={(event) => setDriverPinInput(event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="••••" className="w-full rounded-xl border border-input bg-background px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-foreground" />
               {err && <p className="text-sm text-destructive">{err}</p>}
               <div className="flex gap-2">
