@@ -325,8 +325,8 @@ export function JastipCatalog() {
                     </div>
 
                     <div className="space-y-2">
-                      <PlaceAutocomplete label="Titik A (Lokasi Jemput / Toko)" placeholder="Cari lokasi jemput / nama toko…" value={pickup} onChange={setPickup} />
-                      <PlaceAutocomplete label="Titik B (Lokasi Antar / Penerima)" placeholder="Cari alamat tujuan / pengantaran…" value={dropoff} onChange={setDropoff} />
+                      <PlaceAutocomplete label={selectedService === "nebeng" ? "Titik A (Lokasi Jemput Penumpang)" : selectedService === "belanja" ? "Titik A (Lokasi Toko / Tempat Belanja)" : "Titik A (Lokasi Jemput Barang)"} placeholder={selectedService === "nebeng" ? "Cari alamat jemput penumpang…" : "Cari lokasi jemput / nama toko…"} value={pickup} onChange={setPickup} />
+                      <PlaceAutocomplete label={selectedService === "nebeng" ? "Titik B (Tujuan Penumpang)" : "Titik B (Lokasi Antar / Penerima)"} placeholder={selectedService === "nebeng" ? "Cari alamat tujuan penumpang…" : "Cari alamat tujuan / pengantaran…"} value={dropoff} onChange={setDropoff} />
                     </div>
 
                     {selectedService === "belanja" && (
@@ -340,12 +340,12 @@ export function JastipCatalog() {
                     <div className="space-y-2 rounded-xl border border-border p-3">
                       <label className="flex cursor-pointer items-center gap-2 text-xs font-medium">
                         <input type="checkbox" checked={isForOther} onChange={(e) => setIsForOther(e.target.checked)} className="h-4 w-4 rounded accent-primary" />
-                        <span>Pesan / kirim untuk orang lain?</span>
+                        <span>{selectedService === "nebeng" ? "Pesan untuk penumpang lain?" : "Pesan / kirim untuk orang lain?"}</span>
                       </label>
                       {isForOther && (
                         <div className="grid grid-cols-2 gap-2 pt-1">
-                          <input className={inputCls} placeholder="Nama Penerima" value={recipientName} onChange={(e) => setRecipientName(e.target.value)} maxLength={100} />
-                          <input className={inputCls} placeholder="WhatsApp Penerima" value={recipientWa} onChange={(e) => setRecipientWa(e.target.value)} maxLength={20} />
+                          <input className={inputCls} placeholder={selectedService === "nebeng" ? "Nama Penumpang" : "Nama Penerima"} value={recipientName} onChange={(e) => setRecipientName(e.target.value)} maxLength={100} />
+                          <input className={inputCls} placeholder={selectedService === "nebeng" ? "WhatsApp Penumpang" : "WhatsApp Penerima"} value={recipientWa} onChange={(e) => setRecipientWa(e.target.value)} maxLength={20} />
                         </div>
                       )}
                     </div>
@@ -371,11 +371,11 @@ export function JastipCatalog() {
                       </div>
                     )}
 
-                    <input className={inputCls} placeholder="Catatan / deskripsi barang (opsional)" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={300} />
+                    <input className={inputCls} placeholder={selectedService === "nebeng" ? "Catatan penjemputan / patokan penumpang (opsional)" : "Catatan / deskripsi barang (opsional)"} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={300} />
 
                     <div className="space-y-1.5 rounded-xl border border-border bg-muted/50 p-3 text-xs">
                       <div className="font-bold text-foreground">Rincian Pembayaran</div>
-                      <div className="flex justify-between text-muted-foreground"><span>{selectedService === "nebeng" ? "Tarif kursi" : "Biaya titip"} ({slots}):</span><span>{formatRupiah(subtotal)}</span></div>
+                      <div className="flex justify-between text-muted-foreground"><span>{selectedService === "nebeng" ? "Tarif kursi penumpang" : "Biaya titip"} ({slots}):</span><span>{formatRupiah(subtotal)}</span></div>
                       <div className="flex justify-between text-muted-foreground"><span>Biaya Layanan Aplikasi:</span><span>{formatRupiah(serviceFee)}</span></div>
                       <div className="flex justify-between border-t border-border pt-1 font-bold text-foreground"><span>Total Tagihan:</span><span className="text-primary">{formatRupiah(total)}</span></div>
                     </div>
