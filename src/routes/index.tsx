@@ -376,16 +376,22 @@ function Index() {
 
   const activeServiceObj = ONBID_SERVICES.find((s) => s.id === selectedService);
 
+  const isPassengerTrip = isOjek || isCar;
+
   // Label dinamis
   const originLabel =
     selectedService === "belanja"
       ? "Lokasi Toko / Pasar (Titik A)"
       : selectedService === "food"
       ? "Titik Lokasi Resto / Warung (Titik A)"
+      : isPassengerTrip
+      ? "Titik Penjemputan Penumpang (Titik A)"
       : "Titik Penjemputan / Asal (Titik A)";
 
   const destLabel =
-    selectedService === "kirim" || selectedService === "pickup"
+    isPassengerTrip
+      ? "Tujuan Perjalanan (Titik B)"
+      : selectedService === "kirim" || selectedService === "pickup"
       ? "Lokasi Pengantaran / Penerima (Titik B)"
       : "Lokasi Anda / Tujuan (Titik B)";
 
@@ -1014,7 +1020,7 @@ function Index() {
                               }}
                               className="rounded border-input text-primary"
                             />
-                            Pesan untuk orang lain
+                            {isPassengerTrip ? "Pesan untuk penumpang lain" : "Pesan untuk orang lain"}
                           </label>
                         )}
                       </div>
@@ -1028,13 +1034,13 @@ function Index() {
                       ) : (
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           <div>
-                            <label className="mb-1 block text-xs text-muted-foreground">{isForOther ? "Nama orang yang menerima pesanan" : "Nama Anda"}</label>
+                            <label className="mb-1 block text-xs text-muted-foreground">{isForOther ? (isPassengerTrip ? "Nama penumpang yang akan dijemput" : "Nama orang yang menerima pesanan") : "Nama Anda"}</label>
                             <input
                               type="text"
                               value={senderName}
                               onChange={(e) => setSenderName(e.target.value)}
                               maxLength={60}
-                              placeholder={isForOther ? "Nama orang yang menerima pesanan" : "Nama lengkap pemesan"}
+                              placeholder={isForOther ? (isPassengerTrip ? "Nama penumpang" : "Nama orang yang menerima pesanan") : "Nama lengkap pemesan"}
                               className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                             />
                           </div>
@@ -1131,7 +1137,7 @@ function Index() {
                         disabled={calculating}
                         className="w-full rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
                       >
-                        {calculating ? "Menghitung rute & ongkir…" : "Hitung Estimasi Harga"}
+                        {calculating ? (isPassengerTrip ? "Menghitung rute & tarif…" : "Menghitung rute & ongkir…") : "Hitung Estimasi Harga"}
                       </button>
                     )}
                   </form>
@@ -1190,7 +1196,7 @@ function Index() {
                         <span className="shrink-0 text-foreground">{formatRupiah(summary.price.consumerServiceFee)}</span>
                       </div>
                       <div className="flex justify-between gap-3">
-                        <span className="text-muted-foreground">Ongkos Kirim</span>
+                        <span className="text-muted-foreground">{isPassengerTrip ? "Tarif Perjalanan" : "Ongkos Kirim"}</span>
                         <span className="shrink-0 text-foreground">{formatRupiah(summary.price.shippingFare)}</span>
                       </div>
                       <div className="mt-1 flex justify-between gap-3 border-t border-border pt-2 text-sm sm:text-base font-bold">
