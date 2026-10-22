@@ -200,23 +200,26 @@ export function DriverJastipTrips({ driverId }: { driverId: string }) {
                     customer_wa?: string | null;
                     total_price?: number | null;
                   };
-                  const wa = (b.shop_wa || b.recipient_wa || "").replace(/\D/g, "").replace(/^0/, "62");
-                  const message = `Halo, saya driver Mider untuk pesanan ${b.code ?? ""}. Saya sedang menuju lokasi.`;
+                  const isOtherParty = Boolean((b as any).is_for_other && b.recipient_wa);
+                  const isShop = Boolean(b.service_type === "belanja" && b.shop_wa);
+                  const isShipmentOther = Boolean(b.service_type !== "nebeng" && b.recipient_wa);
+                  const externalWa = isShop ? b.shop_wa : isOtherParty || isShipmentOther ? b.recipient_wa : null;
+                  const waClean = (externalWa || "").replace(/\D/g, "").replace(/^0/, "62");
+                  const waLabel = isShop ? "WhatsApp Toko" : b.service_type === "nebeng" ? "WhatsApp Penumpang" : "WhatsApp Penerima";
+                  const message = isShop ? `Halo, saya driver Mider ingin konfirmasi pesanan belanja ${b.code ?? ""}.` : `Halo, saya driver Mider untuk pesanan ${b.code ?? ""}. Saya sedang menuju lokasi.`;
                   return (
                     <li key={b.id} className="space-y-1.5 rounded-lg border border-border bg-card p-2.5 text-xs">
                       <div className="flex flex-wrap justify-between gap-2 font-bold text-foreground">
-                        <span>{b.customer_name ?? b.contact_name} ({b.slots} {b.service_type === "nebeng" ? "kursi" : "paket"}) · {b.customer_wa ?? b.contact_wa}</span>
+                        <span>{b.customer_name ?? b.contact_name} ({b.slots} {b.service_type === "nebeng" ? "kursi" : "paket"})</span>
                         <span className="text-primary">{formatRupiah(b.total_price ?? b.total)} ({b.payment_method === "cod" ? "COD" : "Saldo"})</span>
                       </div>
-                      {(b.recipient_name || b.shop_name) && (
+                      {(b.is_for_other || b.recipient_name) && (
                         <div className="text-muted-foreground">
-                          {b.service_type === "nebeng"
-                            ? b.recipient_name ? `Penumpang: ${b.recipient_name}` : ""
-                            : b.recipient_name ? `Penerima: ${b.recipient_name}` : ""}
-                          {b.recipient_name && b.shop_name ? " · " : ""}
-                          {b.shop_name ? `Toko: ${b.shop_name}` : ""}
+                          {b.service_type === "nebeng" ? `Penumpang: ${b.recipient_name || "-"}` : `Penerima paket: ${b.recipient_name || "-"}`}
+                          {b.recipient_wa && <span className="text-[11px]"> ({b.recipient_wa})</span>}
                         </div>
                       )}
+                      {b.service_type === "belanja" && b.shop_name && <div className="text-muted-foreground">Toko: {b.shop_name}{b.shop_wa ? ` (${b.shop_wa})` : ""}</div>}
                       <div className="flex flex-wrap gap-2 pt-1 text-[11px]">
                         {b.pickup_lat != null && b.pickup_lng != null ? (
                           <a href={`https://www.google.com/maps/dir/?api=1&destination=${b.pickup_lat},${b.pickup_lng}`} target="_blank" rel="noreferrer" className="rounded bg-accent px-2 py-1 text-accent-foreground hover:underline">
@@ -230,10 +233,10 @@ export function DriverJastipTrips({ driverId }: { driverId: string }) {
                         ) : <span className="text-muted-foreground">{b.service_type === "nebeng" ? "🏁 Tujuan: " : "🏁 Antar: "}{b.dropoff_address || "-"}</span>}
                       </div>
                       {b.service_type === "belanja" && b.shop_name && <div className="text-muted-foreground">Detail toko: {b.shop_name}{b.shop_wa ? ` · ${b.shop_wa}` : ""}</div>}
-                      {(b.recipient_wa || b.shop_wa) && wa && (
-                        <a href={`https://wa.me/${wa}?text=${encodeURIComponent(message)}`} target="_blank" rel="noreferrer" className="inline-flex rounded border border-border px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-accent">
-                          WhatsApp darurat
-                        </a>
+                      {externalWa && waClean && (
+                        <div className="pt-1">
+                          <a href={`https://wa.me/${waClean}?text=${encodeURIComponent(message)}`} target="_blank" rel="noreferrer" className="inline-flex rounded border border-border px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-accent">{waLabel}</a>
+                        </div>
                       )}
                     </li>
                   );
