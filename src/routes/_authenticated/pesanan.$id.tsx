@@ -269,6 +269,12 @@ function OrderDetail() {
                 {row("Jarak", `${(o.distance_meters / 1000).toFixed(1)} km · ±${Math.round(o.duration_seconds / 60)} menit`)}
                 {row("Pemesan", `${o.sender_name} (${o.sender_wa})`)}
                 {o.service === "kirim" && row("Penerima", `${o.recipient_name} (${o.recipient_wa})`)}
+                {(o.service === "kirim" || o.service === "pickup") && (
+                  <>
+                    {row("Ukuran", (o as any).package_size || "-")}
+                    {row("Berat", (o as any).package_weight ? `${(o as any).package_weight} kg` : "-")}
+                  </>
+                )}
                 {row("Ongkos Kirim", formatRupiah(o.shipping_fare))}
                 {row("Biaya Layanan", formatRupiah(o.consumer_service_fee))}
                 {((o as any).food_order_type === "mitra" || o.service === "belanja" || itemCost > 0) && row(
