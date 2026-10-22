@@ -275,7 +275,7 @@ function OrderDetail() {
                     {row("Berat", (o as any).package_weight ? `${(o as any).package_weight} kg` : "-")}
                   </>
                 )}
-                {row("Ongkos Kirim", formatRupiah(o.shipping_fare))}
+                {row(o.service === "ojek" ? "Tarif Perjalanan" : "Ongkos Kirim", formatRupiah(o.shipping_fare))}
                 {row("Biaya Layanan", formatRupiah(o.consumer_service_fee))}
                 {((o as any).food_order_type === "mitra" || o.service === "belanja" || itemCost > 0) && row(
                   (o as any).food_order_type === "mitra" ? "Subtotal Menu Mitra Resto" : (o as any).food_order_type === "point" ? "Harga Makanan (Point Resto)" : "Biaya belanja/talangan",
@@ -413,14 +413,26 @@ function OrderDetail() {
           {row("Dari", o.origin_address)}
           {row("Ke", o.dest_address)}
           {row("Jarak", `${(o.distance_meters / 1000).toFixed(1)} km · ±${Math.round(o.duration_seconds / 60)} menit`)}
-          {row(o.service === "belanja" ? "Belanjaan" : "Barang", o.item_detail)}
-          {!isFoodDrinkOrder && row("Paket", `${o.weight_kg} kg · ${o.length_cm}×${o.width_cm}×${o.height_cm} cm`)}
-          {row("Pemesan", `${o.sender_name} (${o.sender_wa})`)}
+          {row(
+            o.service === "belanja"
+              ? "Belanjaan"
+              : o.service === "ojek"
+              ? "Layanan Perjalanan"
+              : "Barang",
+            o.item_detail,
+          )}
+          {!isFoodDrinkOrder && o.service !== "ojek" && row("Paket", `${o.weight_kg} kg · ${o.length_cm}×${o.width_cm}×${o.height_cm} cm`)}
+          {row(
+            o.service === "ojek" && (o.notes?.toLowerCase().includes("lain") || o.recipient_name)
+              ? "Nama Penumpang"
+              : "Pemesan",
+            `${o.sender_name} (${o.sender_wa})`,
+          )}
           {o.service === "kirim" && row("Penerima", `${o.recipient_name} (${o.recipient_wa})`)}
           {o.notes && row("Catatan", o.notes)}
           {row("Pembayaran", o.payment_method === "cod" ? "COD (tunai ke driver)" : "Transfer (QRIS)")}
           <div className="space-y-1 rounded-xl bg-muted p-3 text-sm">
-            {row("Ongkos Kirim", formatRupiah(o.shipping_fare))}
+            {row(o.service === "ojek" ? "Tarif Perjalanan" : "Ongkos Kirim", formatRupiah(o.shipping_fare))}
             {row("Biaya Layanan Aplikasi", formatRupiah(o.consumer_service_fee))}
             {((o as any).food_order_type === "mitra" || o.service === "belanja" || Number((o as any).item_cost ?? 0) > 0) && (
               <div className="flex justify-between gap-4 text-sm">
