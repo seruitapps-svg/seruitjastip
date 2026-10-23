@@ -197,7 +197,7 @@ serve(async (req) => {
                 url: targetUrl,
               },
               android: { priority: "high", notification: { sound: "default", channel_id: "orders" } },
-              webpush: { headers: { Urgency: "high" }, notification: { requireInteraction: true } },
+              webpush: { headers: { Urgency: "high" }, data: { title, body, order_id: String(order.id), url: targetUrl } },
             },
           }),
         });
