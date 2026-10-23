@@ -99,10 +99,29 @@ export async function sendOrderPushEvent(
   messageId?: string,
 ): Promise<void> {
   try {
-    const { error } = await supabase.functions.invoke("send-order-push", {
+    const { data, error } = await supabase.functions.invoke("send-order-push", {
       body: { eventType, orderId, messageId },
     });
-    if (error) console.error("Notifikasi push tidak terkirim:", error.message);
+    if (error) {
+      console.error("Notifikasi push tidak terkirim:", {
+        eventType,
+        orderId,
+        message: error.message,
+        details: (error as any).details,
+        hint: (error as any).hint,
+        context: (error as any).context,
+      });
+      return;
+    }
+    if (!data?.success) {
+      console.warn("Push tidak terkirim atau tidak memiliki penerima/token:", {
+        eventType,
+        orderId,
+        response: data,
+      });
+    } else {
+      console.info("Push notification accepted:", { eventType, orderId, response: data });
+    }
   } catch (error) {
     console.error("Gagal memanggil layanan push notification:", error);
   }
