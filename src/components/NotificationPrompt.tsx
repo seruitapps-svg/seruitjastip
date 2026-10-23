@@ -21,6 +21,9 @@ export function NotificationPrompt() {
   const [dismissed, setDismissed] = useState(false);
   const [locationDismissed, setLocationDismissed] = useState(false);
   const [registered, setRegistered] = useState(false);
+  const [oneSignalLoading, setOneSignalLoading] = useState(false);
+  const [oneSignalStatus, setOneSignalStatus] = useState<string | null>(null);
+  const [oneSignalError, setOneSignalError] = useState<string | null>(null);
   const [locationStatus, setLocationStatus] = useState<"checking" | "granted" | "prompt" | "denied" | "unsupported" | "error">("checking");
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
 
@@ -115,6 +118,77 @@ export function NotificationPrompt() {
   const locationNeedsSetup = locationStatus !== "granted" && locationStatus !== "unsupported" && !locationDismissed;
   if (!pushNeedsSetup && !locationNeedsSetup) return null;
 
+  async function handleEnableOneSignal() {
+    if (!user?.id || oneSignalLoading) return;
+    setOneSignalLoading(true);
+    setOneSignalStatus(null);
+    setOneSignalError(null);
+
+    try {
+      if (typeof window === "undefined" || !("Notification" in window) || !("serviceWorker" in navigator)) {
+        throw new Error("Browser ini belum mendukung Web Push.");
+      }
+
+      type OneSignalSdk = {
+        Notifications: { requestPermission: () => Promise<unknown> };
+        User: {
+          PushSubscription: {
+            optIn: () => Promise<unknown>;
+            id?: string | null;
+            optedIn?: boolean;
+          };
+        };
+      };
+      const oneSignalWindow = window as Window & {
+        OneSignalDeferred?: Array<(sdk: OneSignalSdk) => void>;
+      };
+
+      await new Promise<void>((resolve, reject) => {
+        let settled = false;
+        const timeoutId = window.setTimeout(() => {
+          if (!settled) {
+            settled = true;
+            reject(new Error("SDK OneSignal belum siap. Muat ulang halaman lalu coba lagi."));
+          }
+        }, 15000);
+
+        oneSignalWindow.OneSignalDeferred = oneSignalWindow.OneSignalDeferred || [];
+        oneSignalWindow.OneSignalDeferred.push(async (OneSignal) => {
+          if (settled) return;
+          try {
+            await OneSignal.Notifications.requestPermission();
+            if (Notification.permission !== "granted") {
+              throw new Error("Izin notifikasi belum diizinkan di browser.");
+            }
+            await OneSignal.User.PushSubscription.optIn();
+            window.clearTimeout(timeoutId);
+            settled = true;
+
+            // The SDK may finish subscription registration asynchronously.
+            window.setTimeout(() => {
+              const subscriptionId = OneSignal.User.PushSubscription.id;
+              if (subscriptionId || OneSignal.User.PushSubscription.optedIn) {
+                setOneSignalStatus("Perintah berlangganan OneSignal berhasil dijalankan.");
+              } else {
+                setOneSignalStatus("Permintaan diterima. Periksa kembali Subscriptions OneSignal beberapa saat lagi.");
+              }
+              setOneSignalLoading(false);
+            }, 1500);
+            resolve();
+          } catch (error) {
+            window.clearTimeout(timeoutId);
+            settled = true;
+            reject(error);
+          }
+        });
+      });
+    } catch (error) {
+      setOneSignalError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setOneSignalLoading(false);
+    }
+  }
+
   async function handleEnable() {
     if (!user?.id || loading) return;
     setLoading(true);
@@ -155,6 +229,14 @@ export function NotificationPrompt() {
               {locationMessage && <p className="mt-1 text-muted-foreground">{locationMessage}</p>}
             </div>
           )}
+          {oneSignalStatus && (
+            <p className="mt-2 text-xs text-primary" role="status">{oneSignalStatus}</p>
+          )}
+          {oneSignalError && (
+            <p className="mt-2 break-all text-xs text-destructive" role="alert">
+              OneSignal: {oneSignalError}
+            </p>
+          )}
           {status && (
             <div className="mt-2 text-xs text-muted-foreground" role="status">
               <p className="flex items-start gap-1.5">
@@ -174,6 +256,9 @@ export function NotificationPrompt() {
           )}
         </div>
         <div className="flex shrink-0 flex-col gap-2">
+          <Button size="sm" variant="outline" onClick={handleEnableOneSignal} disabled={oneSignalLoading}>
+            {oneSignalLoading ? "Memproses OneSignal…" : "Aktifkan OneSignal"}
+          </Button>
           {pushNeedsSetup && (
             <Button size="sm" onClick={handleEnable} disabled={loading}>
               {loading ? "Memproses…" : "Aktifkan Notifikasi"}
