@@ -144,47 +144,131 @@ serve(async (req) => {
       body = "Anda menerima pesan baru pada chat pesanan.";
     }
 
-    if (targetUserIds.length === 0) return json({ sent: 0, message: "No recipients" });
+    if (targetUserIds.length === 0) {
+      console.warn("send-order-push: no recipients", { eventType, orderId, callerId });
+      return json({ success: false, sent: 0, failed: 0, stage: "recipients", message: "No recipients" });
+    }
+
     const { data: tokenRows, error: tokenError } = await admin
       .from("user_push_tokens")
       .select("user_id,token")
       .in("user_id", targetUserIds);
     if (tokenError) throw tokenError;
-    if (!tokenRows?.length) return json({ sent: 0, message: "No tokens found" });
+    if (!tokenRows?.length) {
+      console.warn("send-order-push: no registered push tokens", {
+        eventType,
+        orderId,
+        recipientCount: targetUserIds.length,
+      });
+      return json({
+        success: false,
+        sent: 0,
+        failed: 0,
+        stage: "tokens",
+        recipientCount: targetUserIds.length,
+        message: "No tokens found",
+      });
+    }
     if (!LOVABLE_API_KEY || !FIREBASE_API_KEY) {
-      return json({ error: "LOVABLE_API_KEY or FIREBASE_MESSAGING_API_KEY is not configured" }, 500);
+      console.error("send-order-push: gateway secrets missing", {
+        hasLovableApiKey: Boolean(LOVABLE_API_KEY),
+        hasFirebaseMessagingApiKey: Boolean(FIREBASE_API_KEY),
+      });
+      return json({ error: "LOVABLE_API_KEY or FIREBASE_MESSAGING_API_KEY is not configured", stage: "configuration" }, 500);
     }
 
-    const results = await Promise.all(tokenRows.map(async ({ token }) => {
-      const response = await fetch(`${GATEWAY_URL}/v1/projects/_/messages:send`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "X-Connection-Api-Key": FIREBASE_API_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: {
-            token,
-            // Data-only delivery lets the service worker display one customized notification.
-            data: {
-              title,
-              body,
-              order_id: String(order.id),
-              url: targetUrl,
-            },
-            android: { priority: "high", notification: { sound: "default", channel_id: "orders" } },
-            webpush: { headers: { Urgency: "high" }, notification: { requireInteraction: true } },
+    const results = await Promise.all(tokenRows.map(async ({ user_id, token }) => {
+      try {
+        const response = await fetch(`${GATEWAY_URL}/v1/projects/_/messages:send`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "X-Connection-Api-Key": FIREBASE_API_KEY,
+            "Content-Type": "application/json",
           },
-        }),
-      });
-      if (response.status === 404 || response.status === 410) {
-        await admin.from("user_push_tokens").delete().eq("token", token);
+          body: JSON.stringify({
+            message: {
+              token,
+              // Data-only delivery lets the service worker display one customized notification.
+              data: {
+                title,
+                body,
+                order_id: String(order.id),
+                url: targetUrl,
+              },
+              android: { priority: "high", notification: { sound: "default", channel_id: "orders" } },
+              webpush: { headers: { Urgency: "high" }, notification: { requireInteraction: true } },
+            },
+          }),
+        });
+
+        const responseText = await response.text();
+        let responseBody: unknown = responseText;
+        try {
+          responseBody = responseText ? JSON.parse(responseText) : null;
+        } catch {
+          // Keep a short text response when the gateway does not return JSON.
+          responseBody = responseText.slice(0, 500);
+        }
+
+        if (response.status === 404 || response.status === 410) {
+          const { error: deleteError } = await admin
+            .from("user_push_tokens")
+            .delete()
+            .eq("user_id", user_id)
+            .eq("token", token);
+          if (deleteError) console.error("send-order-push: stale token cleanup failed", { userId: user_id, message: deleteError.message });
+        }
+
+        if (!response.ok) {
+          console.error("send-order-push: gateway rejected message", {
+            eventType,
+            orderId,
+            userId: user_id,
+            status: response.status,
+            response: responseBody,
+          });
+        }
+
+        return {
+          userId: user_id,
+          ok: response.ok,
+          status: response.status,
+          ...(response.ok ? {} : { error: responseBody }),
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error("send-order-push: gateway request failed", {
+          eventType,
+          orderId,
+          userId: user_id,
+          message,
+        });
+        return { userId: user_id, ok: false, status: 0, error: message };
       }
-      return response.ok;
     }));
 
-    return json({ success: true, count: results.filter(Boolean).length, failed: results.length - results.filter(Boolean).length });
+    const sent = results.filter((result) => result.ok).length;
+    const failedResults = results.filter((result) => !result.ok);
+    console.info("send-order-push: delivery summary", {
+      eventType,
+      orderId,
+      recipientCount: targetUserIds.length,
+      tokenCount: tokenRows.length,
+      sent,
+      failed: failedResults.length,
+    });
+
+    return json({
+      success: failedResults.length === 0 && sent > 0,
+      sent,
+      failed: failedResults.length,
+      recipientCount: targetUserIds.length,
+      tokenCount: tokenRows.length,
+      ...(failedResults.length ? {
+        failures: failedResults.map(({ userId, status, error }) => ({ userId, status, error })),
+      } : {}),
+    }, sent === 0 ? 502 : 200);
   } catch (error) {
     console.error("send-order-push error:", error);
     return json({ error: error instanceof Error ? error.message : "Internal server error" }, 500);
