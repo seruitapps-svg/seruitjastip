@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { OrderCard, btnPrimary, btnOutline } from "@/components/order/OrderCard";
 import { useAuth } from "@/hooks/use-auth";
+import { sendOrderPushEvent } from "@/lib/push-notifications";
 import { DRIVER_NEXT_LABEL } from "@/lib/order-status";
 import { WalletPanel } from "@/components/wallet/WalletPanel";
 import { DriverEarningsSettings } from "@/components/driver/DriverEarningsSettings";
@@ -246,6 +247,11 @@ function DriverPage() {
         qc.invalidateQueries({ queryKey: ["wallet"] }),
         qc.invalidateQueries({ queryKey: ["driver-wallet-earnings"] }),
       ]);
+      void sendOrderPushEvent("order_status_changed", id);
+      const { data: orderForPush } = await supabase.from("orders").select("food_order_type,merchant_response,driver_id").eq("id", id).maybeSingle();
+      if (orderForPush?.food_order_type === "mitra" && orderForPush.merchant_response === "accepted" && orderForPush.driver_id === user?.id) {
+        void sendOrderPushEvent("merchant_order_ready", id);
+      }
       if (openAfter) navigate({ to: "/pesanan/$id", params: { id } });
     } catch (error) {
       setErr(getDriverErrorMessage(error, "Aksi gagal diproses. Periksa koneksi lalu coba lagi."));
