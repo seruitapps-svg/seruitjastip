@@ -7,10 +7,11 @@ const appId =
   import.meta.env.VITE_FIREBASE_APP_ID ||
   "1:803891035138:web:0b61998d8469b9d1c57b1b";
 
+// VAPID Key yang sudah diverifikasi valid secara matematis kurva P-256 (J25Oewrt dengan O kapital)
 const vapidKey =
   import.meta.env.VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_VAPID_KEY ||
   import.meta.env.VITE_FIREBASE_VAPID_KEY ||
-  "BJqbD1sHSJ6nhPkBCXupiYz-U2Gt-CZzjXyqxMkR42PgX8sLI9Mv1J250ewrtZVxeCQKexPOmfmW6-jpznB1Y1o";
+  "BJqbD1sHSJ6nhPkBCXupiYz-U2Gt-CZzjXyqxMkR42PgX8sLI9Mv1J25OewrtZVxeCQKexPOmfmW6-jpznB1Y1o";
 
 const firebaseConfig = {
   apiKey:
@@ -105,7 +106,6 @@ export async function sendOrderPushEvent(
     });
     if (error) console.error("Notifikasi push tidak terkirim:", error.message);
   } catch (error) {
-    // Notifikasi push tidak boleh menghalangi alur transaksi order
     console.error("Gagal memanggil layanan push notification:", error);
   }
 }
