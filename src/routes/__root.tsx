@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { ensureOneSignalReady } from "../lib/onesignal";
 
 function NotFoundComponent() {
   return (
@@ -137,30 +138,9 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const oneSignalWindow = window as Window & {
-      __miderOneSignalInit?: boolean;
-      OneSignalDeferred?: Array<(OneSignal: any) => void>;
-    };
-
-    // Avoid duplicate SDK initialization during client re-renders or React Strict Mode.
-    if (oneSignalWindow.__miderOneSignalInit) return;
-    oneSignalWindow.__miderOneSignalInit = true;
-    oneSignalWindow.OneSignalDeferred = oneSignalWindow.OneSignalDeferred || [];
-    oneSignalWindow.OneSignalDeferred.push(async (OneSignal) => {
-      await OneSignal.init({
-        appId: "1dc83317-d6c7-43ce-aa95-fdfff1ab2364",
-        // Keep OneSignal separate from Mider's existing Firebase worker at scope "/".
-        serviceWorkerPath: "/onesignal/OneSignalSDKWorker.js",
-        serviceWorkerParam: { scope: "/onesignal/" },
-      });
+    void ensureOneSignalReady().catch((error) => {
+      console.error("OneSignal initialization failed:", error);
     });
-
-    const script = document.createElement("script");
-    script.src = "https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";
-    script.defer = true;
-    document.head.appendChild(script);
   }, []);
 
   return (
