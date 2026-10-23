@@ -20,6 +20,56 @@ export function NotificationPrompt() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [registered, setRegistered] = useState(false);
+  const [locationStatus, setLocationStatus] = useState<"checking" | "granted" | "prompt" | "denied" | "unsupported" | "error">("checking");
+  const [locationMessage, setLocationMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
+      setLocationStatus("unsupported");
+      return;
+    }
+    if (!(navigator as Navigator & { permissions?: Permissions }).permissions?.query) {
+      setLocationStatus("prompt");
+      return;
+    }
+    let cancelled = false;
+    void navigator.permissions.query({ name: "geolocation" as PermissionName })
+      .then((permission) => {
+        if (!cancelled) {
+          setLocationStatus(permission.state === "granted" ? "granted" : permission.state === "denied" ? "denied" : "prompt");
+          permission.onchange = () => {
+            if (!cancelled) setLocationStatus(permission.state === "granted" ? "granted" : permission.state === "denied" ? "denied" : "prompt");
+          };
+        }
+      })
+      .catch(() => { if (!cancelled) setLocationStatus("prompt"); });
+    return () => { cancelled = true; };
+  }, []);
+
+  async function handleEnableLocation() {
+    if (!navigator.geolocation) {
+      setLocationStatus("unsupported");
+      return;
+    }
+    setLocationMessage(null);
+    navigator.geolocation.getCurrentPosition(
+      () => {
+        setLocationStatus("granted");
+        setLocationMessage("Izin lokasi aktif di browser ini.");
+      },
+      (error) => {
+        setLocationStatus(error.code === error.PERMISSION_DENIED ? "denied" : "error");
+        setLocationMessage(
+          error.code === error.PERMISSION_DENIED
+            ? "Izin lokasi ditolak. Ubah izin Lokasi untuk situs ini melalui pengaturan browser."
+            : error.code === error.POSITION_UNAVAILABLE
+            ? "Lokasi belum tersedia. Pastikan GPS/lokasi HP aktif."
+            : "Permintaan lokasi habis waktu. Aktifkan GPS lalu coba lagi."
+        );
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
+    );
+  }
 
   useEffect(() => {
     if (!user?.id || typeof window === "undefined" || !("Notification" in window) || Notification.permission !== "granted") return;
@@ -38,8 +88,11 @@ export function NotificationPrompt() {
     return () => { cancelled = true; };
   }, [user?.id]);
 
-  if (!user || typeof window === "undefined" || !("Notification" in window)) return null;
-  if ((Notification.permission === "granted" && registered) || status === "granted" || dismissed) return null;
+  if (!user || typeof window === "undefined") return null;
+  const notificationSupported = "Notification" in window;
+  const pushNeedsSetup = notificationSupported && !((Notification.permission === "granted" && registered) || status === "granted" || dismissed);
+  const locationNeedsSetup = locationStatus !== "granted" && locationStatus !== "unsupported";
+  if (!pushNeedsSetup && !locationNeedsSetup) return null;
 
   async function handleEnable() {
     if (!user?.id || loading) return;
@@ -61,11 +114,26 @@ export function NotificationPrompt() {
         <Bell className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-foreground">
-            {Notification.permission === "granted" ? "Daftarkan Notifikasi Order" : "Aktifkan Notifikasi Order"}
+            {pushNeedsSetup ? (notificationSupported ? (Notification.permission === "granted" ? "Daftarkan Notifikasi Order" : "Aktifkan Notifikasi Order") : "Pengaturan Izin Perangkat") : "Aktifkan Izin Lokasi"}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             Terima pemberitahuan pesanan dan pesan chat meski aplikasi tidak sedang terbuka.
           </p>
+          {locationStatus !== "granted" && (
+            <div className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-foreground" role="status">
+              <p className="font-semibold">Izin lokasi belum aktif</p>
+              <p className="mt-1 text-muted-foreground">
+                Lokasi diperlukan untuk titik penjemputan dan pelacakan driver. Tekan Aktifkan Lokasi lalu izinkan akses di browser.
+              </p>
+              {locationStatus === "denied" && (
+                <p className="mt-1 text-destructive">Izin pernah ditolak. Ubah izin Lokasi melalui pengaturan situs di browser, lalu muat ulang halaman.</p>
+              )}
+              {locationStatus === "unsupported" && (
+                <p className="mt-1 text-muted-foreground">Browser ini tidak menyediakan akses lokasi.</p>
+              )}
+              {locationMessage && <p className="mt-1">{locationMessage}</p>}
+            </div>
+          )}
           {status && (
             <div className="mt-2 text-xs text-muted-foreground" role="status">
               <p className="flex items-start gap-1.5">
@@ -85,12 +153,21 @@ export function NotificationPrompt() {
           )}
         </div>
         <div className="flex shrink-0 flex-col gap-2">
-          <Button size="sm" onClick={handleEnable} disabled={loading}>
-            {loading ? "Memproses…" : "Aktifkan"}
-          </Button>
-          <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setDismissed(true)}>
-            Nanti
-          </button>
+          {pushNeedsSetup && (
+            <Button size="sm" onClick={handleEnable} disabled={loading}>
+              {loading ? "Memproses…" : "Aktifkan Notifikasi"}
+            </Button>
+          )}
+          {locationNeedsSetup && (
+            <Button size="sm" variant="outline" onClick={handleEnableLocation}>
+              Aktifkan Lokasi
+            </Button>
+          )}
+          {(pushNeedsSetup || locationNeedsSetup) && (
+            <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setDismissed(true)}>
+              Nanti
+            </button>
+          )}
         </div>
       </div>
     </div>
