@@ -1,21 +1,30 @@
-/* Firebase Cloud Messaging service worker. */
+/* eslint-disable no-restricted-globals */
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
 
 const params = new URL(self.location.href).searchParams;
-const firebaseConfig = Object.fromEntries(params.entries());
+const queryConfig = Object.fromEntries(params.entries());
 
-if (firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId) {
+// Gunakan config dari URL atau fallback langsung ke project Mider
+const firebaseConfig = {
+  apiKey: queryConfig.apiKey || "AIzaSyAuRDJSTHaKdJFsTHobXbqFaPy4D2IKMYA",
+  projectId: queryConfig.projectId || "mider-web",
+  appId: queryConfig.appId || "1:803891035138:web:0b61998d8469b9d1c57b1b",
+  messagingSenderId: queryConfig.messagingSenderId || "803891035138",
+};
+
+// Inisialisasi Firebase di Service Worker
+if (firebaseConfig.apiKey && firebaseConfig.projectId) {
   firebase.initializeApp(firebaseConfig);
   const messaging = firebase.messaging();
 
   messaging.onBackgroundMessage((payload) => {
     const data = payload.data || {};
-    const title = payload.notification?.title || data.title || "Seruit";
+    const title = payload.notification?.title || data.title || "Mider Jastip";
     const options = {
       body: payload.notification?.body || data.body || "Ada pembaruan pesanan.",
       icon: "/favicon.ico",
-      tag: data.order_id || "seruit-order",
+      tag: data.order_id || "mider-order",
       renotify: true,
       vibrate: [200, 100, 200],
       data: {
@@ -40,6 +49,6 @@ self.addEventListener("notificationclick", (event) => {
       }
       if (clients.openWindow) return clients.openWindow(targetUrl);
       return undefined;
-    }),
+    })
   );
 });
