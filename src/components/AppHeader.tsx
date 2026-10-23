@@ -48,6 +48,7 @@ export function AppHeader() {
       return nextBranding;
     },
     initialData: () => readCachedBranding() ?? undefined,
+    initialDataUpdatedAt: 0,
     staleTime: 60000,
   });
 
