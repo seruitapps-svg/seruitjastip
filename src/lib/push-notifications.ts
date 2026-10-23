@@ -1,30 +1,6 @@
-import { getApp, getApps, initializeApp } from "firebase/app";
-import { getMessaging, getToken, isSupported } from "firebase/messaging";
 import { supabase } from "@/integrations/supabase/client";
 
-const appId =
-  import.meta.env.VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_APP_ID ||
-  import.meta.env.VITE_FIREBASE_APP_ID ||
-  "1:803891035138:web:0b61998d8469b9d1c57b1b";
-
-// VAPID Key yang sudah diverifikasi valid secara matematis kurva P-256 (J25Oewrt dengan O kapital)
-const vapidKey =
-  import.meta.env.VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_VAPID_KEY ||
-  import.meta.env.VITE_FIREBASE_VAPID_KEY ||
-  "BJqbD1sHSJ6nhPkBCXupiYz-U2Gt-CZzjXyqxMkR42PgX8sLI9Mv1J25OewrtZVxeCQKexPOmfmW6-jpznB1Y1o";
-
-const firebaseConfig = {
-  apiKey:
-    import.meta.env.VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_WEB_API_KEY ||
-    import.meta.env.VITE_FIREBASE_API_KEY ||
-    "AIzaSyAuRDJSTHaKdJFsTHobXbqFaPy4D2IKMYA",
-  projectId:
-    import.meta.env.VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_PROJECT_ID ||
-    import.meta.env.VITE_FIREBASE_PROJECT_ID ||
-    "mider-web",
-  appId,
-  messagingSenderId: appId ? appId.split(":")[1] || "803891035138" : "803891035138",
-};
+const vapidPublicKey = import.meta.env.VITE_WEB_PUSH_VAPID_PUBLIC_KEY || "";
 
 export type PushPermissionStatus =
   | "granted"
@@ -33,17 +9,45 @@ export type PushPermissionStatus =
   | "open-in-new-tab"
   | "not-configured";
 
-export async function requestAndSavePushToken(
-  userId: string,
-): Promise<{ status: PushPermissionStatus; token?: string; error?: string }> {
-  if (!firebaseConfig.apiKey || !firebaseConfig.projectId || !appId || !vapidKey) {
-    return { status: "not-configured" };
+function urlBase64ToUint8Array(value: string): Uint8Array {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4);
+  const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = window.atob(base64);
+  const output = new Uint8Array(raw.length);
+  for (let index = 0; index < raw.length; index += 1) {
+    output[index] = raw.charCodeAt(index);
   }
+  return output;
+}
+
+function bytesToBase64Url(value: ArrayBuffer | null): string {
+  if (!value) return "";
+  const bytes = new Uint8Array(value);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return window.btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
+
+function sameApplicationServerKey(
+  subscription: PushSubscription,
+  expectedKey: Uint8Array,
+): boolean {
+  const currentKey = subscription.options.applicationServerKey;
+  if (!currentKey) return false;
+  return bytesToBase64Url(currentKey) === bytesToBase64Url(expectedKey.buffer);
+}
+
+export async function requestAndSavePushSubscription(): Promise<{
+  status: PushPermissionStatus;
+  error?: string;
+}> {
+  if (!vapidPublicKey) return { status: "not-configured" };
 
   if (
     typeof window === "undefined" ||
     !("Notification" in window) ||
-    !("serviceWorker" in navigator)
+    !("serviceWorker" in navigator) ||
+    !("PushManager" in window)
   ) {
     return { status: "unsupported" };
   }
@@ -51,45 +55,51 @@ export async function requestAndSavePushToken(
   if (window.top !== window.self) return { status: "open-in-new-tab" };
 
   try {
-    if (!(await isSupported())) return { status: "unsupported" };
     const permission = await Notification.requestPermission();
     if (permission !== "granted") return { status: "denied" };
 
-    const query = new URLSearchParams(
-      Object.entries(firebaseConfig).filter((entry): entry is [string, string] => Boolean(entry[1])),
-    ).toString();
-
-    // Daftarkan Service Worker
-    const registration = await navigator.serviceWorker.register(
-      `/firebase-messaging-sw.js?${query}`,
-      { scope: "/" },
-    );
-
-    // Tunggu sampai Service Worker aktif
+    const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+    const registration = await navigator.serviceWorker.register("/push-sw.js", {
+      scope: "/",
+    });
     await navigator.serviceWorker.ready;
 
-    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-    const messaging = getMessaging(app);
-    const fcmToken = await getToken(messaging, {
-      vapidKey,
-      serviceWorkerRegistration: registration,
+    let subscription = await registration.pushManager.getSubscription();
+    if (subscription && !sameApplicationServerKey(subscription, applicationServerKey)) {
+      await subscription.unsubscribe();
+      subscription = null;
+    }
+
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      });
+    }
+
+    const serialized = subscription.toJSON();
+    const endpoint = serialized.endpoint || subscription.endpoint;
+    const p256dh = serialized.keys?.p256dh;
+    const auth = serialized.keys?.auth;
+    if (!endpoint || !p256dh || !auth) {
+      throw new Error("Browser tidak memberikan data subscription Web Push yang lengkap.");
+    }
+
+    const { error } = await supabase.rpc("register_user_push_subscription", {
+      p_endpoint: endpoint,
+      p_p256dh: p256dh,
+      p_auth_key: auth,
+      p_platform: /Android/i.test(navigator.userAgent) ? "android_pwa" : "web_pwa",
     });
+    if (error) throw error;
 
-    if (!fcmToken) return { status: "denied", error: "Token FCM tidak ditemukan" };
-
-    // RPC safely reassigns a token already registered to a previous account.
-    // The database function must verify auth.uid() = p_user_id.
-    const { error: dbError } = await (supabase as any).rpc("register_user_push_token", {
-      p_user_id: userId,
-      p_token: fcmToken,
-      p_platform: /Android/i.test(navigator.userAgent) ? "android_twa" : "pwa",
-    });
-    if (dbError) throw dbError;
-
-    return { status: "granted", token: fcmToken };
-  } catch (error: any) {
-    console.error("Gagal mendaftarkan push notification:", error);
-    return { status: "denied", error: error?.message || String(error) };
+    return { status: "granted" };
+  } catch (error) {
+    console.error("Gagal mendaftarkan Web Push:", error);
+    return {
+      status: "denied",
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
@@ -114,57 +124,49 @@ export async function sendOrderPushEvent(
       return;
     }
     if (!data?.success) {
-      console.warn("Push tidak terkirim atau tidak memiliki penerima/token:", {
+      console.warn("Push tidak terkirim atau tidak memiliki penerima/subscription:", {
         eventType,
         orderId,
         response: data,
       });
     } else {
-      console.info("Push notification accepted:", { eventType, orderId, response: data });
+      console.info("Web Push accepted:", { eventType, orderId, response: data });
     }
   } catch (error) {
-    console.error("Gagal memanggil layanan push notification:", error);
+    console.error("Gagal memanggil layanan Web Push:", error);
   }
 }
 
-
 /**
- * Remove the current browser's push token before signing out.
- * The delete is scoped to both the authenticated user and this browser token.
+ * Remove this browser's Web Push subscription before signing out so another
+ * account using the same browser cannot receive the previous user's messages.
  */
-export async function unregisterCurrentPushToken(userId: string): Promise<void> {
+export async function unregisterCurrentPushSubscription(): Promise<void> {
   if (
     typeof window === "undefined" ||
+    !("serviceWorker" in navigator) ||
     !("Notification" in window) ||
-    Notification.permission !== "granted" ||
-    !("serviceWorker" in navigator)
+    Notification.permission !== "granted"
   ) {
     return;
   }
 
   try {
     const registration = await navigator.serviceWorker.getRegistration("/");
-    if (!registration) return;
+    const subscription = await registration?.pushManager.getSubscription();
+    if (!subscription) return;
 
-    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-    const messaging = getMessaging(app);
-    const fcmToken = await getToken(messaging, {
-      vapidKey,
-      serviceWorkerRegistration: registration,
+    const { error } = await supabase.rpc("unregister_user_push_subscription", {
+      p_endpoint: subscription.endpoint,
     });
-    if (!fcmToken) return;
-
-    const { error } = await (supabase as any)
-      .from("user_push_tokens")
-      .delete()
-      .eq("user_id", userId)
-      .eq("token", fcmToken);
-
     if (error) {
-      console.warn("Token not removed during sign-out:", error.message);
+      console.warn("Subscription tidak dapat dilepas dari akun:", error.message);
+      return;
     }
+
+    await subscription.unsubscribe();
   } catch (error) {
-    // Logout must continue even if push-token cleanup fails.
-    console.warn("Could not remove push token during sign-out:", error);
+    // Logout must continue even if push-subscription cleanup fails.
+    console.warn("Could not remove Web Push subscription during sign-out:", error);
   }
 }
