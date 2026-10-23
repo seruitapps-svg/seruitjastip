@@ -77,15 +77,13 @@ export async function requestAndSavePushToken(
 
     if (!fcmToken) return { status: "denied", error: "Token FCM tidak ditemukan" };
 
-    const { error: dbError } = await (supabase as any).from("user_push_tokens").upsert(
-      {
-        user_id: userId,
-        token: fcmToken,
-        platform: /Android/i.test(navigator.userAgent) ? "android_twa" : "pwa",
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "token" },
-    );
+    // RPC safely reassigns a token already registered to a previous account.
+    // The database function must verify auth.uid() = p_user_id.
+    const { error: dbError } = await (supabase as any).rpc("register_user_push_token", {
+      p_user_id: userId,
+      p_token: fcmToken,
+      p_platform: /Android/i.test(navigator.userAgent) ? "android_twa" : "pwa",
+    });
     if (dbError) throw dbError;
 
     return { status: "granted", token: fcmToken };
