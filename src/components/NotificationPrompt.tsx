@@ -111,13 +111,46 @@ export function NotificationPrompt() {
       if (typeof window === "undefined" || !("Notification" in window) || !("serviceWorker" in navigator)) {
         throw new Error("Browser ini belum mendukung Web Push.");
       }
-      const OneSignal = await ensureOneSignalReady();
-      await OneSignal.Notifications.requestPermission();
+      const OneSignal = await Promise.race([
+        ensureOneSignalReady(),
+        new Promise<never>((_, reject) =>
+          window.setTimeout(
+            () => reject(new Error("Inisialisasi OneSignal melewati batas 15 detik. Tutup PWA, buka ulang, lalu coba lagi.")),
+            15000,
+          ),
+        ),
+      ]);
+
+      await Promise.race([
+        OneSignal.Notifications.requestPermission(),
+        new Promise<never>((_, reject) =>
+          window.setTimeout(
+            () => reject(new Error("Permintaan izin notifikasi tidak merespons dalam 15 detik.")),
+            15000,
+          ),
+        ),
+      ]);
+
       if (Notification.permission !== "granted") {
         throw new Error("Izin notifikasi belum diizinkan di browser.");
       }
-      await OneSignal.User.PushSubscription.optIn();
-      setOneSignalStatus("Permintaan berlangganan dikirim. Periksa Subscriptions OneSignal beberapa saat lagi.");
+
+      await Promise.race([
+        OneSignal.User.PushSubscription.optIn(),
+        new Promise<never>((_, reject) =>
+          window.setTimeout(
+            () => reject(new Error("Pendaftaran subscription tidak merespons dalam 15 detik.")),
+            15000,
+          ),
+        ),
+      ]);
+
+      const subscriptionId = OneSignal.User.PushSubscription.id;
+      setOneSignalStatus(
+        subscriptionId
+          ? "OneSignal aktif. ID subscription: " + subscriptionId
+          : "Permintaan aktivasi selesai, tetapi ID subscription belum tersedia. Periksa tab Subscriptions OneSignal.",
+      );
     } catch (error) {
       setOneSignalError(error instanceof Error ? error.message : String(error));
     } finally {
