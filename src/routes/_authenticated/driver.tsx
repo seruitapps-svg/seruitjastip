@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { OrderCard, btnPrimary, btnOutline } from "@/components/order/OrderCard";
@@ -50,6 +51,7 @@ function DriverPage() {
   const [profileSaving, setProfileSaving] = useState(false);
   const [driverProfilePopupOpen, setDriverProfilePopupOpen] = useState(false);
   const [profileForm, setProfileForm] = useState({ full_name: "", phone: "", vehicle_type: "Motor", vehicle_plate: "" });
+  const alertedOrderIds = useRef<Set<string>>(new Set());
 
   // Profil driver (status online & accepts_ojek)
   const driverProfile = useQuery({
@@ -213,9 +215,56 @@ function DriverPage() {
     if (!isDriver) return;
     const ch = supabase
       .channel("driver-dashboard-sync")
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, (payload) => {
         qc.invalidateQueries({ queryKey: ["pool"] });
         qc.invalidateQueries({ queryKey: ["driver-jobs"] });
+
+        // Pesanan baru yang masuk saat driver sedang online harus langsung terlihat.
+        if (
+          payload.eventType === "INSERT" &&
+          isOnline &&
+          payload.new &&
+          typeof payload.new === "object" &&
+          "id" in payload.new &&
+          "status" in payload.new &&
+          payload.new.status === "tersedia"
+        ) {
+          const newOrderId = String(payload.new.id);
+          if (!alertedOrderIds.current.has(newOrderId)) {
+            alertedOrderIds.current.add(newOrderId);
+            toast("Ada Pesanan Baru!", {
+              description: "Pesanan baru tersedia. Buka daftar order untuk melihat dan mengambilnya.",
+              duration: 10000,
+            });
+
+            // Bunyi singkat saat halaman aktif. Browser mungkin mensyaratkan interaksi
+            // pengguna terlebih dahulu; push notification tetap ditangani oleh service worker.
+            try {
+              const AudioContextConstructor = window.AudioContext;
+              if (AudioContextConstructor && document.visibilityState === "visible") {
+                const audioContext = new AudioContextConstructor();
+                if (audioContext.state === "running") {
+                  const oscillator = audioContext.createOscillator();
+                  const gain = audioContext.createGain();
+                  oscillator.type = "sine";
+                  oscillator.frequency.value = 880;
+                  gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+                  gain.gain.exponentialRampToValueAtTime(0.12, audioContext.currentTime + 0.03);
+                  gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.45);
+                  oscillator.connect(gain);
+                  gain.connect(audioContext.destination);
+                  oscillator.start();
+                  oscillator.stop(audioContext.currentTime + 0.45);
+                  oscillator.onended = () => { void audioContext.close(); };
+                } else {
+                  void audioContext.close();
+                }
+              }
+            } catch (error) {
+              console.debug("Bunyi pesanan baru tidak tersedia di browser ini.", error);
+            }
+          }
+        }
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "driver_wallets" }, () => {
         qc.invalidateQueries({ queryKey: ["driver-wallet-header"] });
