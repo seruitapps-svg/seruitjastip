@@ -14,6 +14,7 @@ import { DriverTransactionBreakdown } from "@/components/order/DriverTransaction
 import { DriverItemCostCard } from "@/components/order/DriverItemCostCard";
 import { DriverLiveTracking } from "@/components/order/DriverLiveTracking";
 import { sendOrderPushEvent } from "@/lib/push-notifications";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/pesanan/$id")({
   head: () => ({
@@ -653,13 +654,48 @@ function OrderChat({ orderId, myId }: { orderId: string; myId: string }) {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "order_messages", filter: `order_id=eq.${orderId}` },
-        () => qc.invalidateQueries({ queryKey: ["messages", orderId] }),
+        (payload) => {
+          void qc.invalidateQueries({ queryKey: ["messages", orderId] });
+          const incoming = payload.new as { sender_id?: string; body?: string } | undefined;
+          if (incoming?.sender_id && incoming.sender_id !== myId) {
+            toast("Pesan chat baru", {
+              description: incoming.body || "Anda menerima pesan baru pada pesanan.",
+              duration: 5000,
+            });
+            // Coba bunyikan peringatan. Audio bisa diblokir browser sampai pengguna
+            // pernah berinteraksi dengan halaman ini.
+            try {
+              const AudioContextConstructor = window.AudioContext;
+              if (AudioContextConstructor && document.visibilityState === "visible") {
+                const audio = new AudioContextConstructor();
+                void audio.resume().then(() => {
+                  if (audio.state !== "running") return audio.close();
+                  const oscillator = audio.createOscillator();
+                  const gain = audio.createGain();
+                  oscillator.type = "sine";
+                  oscillator.frequency.value = 1046;
+                  gain.gain.setValueAtTime(0.0001, audio.currentTime);
+                  gain.gain.exponentialRampToValueAtTime(0.14, audio.currentTime + 0.025);
+                  gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.35);
+                  oscillator.connect(gain);
+                  gain.connect(audio.destination);
+                  oscillator.start();
+                  oscillator.stop(audio.currentTime + 0.35);
+                  oscillator.onended = () => { void audio.close(); };
+                  return undefined;
+                }).catch(() => { void audio.close(); });
+              }
+            } catch (error) {
+              console.debug("Bunyi chat tidak tersedia di browser ini.", error);
+            }
+          }
+        },
       )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [orderId, qc]);
+  }, [orderId, qc, myId]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
