@@ -5,6 +5,7 @@ import { Bike, ChevronDown, LogOut, ShoppingBag, Store, UserRound } from "lucide
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { AppAnnouncements } from "@/components/AppAnnouncements";
+import { NotificationPrompt } from "@/components/NotificationPrompt";
 
 export function AppHeader() {
   const { user, isAdmin, isDriver, isMitra, isCustomerOnly } = useAuth();
@@ -30,6 +31,7 @@ export function AppHeader() {
   const activeCls = "!text-primary font-bold";
 
   return (
+    <>
     <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur">
 
       <div className="mx-auto flex max-w-3xl items-center gap-2 px-4 py-2.5">
@@ -216,5 +218,7 @@ export function AppHeader() {
       </div>
       <AppAnnouncements />
     </header>
+    <NotificationPrompt />
+    </>
   );
 }
