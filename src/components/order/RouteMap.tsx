@@ -203,7 +203,16 @@ export function RouteMap({
     const bounds = new maps.LatLngBounds();
     let hasPoint = false;
 
-    if (origin) {
+    const isValidPoint = (point: Point | null): point is Point =>
+      !!point &&
+      Number.isFinite(point.lat) &&
+      Number.isFinite(point.lng) &&
+      point.lat >= -90 &&
+      point.lat <= 90 &&
+      point.lng >= -180 &&
+      point.lng <= 180;
+
+    if (isValidPoint(origin)) {
       const marker = new maps.Marker({
         map,
         position: origin,
@@ -214,7 +223,7 @@ export function RouteMap({
       bounds.extend(origin);
       hasPoint = true;
     }
-    if (destination) {
+    if (isValidPoint(destination)) {
       const marker = new maps.Marker({
         map,
         position: destination,
@@ -226,18 +235,27 @@ export function RouteMap({
       hasPoint = true;
     }
     if (encodedPolyline) {
-      const path = decodePolyline(encodedPolyline).map(
-        (point) => new maps.LatLng(point.lat, point.lng),
-      );
-      polylineRef.current = new maps.Polyline({
-        map,
-        path,
-        strokeColor: "#0d9488",
-        strokeWeight: 5,
-        strokeOpacity: 0.85,
-      });
-      path.forEach((point: any) => bounds.extend(point));
-      hasPoint = true;
+      const path = decodePolyline(encodedPolyline)
+        .filter((point) =>
+          Number.isFinite(point.lat) &&
+          Number.isFinite(point.lng) &&
+          point.lat >= -90 &&
+          point.lat <= 90 &&
+          point.lng >= -180 &&
+          point.lng <= 180,
+        )
+        .map((point) => new maps.LatLng(point.lat, point.lng));
+      if (path.length > 1) {
+        polylineRef.current = new maps.Polyline({
+          map,
+          path,
+          strokeColor: "#0d9488",
+          strokeWeight: 5,
+          strokeOpacity: 0.85,
+        });
+        path.forEach((point: any) => bounds.extend(point));
+        hasPoint = true;
+      }
     }
     if (hasPoint) map.fitBounds(bounds, 60);
   }, [mapReady, origin, destination, encodedPolyline]);
