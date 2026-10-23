@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ONESIGNAL_API_URL = "https://api.onesignal.com/notifications";
 const ONESIGNAL_APP_ID = "1dc83317-d6c7-43ce-aa95-fdfff1ab2364";
-const ONESIGNAL_REST_API_KEY = Deno.env.get("ONESIGNAL_REST_API_KEY");
+let ONESIGNAL_REST_API_KEY = Deno.env.get("ONESIGNAL_REST_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -34,10 +34,6 @@ serve(async (req) => {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
     return json({ error: "Supabase function secrets are not configured" }, 500);
   }
-  if (!ONESIGNAL_REST_API_KEY) {
-    return json({ error: "ONESIGNAL_REST_API_KEY belum dikonfigurasi di secrets Supabase" }, 500);
-  }
-
   try {
     const authorization = req.headers.get("Authorization");
     if (!authorization?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
@@ -61,6 +57,17 @@ serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+    if (!ONESIGNAL_REST_API_KEY) {
+      const { data: vaultSecret, error: vaultError } = await admin.rpc("get_onesignal_rest_api_key");
+      if (vaultError) {
+        console.error("send-order-push: gagal membaca secret Vault", vaultError.message);
+        return json({ error: "Secret OneSignal belum dapat dibaca. Pastikan SQL penghubung sudah diterapkan." }, 500);
+      }
+      ONESIGNAL_REST_API_KEY = typeof vaultSecret === "string" ? vaultSecret : null;
+    }
+    if (!ONESIGNAL_REST_API_KEY) {
+      return json({ error: "ONESIGNAL_REST_API_KEY belum dikonfigurasi di panel Admin." }, 500);
+    }
     const { data: order, error: orderError } = await admin
       .from("orders")
       .select("id,user_id,driver_id,status,service,food_order_type,merchant_response,merchant_id")
