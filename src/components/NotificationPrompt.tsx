@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, Bell, CheckCircle2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { requestAndSavePushToken, type PushPermissionStatus } from "@/lib/push-notifications";
+import { ensureOneSignalReady } from "@/lib/onesignal";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -129,59 +130,17 @@ export function NotificationPrompt() {
         throw new Error("Browser ini belum mendukung Web Push.");
       }
 
-      type OneSignalSdk = {
-        Notifications: { requestPermission: () => Promise<unknown> };
-        User: {
-          PushSubscription: {
-            optIn: () => Promise<unknown>;
-            id?: string | null;
-            optedIn?: boolean;
-          };
-        };
-      };
-      const oneSignalWindow = window as Window & {
-        OneSignalDeferred?: Array<(sdk: OneSignalSdk) => void>;
-      };
+      const OneSignal = await ensureOneSignalReady();
+      await OneSignal.Notifications.requestPermission();
 
-      await new Promise<void>((resolve, reject) => {
-        let settled = false;
-        const timeoutId = window.setTimeout(() => {
-          if (!settled) {
-            settled = true;
-            reject(new Error("SDK OneSignal belum siap. Muat ulang halaman lalu coba lagi."));
-          }
-        }, 15000);
+      if (Notification.permission !== "granted") {
+        throw new Error("Izin notifikasi belum diizinkan di browser.");
+      }
 
-        oneSignalWindow.OneSignalDeferred = oneSignalWindow.OneSignalDeferred || [];
-        oneSignalWindow.OneSignalDeferred.push(async (OneSignal) => {
-          if (settled) return;
-          try {
-            await OneSignal.Notifications.requestPermission();
-            if (Notification.permission !== "granted") {
-              throw new Error("Izin notifikasi belum diizinkan di browser.");
-            }
-            await OneSignal.User.PushSubscription.optIn();
-            window.clearTimeout(timeoutId);
-            settled = true;
-
-            // The SDK may finish subscription registration asynchronously.
-            window.setTimeout(() => {
-              const subscriptionId = OneSignal.User.PushSubscription.id;
-              if (subscriptionId || OneSignal.User.PushSubscription.optedIn) {
-                setOneSignalStatus("Perintah berlangganan OneSignal berhasil dijalankan.");
-              } else {
-                setOneSignalStatus("Permintaan diterima. Periksa kembali Subscriptions OneSignal beberapa saat lagi.");
-              }
-              setOneSignalLoading(false);
-            }, 1500);
-            resolve();
-          } catch (error) {
-            window.clearTimeout(timeoutId);
-            settled = true;
-            reject(error);
-          }
-        });
-      });
+      await OneSignal.User.PushSubscription.optIn();
+      setOneSignalStatus(
+        "Permintaan berlangganan OneSignal dikirim. Periksa daftar Subscriptions beberapa saat lagi.",
+      );
     } catch (error) {
       setOneSignalError(error instanceof Error ? error.message : String(error));
     } finally {
