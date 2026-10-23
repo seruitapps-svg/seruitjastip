@@ -13,8 +13,56 @@ export function AppHeader() {
   const queryClient = useQueryClient();
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
-  const branding = useQuery({ queryKey: ["app-branding"], queryFn: async () => { const { data, error } = await (supabase as any).from("app_branding").select("app_name,logo_url,favicon_url").eq("id", 1).maybeSingle(); if (error) return null; return data as { app_name: string; logo_url: string | null; favicon_url: string | null } | null; }, staleTime: 60000 });
-  useEffect(() => { const url = branding.data?.favicon_url; if (!url) return; let icon = document.querySelector<HTMLLinkElement>("link[rel=icon]"); if (!icon) { icon = document.createElement("link"); icon.rel = "icon"; document.head.appendChild(icon); } icon.href = url; }, [branding.data?.favicon_url]);
+  type AppBranding = { app_name: string; logo_url: string | null; favicon_url: string | null };
+  const brandingCacheKey = "mider-app-branding";
+
+  function readCachedBranding(): AppBranding | null {
+    if (typeof window === "undefined") return null;
+    try {
+      const cached = window.localStorage.getItem(brandingCacheKey);
+      return cached ? (JSON.parse(cached) as AppBranding) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  const branding = useQuery({
+    queryKey: ["app-branding"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("app_branding")
+        .select("app_name,logo_url,favicon_url")
+        .eq("id", 1)
+        .maybeSingle();
+
+      if (error) return readCachedBranding();
+
+      const nextBranding = data as AppBranding | null;
+      if (nextBranding && typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(brandingCacheKey, JSON.stringify(nextBranding));
+        } catch {
+          // Logo tetap bisa ditampilkan meskipun penyimpanan browser tidak tersedia.
+        }
+      }
+      return nextBranding;
+    },
+    initialData: () => readCachedBranding() ?? undefined,
+    initialDataUpdatedAt: 0,
+    staleTime: 60000,
+  });
+
+  useEffect(() => {
+    const url = branding.data?.favicon_url;
+    if (!url) return;
+    let icon = document.querySelector<HTMLLinkElement>("link[rel=icon]");
+    if (!icon) {
+      icon = document.createElement("link");
+      icon.rel = "icon";
+      document.head.appendChild(icon);
+    }
+    icon.href = url;
+  }, [branding.data?.favicon_url]);
 
   const isDriverPage = currentPath.startsWith("/driver");
   const isMitraPage = currentPath.startsWith("/mitra");
