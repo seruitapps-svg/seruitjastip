@@ -3,6 +3,7 @@ import { AlertTriangle, Bell, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { requestAndSavePushToken, type PushPermissionStatus } from "@/lib/push-notifications";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 
 const STATUS_MESSAGE: Record<PushPermissionStatus, string> = {
   granted: "Notifikasi pesanan berhasil diaktifkan di perangkat ini.",
@@ -24,8 +25,8 @@ export function NotificationPrompt() {
     let cancelled = false;
     void (async () => {
       try {
-        const { data, error } = await (await import("@/integrations/supabase/client")).supabase
-          .from("user_push_tokens" as never)
+        const { data, error } = await (supabase as any)
+          .from("user_push_tokens")
           .select("id")
           .eq("user_id", user.id);
         if (!cancelled && !error && data && data.length > 0) setRegistered(true);
