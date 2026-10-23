@@ -279,7 +279,7 @@ function DriverPage() {
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [isDriver, qc]);
+  }, [isDriver, isOnline, qc]);
 
   async function run(id: string, fn: () => Promise<{ error: { message: string } | null }>, openAfter = false) {
     if (busy) return;
