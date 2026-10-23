@@ -13,8 +13,8 @@ function json(body: unknown, status = 200) {
   });
 }
 
-// The old OneSignal sender has been removed. Keep this endpoint temporarily so
-// existing order flows fail clearly instead of calling a removed function.
+// Keep this endpoint temporarily so existing order flows fail clearly while
+// the Firebase Cloud Messaging sender is being configured.
 // Replace this handler with the Firebase Cloud Messaging sender before enabling
 // transactional push delivery again.
 serve(async (req) => {
