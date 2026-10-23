@@ -46,6 +46,7 @@ export function RouteMap({
   const [now, setNow] = useState(Date.now);
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [trackingError, setTrackingError] = useState("");
 
   const applyDriverPosition = useCallback((position: Point, updatedAt?: string) => {
     const parsedTimestamp = updatedAt ? Date.parse(updatedAt) : Date.now();
@@ -69,7 +70,7 @@ export function RouteMap({
         .maybeSingle();
 
       if (error) {
-        if (manual) setLoadError("Posisi belum dapat diperbarui. Periksa koneksi internet.");
+        if (manual) setTrackingError("Posisi belum dapat diperbarui. Periksa koneksi internet.");
         return;
       }
 
@@ -80,15 +81,15 @@ export function RouteMap({
           row.updated_at,
         );
         setLoadError("");
-      } else if (manual && !driverPosition) {
-        setLoadError("Belum ada posisi driver yang tersimpan.");
+      } else if (manual) {
+        setTrackingError("Belum ada posisi driver yang tersimpan.");
       }
     } catch {
       if (manual) setLoadError("Posisi belum dapat diperbarui. Periksa koneksi internet.");
     } finally {
       if (manual) setRefreshing(false);
     }
-  }, [orderId, trackingActive, applyDriverPosition, driverPosition]);
+  }, [orderId, trackingActive, applyDriverPosition]);
 
   // Perbarui label waktu agar pelanggan bisa mengetahui kesegaran posisi.
   useEffect(() => {
@@ -149,7 +150,7 @@ export function RouteMap({
             { lat: payload.lat, lng: payload.lng },
             payload.updated_at,
           );
-          setLoadError("");
+          setTrackingError("");
         }
       })
       .on(
@@ -320,7 +321,7 @@ export function RouteMap({
         <div className="absolute left-3 right-3 top-3 z-10 flex items-start justify-between gap-2 rounded-lg border border-border bg-background/95 px-3 py-2 shadow-sm">
           <div className="min-w-0 text-xs">
             <p className="font-semibold text-foreground">{positionStatus}</p>
-            {loadError && <p className="mt-1 text-destructive">{loadError}</p>}
+            {trackingError && <p className="mt-1 text-destructive">{trackingError}</p>}
           </div>
           <button
             type="button"
