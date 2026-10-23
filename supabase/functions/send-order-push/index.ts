@@ -118,7 +118,7 @@ serve(async (req) => {
           .maybeSingle();
         isOrderMerchant = merchant?.user_id === callerId;
       }
-      if (!isOwner && !isDriver && !isAdmin && !isOrderMerchant) return json({ error: "Forbidden" }, 403);
+      if (!isDriver && !isAdmin && !isOrderMerchant) return json({ error: "Forbidden" }, 403);
       if (order.food_order_type !== "mitra" || order.merchant_response !== "accepted" || !order.driver_id) {
         return json({ sent: 0, message: "Order Mitra Resto belum siap atau belum memiliki driver" });
       }
