@@ -144,7 +144,7 @@ export function DriverLiveTracking({ orderId, driverId, active }: DriverLiveTrac
         if (!stopped && saveError) {
           setError("Lokasi cadangan belum tersimpan. Periksa koneksi internet.");
           setMessage("Menunggu koneksi");
-        } else if (!stopped && !error) {
+        } else if (!stopped) {
           setMessage(channelReady ? "GPS aktif · mengirim posisi realtime" : "GPS aktif · menyimpan posisi");
         }
       },
