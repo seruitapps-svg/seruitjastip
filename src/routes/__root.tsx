@@ -12,7 +12,6 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { ensureOneSignalReady } from "../lib/onesignal";
 
 function NotFoundComponent() {
   return (
@@ -136,12 +135,6 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-
-  useEffect(() => {
-    void ensureOneSignalReady().catch((error) => {
-      console.error("OneSignal initialization failed:", error);
-    });
-  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
