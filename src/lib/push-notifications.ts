@@ -34,7 +34,7 @@ function sameApplicationServerKey(
 ): boolean {
   const currentKey = subscription.options.applicationServerKey;
   if (!currentKey) return false;
-  return bytesToBase64Url(currentKey) === bytesToBase64Url(expectedKey.buffer);
+  return bytesToBase64Url(currentKey) === bytesToBase64Url(expectedKey.buffer as ArrayBuffer);
 }
 
 export async function requestAndSavePushSubscription(): Promise<{
@@ -161,6 +161,7 @@ export async function unregisterCurrentPushSubscription(): Promise<void> {
     });
     if (error) {
       console.warn("Subscription tidak dapat dilepas dari akun:", error.message);
+      await subscription.unsubscribe();
       return;
     }
 
