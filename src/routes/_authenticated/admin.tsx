@@ -220,6 +220,42 @@ function AdminPage() {
     await qc.invalidateQueries({ queryKey: ["admin-driver-registrations"] });
   }
 
+  async function handleSetRole(userId: string, role: "driver" | "mitra" | "superadmin", grant: boolean) {
+    setBusy(userId);
+    setErr("");
+    try {
+      const { error } = await supabase.rpc("admin_set_role", {
+        _user_id: userId,
+        _role: role,
+        _grant: grant,
+      });
+      if (error) throw error;
+
+      // Read back the persisted roles so the open detail dialog reflects the backend immediately.
+      const { data, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+      if (rolesError) throw rolesError;
+
+      const roles = (data ?? []).map((item) => item.role);
+      setSelectedUser((current: any) =>
+        current?.id === userId ? { ...current, roles } : current,
+      );
+
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["admin-accounts"] }),
+        // useAuth caches role data by user ID; invalidate it so role-based navigation updates.
+        qc.invalidateQueries({ queryKey: ["my-roles"] }),
+      ]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Terjadi kesalahan yang tidak diketahui.";
+      setErr("Gagal mengubah peran akun: " + message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function handleDeleteUser(userId: string, name: string) {
     if (!window.confirm(`PERINGATAN: Yakin ingin menghapus permanen akun "${name}"? Semua data terkait akun ini akan dihapus.`)) return;
     setBusy(userId);
@@ -845,16 +881,16 @@ function AdminPage() {
                     </button>
                   </div>
                   {(() => {
-                    const isDrv = selectedUser.roles.includes("driver");
-                    const isMitra = selectedUser.roles.includes("mitra");
-                    const isAdm = selectedUser.roles.includes("superadmin");
+                    const isDrv = (selectedUser.roles ?? []).includes("driver");
+                    const isMitra = (selectedUser.roles ?? []).includes("mitra");
+                    const isAdm = (selectedUser.roles ?? []).includes("superadmin");
                     return (
                       <div className="space-y-2 border-t border-border pt-4">
                         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kelola Peran</p>
                         <div className="flex flex-wrap gap-2">
-                          <button type="button" className={isDrv ? btnDanger : btnOutline} disabled={busy === selectedUser.id} onClick={() => run(selectedUser.id, () => supabase.rpc("admin_set_role", { _user_id: selectedUser.id, _role: "driver", _grant: !isDrv }))}>{isDrv ? "Cabut driver" : "Jadikan driver"}</button>
-                          <button type="button" className={isMitra ? btnDanger : btnOutline} disabled={busy === selectedUser.id} onClick={() => run(selectedUser.id, () => supabase.rpc("admin_set_role", { _user_id: selectedUser.id, _role: "mitra", _grant: !isMitra }))}>{isMitra ? "Cabut mitra" : "Jadikan mitra"}</button>
-                          <button type="button" className={isAdm ? btnDanger : btnOutline} disabled={busy === selectedUser.id} onClick={() => run(selectedUser.id, () => supabase.rpc("admin_set_role", { _user_id: selectedUser.id, _role: "superadmin", _grant: !isAdm }))}>{isAdm ? "Cabut admin" : "Jadikan admin"}</button>
+                          <button type="button" className={isDrv ? btnDanger : btnOutline} disabled={busy === selectedUser.id} onClick={() => handleSetRole(selectedUser.id, "driver", !isDrv)}>{busy === selectedUser.id ? "Menyimpan..." : isDrv ? "Cabut driver" : "Jadikan driver"}</button>
+                          <button type="button" className={isMitra ? btnDanger : btnOutline} disabled={busy === selectedUser.id} onClick={() => handleSetRole(selectedUser.id, "mitra", !isMitra)}>{busy === selectedUser.id ? "Menyimpan..." : isMitra ? "Cabut mitra" : "Jadikan mitra"}</button>
+                          <button type="button" className={isAdm ? btnDanger : btnOutline} disabled={busy === selectedUser.id} onClick={() => handleSetRole(selectedUser.id, "superadmin", !isAdm)}>{busy === selectedUser.id ? "Menyimpan..." : isAdm ? "Cabut admin" : "Jadikan admin"}</button>
                           {isDrv && <button type="button" className={btnOutline} onClick={() => setOpenWallet(openWallet === selectedUser.id ? null : selectedUser.id)}>Saldo</button>}
                         </div>
                         {openWallet === selectedUser.id && isDrv && (
