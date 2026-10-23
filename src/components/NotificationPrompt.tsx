@@ -135,6 +135,10 @@ export function NotificationPrompt() {
         throw new Error("Izin notifikasi belum diizinkan di browser.");
       }
 
+      // Link this browser subscription to the authenticated Mider user so the
+      // Edge Function can target the correct account through OneSignal aliases.
+      await OneSignal.login(user.id);
+
       await Promise.race([
         OneSignal.User.PushSubscription.optIn(),
         new Promise<never>((_, reject) =>
