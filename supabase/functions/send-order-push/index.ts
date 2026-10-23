@@ -1,12 +1,13 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/firebase_messaging";
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-const FIREBASE_API_KEY = Deno.env.get("FIREBASE_MESSAGING_API_KEY");
+const ONESIGNAL_API_URL = "https://api.onesignal.com/notifications";
+const ONESIGNAL_APP_ID = "1dc83317-d6c7-43ce-aa95-fdfff1ab2364";
+const ONESIGNAL_REST_API_KEY = Deno.env.get("ONESIGNAL_REST_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const APP_ORIGIN = "https://mider-jastip.lovable.app";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,11 +24,18 @@ function json(body: unknown, status = 200) {
   });
 }
 
+function uniqueIds(ids: Array<string | null | undefined>): string[] {
+  return [...new Set(ids.filter((id): id is string => Boolean(id)))];
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
     return json({ error: "Supabase function secrets are not configured" }, 500);
+  }
+  if (!ONESIGNAL_REST_API_KEY) {
+    return json({ error: "ONESIGNAL_REST_API_KEY belum dikonfigurasi di secrets Supabase" }, 500);
   }
 
   try {
@@ -63,27 +71,26 @@ serve(async (req) => {
 
     const isOwner = order.user_id === callerId;
     const isDriver = order.driver_id === callerId;
-    let isAdmin = false;
     const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", callerId);
-    isAdmin = (roles ?? []).some((row) => row.role === "superadmin");
+    const isAdmin = (roles ?? []).some((row) => row.role === "superadmin");
 
     let targetUserIds: string[] = [];
     let title = "";
     let body = "";
-    let targetUrl = `/pesanan/${order.id}`;
+    let targetPath = `/pesanan/${order.id}`;
 
     if (eventType === "order_created") {
       if (!isOwner) return json({ error: "Forbidden" }, 403);
-      if (order.status !== "tersedia") return json({ sent: 0, message: "Order belum tersedia di pool" });
+      if (order.status !== "tersedia") return json({ success: true, sent: 0, message: "Order belum tersedia di pool" });
       const { data: onlineDrivers, error } = await admin
         .from("driver_profiles")
         .select("user_id")
         .eq("is_online", true);
       if (error) throw error;
-      targetUserIds = [...new Set((onlineDrivers ?? []).map((row) => row.user_id).filter((id) => id && id !== callerId))];
+      targetUserIds = uniqueIds((onlineDrivers ?? []).map((row) => row.user_id).filter((id) => id !== callerId));
       title = "Ada Order Baru!";
       body = "Order baru tersedia di pool. Buka aplikasi untuk melihat dan mengambil pesanan.";
-      targetUrl = "/driver";
+      targetPath = "/driver";
     } else if (eventType === "order_status_changed") {
       if (!isOwner && !isDriver && !isAdmin) return json({ error: "Forbidden" }, 403);
       if (isDriver && order.user_id) {
@@ -99,28 +106,32 @@ serve(async (req) => {
           ? "Pesanan telah selesai."
           : "Status pesanan Anda telah diperbarui.";
       } else if (isAdmin && order.status === "tersedia") {
-        const { data: onlineDrivers, error } = await admin.from("driver_profiles").select("user_id").eq("is_online", true);
+        const { data: onlineDrivers, error } = await admin
+          .from("driver_profiles")
+          .select("user_id")
+          .eq("is_online", true);
         if (error) throw error;
-        targetUserIds = [...new Set((onlineDrivers ?? []).map((row) => row.user_id).filter(Boolean))];
+        targetUserIds = uniqueIds((onlineDrivers ?? []).map((row) => row.user_id));
         title = "Ada Order Baru!";
         body = "Order telah tersedia di pool dan bisa diambil.";
-        targetUrl = "/driver";
+        targetPath = "/driver";
       } else {
-        return json({ sent: 0, message: "Tidak ada penerima untuk perubahan ini" });
+        return json({ success: true, sent: 0, message: "Tidak ada penerima untuk perubahan ini" });
       }
     } else if (eventType === "merchant_order_ready") {
       let isOrderMerchant = false;
       if (order.merchant_id) {
-        const { data: merchant } = await admin
+        const { data: merchant, error: merchantError } = await admin
           .from("merchants")
           .select("user_id")
           .eq("id", order.merchant_id)
           .maybeSingle();
+        if (merchantError) throw merchantError;
         isOrderMerchant = merchant?.user_id === callerId;
       }
       if (!isDriver && !isAdmin && !isOrderMerchant) return json({ error: "Forbidden" }, 403);
       if (order.food_order_type !== "mitra" || order.merchant_response !== "accepted" || !order.driver_id) {
-        return json({ sent: 0, message: "Order Mitra Resto belum siap atau belum memiliki driver" });
+        return json({ success: true, sent: 0, message: "Order Mitra Resto belum siap atau belum memiliki driver" });
       }
       targetUserIds = [order.driver_id];
       title = "Pesanan Siap Diambil";
@@ -137,137 +148,76 @@ serve(async (req) => {
       if (!message || message.sender_id !== callerId) return json({ error: "Forbidden" }, 403);
       if (isOwner && order.driver_id) targetUserIds = [order.driver_id];
       else if (isDriver) targetUserIds = [order.user_id];
-      else if (isAdmin) {
-        targetUserIds = [order.user_id, order.driver_id].filter((id): id is string => Boolean(id && id !== callerId));
-      } else return json({ error: "Forbidden" }, 403);
+      else if (isAdmin) targetUserIds = uniqueIds([order.user_id, order.driver_id].filter((id) => id !== callerId));
+      else return json({ error: "Forbidden" }, 403);
       title = isDriver ? "Pesan Baru dari Driver" : "Pesan Baru dari Pelanggan";
       body = "Anda menerima pesan baru pada chat pesanan.";
     }
 
+    targetUserIds = uniqueIds(targetUserIds);
     if (targetUserIds.length === 0) {
-      console.warn("send-order-push: no recipients", { eventType, orderId, callerId });
-      return json({ success: false, sent: 0, failed: 0, stage: "recipients", message: "No recipients" });
+      console.info("send-order-push: no recipients", { eventType, orderId, callerId });
+      return json({ success: true, sent: 0, failed: 0, stage: "recipients", message: "No recipients" });
     }
 
-    const { data: tokenRows, error: tokenError } = await admin
-      .from("user_push_tokens")
-      .select("user_id,token")
-      .in("user_id", targetUserIds);
-    if (tokenError) throw tokenError;
-    if (!tokenRows?.length) {
-      console.warn("send-order-push: no registered push tokens", {
-        eventType,
-        orderId,
-        recipientCount: targetUserIds.length,
-      });
-      return json({
-        success: false,
-        sent: 0,
-        failed: 0,
-        stage: "tokens",
-        recipientCount: targetUserIds.length,
-        message: "No tokens found",
-      });
-    }
-    if (!LOVABLE_API_KEY || !FIREBASE_API_KEY) {
-      console.error("send-order-push: gateway secrets missing", {
-        hasLovableApiKey: Boolean(LOVABLE_API_KEY),
-        hasFirebaseMessagingApiKey: Boolean(FIREBASE_API_KEY),
-      });
-      return json({ error: "LOVABLE_API_KEY or FIREBASE_MESSAGING_API_KEY is not configured", stage: "configuration" }, 500);
+    const notificationUrl = new URL(targetPath, APP_ORIGIN).toString();
+    const chunks: string[][] = [];
+    for (let index = 0; index < targetUserIds.length; index += 2000) {
+      chunks.push(targetUserIds.slice(index, index + 2000));
     }
 
-    const results = await Promise.all(tokenRows.map(async ({ user_id, token }) => {
+    const results = await Promise.all(chunks.map(async (externalIds) => {
       try {
-        const response = await fetch(`${GATEWAY_URL}/v1/projects/_/messages:send`, {
+        const response = await fetch(ONESIGNAL_API_URL, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "X-Connection-Api-Key": FIREBASE_API_KEY,
+            Authorization: `Key ${ONESIGNAL_REST_API_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            message: {
-              token,
-              // Data-only delivery lets the service worker display one customized notification.
-              data: {
-                title,
-                body,
-                order_id: String(order.id),
-                url: targetUrl,
-              },
-              android: { priority: "high", notification: { sound: "default", channel_id: "orders" } },
-              webpush: { headers: { Urgency: "high" }, data: { title, body, order_id: String(order.id), url: targetUrl } },
-            },
+            app_id: ONESIGNAL_APP_ID,
+            target_channel: "push",
+            include_aliases: { external_id: externalIds },
+            headings: { en: title, id: title },
+            contents: { en: body, id: body },
+            url: notificationUrl,
+            data: { event_type: eventType, order_id: String(order.id), url: targetPath },
+            web_push: { headers: { Urgency: "high" } },
           }),
         });
-
         const responseText = await response.text();
         let responseBody: unknown = responseText;
         try {
           responseBody = responseText ? JSON.parse(responseText) : null;
         } catch {
-          // Keep a short text response when the gateway does not return JSON.
           responseBody = responseText.slice(0, 500);
         }
-
-        if (response.status === 404 || response.status === 410) {
-          const { error: deleteError } = await admin
-            .from("user_push_tokens")
-            .delete()
-            .eq("user_id", user_id)
-            .eq("token", token);
-          if (deleteError) console.error("send-order-push: stale token cleanup failed", { userId: user_id, message: deleteError.message });
-        }
-
         if (!response.ok) {
-          console.error("send-order-push: gateway rejected message", {
-            eventType,
-            orderId,
-            userId: user_id,
-            status: response.status,
-            response: responseBody,
+          console.error("send-order-push: OneSignal rejected notification", {
+            eventType, orderId, status: response.status, response: responseBody,
+            targetCount: externalIds.length,
           });
         }
-
-        return {
-          userId: user_id,
-          ok: response.ok,
-          status: response.status,
-          error: response.ok ? undefined : responseBody,
-        };
+        return { ok: response.ok, status: response.status, response: responseBody, targetCount: externalIds.length };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        console.error("send-order-push: gateway request failed", {
-          eventType,
-          orderId,
-          userId: user_id,
-          message,
-        });
-        return { userId: user_id, ok: false, status: 0, error: message };
+        console.error("send-order-push: OneSignal request failed", { eventType, orderId, message });
+        return { ok: false, status: 0, response: message, targetCount: externalIds.length };
       }
     }));
 
     const sent = results.filter((result) => result.ok).length;
-    const failedResults = results.filter((result) => !result.ok);
-    console.info("send-order-push: delivery summary", {
-      eventType,
-      orderId,
-      recipientCount: targetUserIds.length,
-      tokenCount: tokenRows.length,
-      sent,
-      failed: failedResults.length,
+    const failed = results.length - sent;
+    console.info("send-order-push: OneSignal summary", {
+      eventType, orderId, recipientCount: targetUserIds.length, requestCount: results.length, sent, failed,
     });
-
     return json({
-      success: failedResults.length === 0 && sent > 0,
+      success: failed === 0 && sent > 0,
       sent,
-      failed: failedResults.length,
+      failed,
       recipientCount: targetUserIds.length,
-      tokenCount: tokenRows.length,
-      ...(failedResults.length ? {
-        failures: failedResults.map(({ userId, status, error }) => ({ userId, status, error })),
-      } : {}),
+      requestCount: results.length,
+      ...(failed ? { failures: results.filter((result) => !result.ok).map(({ status, response }) => ({ status, response })) } : {}),
     }, sent === 0 ? 502 : 200);
   } catch (error) {
     console.error("send-order-push error:", error);
