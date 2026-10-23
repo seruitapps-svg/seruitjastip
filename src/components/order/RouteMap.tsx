@@ -134,6 +134,10 @@ export function RouteMap({
     }
 
     let cancelled = false;
+    setDriverPosition(null);
+    setLastUpdatedAt(null);
+    latestUpdatedAtRef.current = 0;
+    setTrackingError("");
     void fetchLatestPosition();
 
     const channel = supabase
