@@ -1,71 +1,32 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import webpush from "npm:web-push@3.6.7";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const FIREBASE_SERVICE_ACCOUNT_JSON = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON") ?? "";
 const APP_ORIGIN = "https://mider-jastip.lovable.app";
+const VAPID_PUBLIC_KEY = Deno.env.get("WEB_PUSH_VAPID_PUBLIC_KEY") ?? "";
+const VAPID_PRIVATE_KEY = Deno.env.get("WEB_PUSH_VAPID_PRIVATE_KEY") ?? "";
+const VAPID_SUBJECT = Deno.env.get("WEB_PUSH_VAPID_SUBJECT") ?? APP_ORIGIN;
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 type EventType = "order_created" | "order_status_changed" | "merchant_order_ready" | "chat_message";
-type ServiceAccount = { project_id: string; client_email: string; private_key: string; token_uri?: string };
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
 function uniqueIds(ids: Array<string | null | undefined>): string[] {
   return [...new Set(ids.filter((id): id is string => Boolean(id)))];
 }
-function base64url(input: Uint8Array | string): string {
-  const bytes = typeof input === "string" ? new TextEncoder().encode(input) : input;
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-}
-function pemToBytes(pem: string): Uint8Array {
-  const base64 = pem.replace(/-----BEGIN PRIVATE KEY-----/g, "").replace(/-----END PRIVATE KEY-----/g, "").replace(/\s/g, "");
-  const binary = atob(base64);
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
-}
-async function getAccessToken(account: ServiceAccount): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  const header = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-  const claim = base64url(JSON.stringify({
-    iss: account.client_email,
-    scope: "https://www.googleapis.com/auth/firebase.messaging",
-    aud: account.token_uri || "https://oauth2.googleapis.com/token",
-    iat: now,
-    exp: now + 3600,
-  }));
-  const unsigned = header + "." + claim;
-  const key = await crypto.subtle.importKey(
-    "pkcs8",
-    pemToBytes(account.private_key),
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(unsigned));
-  const assertion = unsigned + "." + base64url(new Uint8Array(signature));
-  const tokenResponse = await fetch(account.token_uri || "https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion }),
-  });
-  const tokenBody = await tokenResponse.json();
-  if (!tokenResponse.ok || typeof tokenBody.access_token !== "string") {
-    throw new Error("Firebase OAuth gagal: " + JSON.stringify(tokenBody).slice(0, 500));
-  }
-  return tokenBody.access_token;
-}
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) return json({ error: "Supabase secrets belum dikonfigurasi" }, 500);
-  if (!FIREBASE_SERVICE_ACCOUNT_JSON) return json({ error: "FIREBASE_SERVICE_ACCOUNT_JSON belum dikonfigurasi pada Edge Function Secrets" }, 503);
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return json({ error: "WEB_PUSH_VAPID_PUBLIC_KEY dan WEB_PUSH_VAPID_PRIVATE_KEY belum dikonfigurasi pada Edge Function Secrets" }, 503);
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
   try {
     const authorization = req.headers.get("Authorization");
     if (!authorization?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
@@ -157,38 +118,84 @@ serve(async (req) => {
     targetUserIds = uniqueIds(targetUserIds);
     if (!targetUserIds.length) return json({ success: true, sent: 0, failed: 0, message: "Tidak ada penerima" });
 
-    const { data: tokens, error: tokenError } = await admin.from("user_push_tokens").select("user_id,token").in("user_id", targetUserIds);
-    if (tokenError) throw new Error("Gagal membaca token Firebase: " + tokenError.message);
-    const tokenRows = (tokens ?? []).filter((row) => typeof row.token === "string" && row.token.length > 0);
-    if (!tokenRows.length) return json({ success: false, sent: 0, failed: 0, recipientCount: targetUserIds.length, message: "Penerima belum mendaftarkan token Firebase" }, 200);
+    const { data: subscriptions, error: subscriptionError } = await admin
+      .from("user_push_subscriptions")
+      .select("user_id,endpoint,p256dh,auth_key")
+      .in("user_id", targetUserIds);
+    if (subscriptionError) throw new Error("Gagal membaca subscription Web Push: " + subscriptionError.message);
+    const subscriptionRows = (subscriptions ?? []).filter((row) =>
+      typeof row.endpoint === "string" &&
+      typeof row.p256dh === "string" &&
+      typeof row.auth_key === "string" &&
+      row.endpoint.length > 0 &&
+      row.p256dh.length > 0 &&
+      row.auth_key.length > 0
+    );
+    if (!subscriptionRows.length) {
+      return json({
+        success: false,
+        sent: 0,
+        failed: 0,
+        recipientCount: targetUserIds.length,
+        message: "Penerima belum mendaftarkan Web Push",
+      }, 200);
+    }
 
-    const account = JSON.parse(FIREBASE_SERVICE_ACCOUNT_JSON) as ServiceAccount;
-    if (!account.project_id || !account.client_email || !account.private_key) throw new Error("FIREBASE_SERVICE_ACCOUNT_JSON tidak memiliki project_id, client_email, atau private_key");
-    const accessToken = await getAccessToken(account);
     const notificationUrl = new URL(targetPath, APP_ORIGIN).toString();
-    const results = await Promise.all(tokenRows.map(async (row) => {
+    const payload = JSON.stringify({
+      title,
+      body,
+      url: notificationUrl,
+      data: {
+        event_type: eventType,
+        order_id: String(order.id),
+        url: targetPath,
+      },
+    });
+
+    const results = await Promise.all(subscriptionRows.map(async (row) => {
+      const subscription = {
+        endpoint: row.endpoint,
+        keys: { p256dh: row.p256dh, auth: row.auth_key },
+      };
       try {
-        const response = await fetch("https://fcm.googleapis.com/v1/projects/" + account.project_id + "/messages:send", {
-          method: "POST",
-          headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
-          body: JSON.stringify({ message: {
-            token: row.token,
-            notification: { title, body },
-            data: { event_type: eventType, order_id: String(order.id), url: targetPath },
-            webpush: { headers: { Urgency: "high" }, fcmOptions: { link: notificationUrl } },
-          } }),
+        const response = await webpush.sendNotification(subscription, payload, {
+          TTL: 60,
+          urgency: "high",
         });
-        const responseText = await response.text();
-        if (!response.ok) console.error("FCM send failed", { status: response.status, response: responseText.slice(0, 500) });
-        return { ok: response.ok, status: response.status, response: response.ok ? undefined : responseText.slice(0, 300) };
+        return { ok: response.statusCode >= 200 && response.statusCode < 300, status: response.statusCode, endpoint: row.endpoint };
       } catch (error) {
-        return { ok: false, status: 0, response: error instanceof Error ? error.message : String(error) };
+        const status = typeof error === "object" && error !== null && "statusCode" in error
+          ? Number((error as { statusCode?: unknown }).statusCode) || 0
+          : 0;
+        if (status === 404 || status === 410) {
+          const { error: deleteError } = await admin
+            .from("user_push_subscriptions")
+            .delete()
+            .eq("endpoint", row.endpoint);
+          if (deleteError) console.warn("Subscription kedaluwarsa tidak dapat dihapus:", deleteError.message);
+        }
+        return {
+          ok: false,
+          status,
+          endpoint: row.endpoint,
+          response: error instanceof Error ? error.message.slice(0, 300) : String(error).slice(0, 300),
+        };
       }
     }));
     const sent = results.filter((result) => result.ok).length;
     const failed = results.length - sent;
-    return json({ success: sent > 0 && failed === 0, provider: "firebase", sent, failed, recipientCount: targetUserIds.length, tokenCount: tokenRows.length,
-      ...(failed ? { failures: results.filter((result) => !result.ok).map(({ status, response }) => ({ status, response })) } : {}) }, sent > 0 ? 200 : 502);
+    return json({
+      success: sent > 0 && failed === 0,
+      provider: "web-push-vapid",
+      sent,
+      failed,
+      recipientCount: targetUserIds.length,
+      subscriptionCount: subscriptionRows.length,
+      ...(failed ? {
+        failures: results.filter((result) => !result.ok).map(({ status, response }) => ({ status, response })),
+      } : {}),
+    }, sent > 0 ? 200 : 502);
   } catch (error) {
     console.error("send-order-push error:", error);
     return json({ error: error instanceof Error ? error.message : "Internal server error" }, 500);
