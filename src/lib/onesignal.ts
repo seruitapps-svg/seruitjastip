@@ -34,7 +34,7 @@ export function ensureOneSignalReady(): Promise<OneSignalSdk> {
 
   window.OneSignalDeferred = window.OneSignalDeferred || [];
 
-  window.__miderOneSignalReady = new Promise<OneSignalSdk>((resolve, reject) => {
+  const readyPromise = new Promise<OneSignalSdk>((resolve, reject) => {
     let settled = false;
     const timeoutId = window.setTimeout(() => {
       if (settled) return;
@@ -85,10 +85,14 @@ export function ensureOneSignalReady(): Promise<OneSignalSdk> {
     }
   });
 
+  window.__miderOneSignalReady = readyPromise;
+
   // Allow a later retry if loading or initialization failed.
-  window.__miderOneSignalReady.catch(() => {
-    window.__miderOneSignalReady = undefined;
+  readyPromise.catch(() => {
+    if (window.__miderOneSignalReady === readyPromise) {
+      window.__miderOneSignalReady = undefined;
+    }
   });
 
-  return window.__miderOneSignalReady;
+  return readyPromise;
 }
