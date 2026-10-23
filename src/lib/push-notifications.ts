@@ -85,7 +85,7 @@ export async function requestAndSavePushSubscription(): Promise<{
       throw new Error("Browser tidak memberikan data subscription Web Push yang lengkap.");
     }
 
-    const { error } = await supabase.rpc("register_user_push_subscription", {
+    const { error } = await (supabase as any).rpc("register_user_push_subscription", {
       p_endpoint: endpoint,
       p_p256dh: p256dh,
       p_auth_key: auth,
@@ -156,7 +156,7 @@ export async function unregisterCurrentPushSubscription(): Promise<void> {
     const subscription = await registration?.pushManager.getSubscription();
     if (!subscription) return;
 
-    const { error } = await supabase.rpc("unregister_user_push_subscription", {
+    const { error } = await (supabase as any).rpc("unregister_user_push_subscription", {
       p_endpoint: subscription.endpoint,
     });
     if (error) {
