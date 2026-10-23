@@ -234,7 +234,7 @@ serve(async (req) => {
           userId: user_id,
           ok: response.ok,
           status: response.status,
-          ...(response.ok ? {} : { error: responseBody }),
+          error: response.ok ? undefined : responseBody,
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
