@@ -166,7 +166,7 @@ serve(async (req) => {
         body: JSON.stringify({
           message: {
             token,
-            notification: { title, body },
+            // Data-only delivery lets the service worker display one customized notification.
             data: {
               title,
               body,
