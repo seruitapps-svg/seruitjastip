@@ -114,7 +114,7 @@ export function NotificationPrompt() {
         <Bell className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-foreground">
-            {notificationSupported ? (Notification.permission === "granted" ? "Daftarkan Notifikasi Order" : "Aktifkan Notifikasi Order") : "Pengaturan Izin Perangkat"}
+            {pushNeedsSetup ? (notificationSupported ? (Notification.permission === "granted" ? "Daftarkan Notifikasi Order" : "Aktifkan Notifikasi Order") : "Pengaturan Izin Perangkat") : "Aktifkan Izin Lokasi"}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             Terima pemberitahuan pesanan dan pesan chat meski aplikasi tidak sedang terbuka.
