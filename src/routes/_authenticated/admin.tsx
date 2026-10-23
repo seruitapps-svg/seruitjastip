@@ -256,7 +256,12 @@ function AdminPage() {
     }
   }
 
-  async function handleDeleteUser(userId: string, name: string) {
+  async function handleDeleteUser(userId: string, name: string, email: string | null) {
+    // Lindungi akun utama superadmin dari penghapusan melalui panel.
+    if ((email ?? "").trim().toLowerCase() === "seruitapps@gmail.com") {
+      window.alert("Akun utama superadmin seruitapps@gmail.com dilindungi dan tidak dapat dihapus dari panel.");
+      return;
+    }
     if (!window.confirm(`PERINGATAN: Yakin ingin menghapus permanen akun "${name}"? Semua data terkait akun ini akan dihapus.`)) return;
     setBusy(userId);
     const { error } = await supabase.rpc("admin_delete_user", { _target_user_id: userId });
@@ -876,8 +881,8 @@ function AdminPage() {
                     <button type="button" onClick={() => handleResetPassword(selectedUser.email)} className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-muted">
                       <KeyRound className="h-4 w-4" /> Kirim Link Reset Password
                     </button>
-                    <button type="button" disabled={busy === selectedUser.id} onClick={() => handleDeleteUser(selectedUser.id, selectedUser.full_name || selectedUser.email || selectedUser.id)} className="flex w-full items-center justify-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/20 disabled:opacity-50">
-                      <Trash2 className="h-4 w-4" /> Hapus Akun Ini
+                    <button type="button" disabled={busy === selectedUser.id || (selectedUser.email ?? "").trim().toLowerCase() === "seruitapps@gmail.com"} title={(selectedUser.email ?? "").trim().toLowerCase() === "seruitapps@gmail.com" ? "Akun utama superadmin dilindungi dari penghapusan." : undefined} onClick={() => handleDeleteUser(selectedUser.id, selectedUser.full_name || selectedUser.email || selectedUser.id, selectedUser.email ?? null)} className="flex w-full items-center justify-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/20 disabled:opacity-50">
+                      <Trash2 className="h-4 w-4" /> {(selectedUser.email ?? "").trim().toLowerCase() === "seruitapps@gmail.com" ? "Akun Superadmin Dilindungi" : "Hapus Akun Ini"}
                     </button>
                   </div>
                   {(() => {
