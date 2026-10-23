@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { AppAnnouncements } from "@/components/AppAnnouncements";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
-import { unregisterCurrentPushToken } from "@/lib/push-notifications";
+import { unregisterCurrentPushSubscription } from "@/lib/push-notifications";
 
 export function AppHeader() {
   const { user, isAdmin, isDriver, isMitra, isCustomerOnly } = useAuth();
@@ -71,7 +71,7 @@ export function AppHeader() {
   async function signOut() {
     await queryClient.cancelQueries();
     if (user?.id) {
-      await unregisterCurrentPushToken(user.id);
+      await unregisterCurrentPushSubscription();
     }
     queryClient.clear();
     await supabase.auth.signOut();
