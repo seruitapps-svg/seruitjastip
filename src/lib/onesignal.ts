@@ -60,6 +60,15 @@ export function ensureOneSignalReady(): Promise<OneSignalSdk> {
       } catch (error) {
         settled = true;
         window.clearTimeout(timeoutId);
+
+        const message = error instanceof Error ? error.message : String(error);
+        // A previous app bundle or an SDK bootstrap may already have initialized
+        // OneSignal. In that case the SDK instance is usable; do not block opt-in.
+        if (/already initialized/i.test(message)) {
+          resolve(OneSignal);
+          return;
+        }
+
         reject(error);
       }
     });
