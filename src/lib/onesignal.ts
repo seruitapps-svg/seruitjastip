@@ -5,6 +5,7 @@ type OneSignalSdk = {
     serviceWorkerParam: { scope: string };
   }) => Promise<void>;
   Notifications: { requestPermission: () => Promise<unknown> };
+  login: (externalId: string) => Promise<void>;
   User: {
     PushSubscription: {
       optIn: () => Promise<unknown>;
