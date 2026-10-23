@@ -2,7 +2,6 @@ import { getApp, getApps, initializeApp } from "firebase/app";
 import { getMessaging, getToken, isSupported } from "firebase/messaging";
 import { supabase } from "@/integrations/supabase/client";
 
-// Konfigurasi Firebase Web Push (menggunakan env atau fallback nilai project)
 const appId =
   import.meta.env.VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_APP_ID ||
   import.meta.env.VITE_FIREBASE_APP_ID ||
@@ -35,7 +34,7 @@ export type PushPermissionStatus =
 
 export async function requestAndSavePushToken(
   userId: string,
-): Promise<{ status: PushPermissionStatus; token?: string }> {
+): Promise<{ status: PushPermissionStatus; token?: string; error?: string }> {
   if (!firebaseConfig.apiKey || !firebaseConfig.projectId || !appId || !vapidKey) {
     return { status: "not-configured" };
   }
@@ -58,10 +57,15 @@ export async function requestAndSavePushToken(
     const query = new URLSearchParams(
       Object.entries(firebaseConfig).filter((entry): entry is [string, string] => Boolean(entry[1])),
     ).toString();
+
+    // Daftarkan Service Worker
     const registration = await navigator.serviceWorker.register(
       `/firebase-messaging-sw.js?${query}`,
       { scope: "/" },
     );
+
+    // Tunggu sampai Service Worker aktif
+    await navigator.serviceWorker.ready;
 
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     const messaging = getMessaging(app);
@@ -70,9 +74,9 @@ export async function requestAndSavePushToken(
       serviceWorkerRegistration: registration,
     });
 
-    if (!fcmToken) return { status: "denied" };
+    if (!fcmToken) return { status: "denied", error: "Token FCM tidak ditemukan" };
 
-    const { error } = await (supabase as any).from("user_push_tokens").upsert(
+    const { error: dbError } = await (supabase as any).from("user_push_tokens").upsert(
       {
         user_id: userId,
         token: fcmToken,
@@ -81,12 +85,12 @@ export async function requestAndSavePushToken(
       },
       { onConflict: "token" },
     );
-    if (error) throw error;
+    if (dbError) throw dbError;
 
     return { status: "granted", token: fcmToken };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gagal mendaftarkan push notification:", error);
-    return { status: "denied" };
+    return { status: "denied", error: error?.message || String(error) };
   }
 }
 
