@@ -13,6 +13,7 @@ import { DRIVER_NEXT_LABEL, SERVICE_NAME, STATUS_LABEL } from "@/lib/order-statu
 import { DriverTransactionBreakdown } from "@/components/order/DriverTransactionBreakdown";
 import { DriverItemCostCard } from "@/components/order/DriverItemCostCard";
 import { DriverLiveTracking } from "@/components/order/DriverLiveTracking";
+import { sendOrderPushEvent } from "@/lib/push-notifications";
 
 export const Route = createFileRoute("/_authenticated/pesanan/$id")({
   head: () => ({
@@ -154,6 +155,7 @@ function OrderDetail() {
     const { error } = await fn();
     setBusy(false);
     if (error) return setErr(error.message);
+    void sendOrderPushEvent("order_status_changed", id);
     qc.invalidateQueries({ queryKey: ["order", id] });
     qc.invalidateQueries({ queryKey: ["order-history", id] });
     qc.invalidateQueries({ queryKey: ["wallet"] });
@@ -205,6 +207,7 @@ function OrderDetail() {
     }
     setShowPinModal(false);
     setDriverPinInput("");
+    void sendOrderPushEvent("order_status_changed", o.id);
     qc.invalidateQueries({ queryKey: ["order", id] });
     qc.invalidateQueries({ queryKey: ["order-history", id] });
     qc.invalidateQueries({ queryKey: ["wallet"] });
@@ -667,10 +670,11 @@ function OrderChat({ orderId, myId }: { orderId: string; myId: string }) {
     const body = text.trim();
     if (!body) return;
     setSending(true);
-    const { error } = await supabase.from("order_messages").insert({ order_id: orderId, sender_id: myId, body });
+    const { data: insertedMessage, error } = await supabase.from("order_messages").insert({ order_id: orderId, sender_id: myId, body }).select("id").single();
     setSending(false);
     if (!error) {
       setText("");
+      if (insertedMessage?.id) void sendOrderPushEvent("chat_message", orderId, insertedMessage.id);
       qc.invalidateQueries({ queryKey: ["messages", orderId] });
     }
   }

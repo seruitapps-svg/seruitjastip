@@ -5,6 +5,7 @@ import { KeyRound, Trash2, X, ChevronRight, ChevronDown, Calculator } from "luci
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
+import { sendOrderPushEvent } from "@/lib/push-notifications";
 import { OrderCard, btnPrimary, btnDanger, btnOutline } from "@/components/order/OrderCard";
 import { useAuth } from "@/hooks/use-auth";
 import { WalletPanel } from "@/components/wallet/WalletPanel";
@@ -498,7 +499,7 @@ function AdminPage() {
                       <button
                         className={btnPrimary}
                         disabled={busy === o.id}
-                        onClick={() => run(o.id, () => supabase.rpc("admin_review_order", { _order_id: o.id, _approve: true }))}
+                        onClick={() => { void (async () => { await run(o.id, () => supabase.rpc("admin_review_order", { _order_id: o.id, _approve: true })); void sendOrderPushEvent("order_status_changed", o.id); })(); }}
                       >
                         Setujui → pool driver
                       </button>
