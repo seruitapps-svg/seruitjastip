@@ -109,3 +109,45 @@ export async function sendOrderPushEvent(
     console.error("Gagal memanggil layanan push notification:", error);
   }
 }
+
+
+/**
+ * Remove the current browser's push token before signing out.
+ * The delete is scoped to both the authenticated user and this browser token.
+ */
+export async function unregisterCurrentPushToken(userId: string): Promise<void> {
+  if (
+    typeof window === "undefined" ||
+    !("Notification" in window) ||
+    Notification.permission !== "granted" ||
+    !("serviceWorker" in navigator)
+  ) {
+    return;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.getRegistration("/");
+    if (!registration) return;
+
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
+    const fcmToken = await getToken(messaging, {
+      vapidKey,
+      serviceWorkerRegistration: registration,
+    });
+    if (!fcmToken) return;
+
+    const { error } = await (supabase as any)
+      .from("user_push_tokens")
+      .delete()
+      .eq("user_id", userId)
+      .eq("token", fcmToken);
+
+    if (error) {
+      console.warn("Token not removed during sign-out:", error.message);
+    }
+  } catch (error) {
+    // Logout must continue even if push-token cleanup fails.
+    console.warn("Could not remove push token during sign-out:", error);
+  }
+}
