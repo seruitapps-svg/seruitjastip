@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const STATUS_MESSAGE: Record<PushPermissionStatus, string> = {
   granted: "Notifikasi pesanan berhasil diaktifkan di perangkat ini.",
-  denied: "Izin notifikasi ditolak atau pendaftaran token gagal. Periksa izin browser dan konfigurasi Firebase.",
+  denied: "Pendaftaran token gagal. Periksa izin browser dan konfigurasi Firebase.",
   unsupported: "Browser atau perangkat ini belum mendukung Web Push.",
   "open-in-new-tab": "Buka aplikasi dari tab browser penuh, bukan dari jendela preview, lalu coba lagi.",
   "not-configured": "Konfigurasi Firebase Web Push belum tersedia. Hubungi pengelola aplikasi.",
@@ -17,6 +17,7 @@ export function NotificationPrompt() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<PushPermissionStatus | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [registered, setRegistered] = useState(false);
 
@@ -31,7 +32,7 @@ export function NotificationPrompt() {
           .eq("user_id", user.id);
         if (!cancelled && !error && data && data.length > 0) setRegistered(true);
       } catch {
-        // Keep the prompt available if registration state cannot be checked.
+        // Biarkan prompt tetap tersedia jika pengecekan gagal
       }
     })();
     return () => { cancelled = true; };
@@ -43,9 +44,14 @@ export function NotificationPrompt() {
   async function handleEnable() {
     if (!user?.id || loading) return;
     setLoading(true);
+    setErrorMessage(null);
     const result = await requestAndSavePushToken(user.id);
     setStatus(result.status);
-    if (result.status === "granted") setRegistered(true);
+    if (result.status === "granted") {
+      setRegistered(true);
+    } else if (result.error) {
+      setErrorMessage(result.error);
+    }
     setLoading(false);
   }
 
@@ -54,19 +60,28 @@ export function NotificationPrompt() {
       <div className="flex min-w-0 flex-1 items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
         <Bell className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-foreground">{Notification.permission === "granted" ? "Daftarkan Notifikasi Order" : "Aktifkan Notifikasi Order"}</p>
+          <p className="text-sm font-semibold text-foreground">
+            {Notification.permission === "granted" ? "Daftarkan Notifikasi Order" : "Aktifkan Notifikasi Order"}
+          </p>
           <p className="mt-1 text-xs text-muted-foreground">
             Terima pemberitahuan pesanan dan pesan chat meski aplikasi tidak sedang terbuka.
           </p>
           {status && (
-            <p className="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground" role="status">
-              {status === "granted" ? (
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
-              ) : (
-                <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
+            <div className="mt-2 text-xs text-muted-foreground" role="status">
+              <p className="flex items-start gap-1.5">
+                {status === "granted" ? (
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
+                )}
+                {STATUS_MESSAGE[status]}
+              </p>
+              {errorMessage && (
+                <p className="mt-1 font-mono text-[11px] text-destructive break-all pl-5.5">
+                  Detail: {errorMessage}
+                </p>
               )}
-              {STATUS_MESSAGE[status]}
-            </p>
+            </div>
           )}
         </div>
         <div className="flex shrink-0 flex-col gap-2">
