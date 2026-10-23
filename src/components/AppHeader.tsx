@@ -105,6 +105,14 @@ export function AppHeader() {
                 <ChevronDown className="h-3.5 w-3.5" />
               </summary>
               <div className="absolute right-0 top-full z-50 mt-2 min-w-56 rounded-xl border border-border bg-card p-2 shadow-lg">
+                <Link
+                  to="/profil"
+                  className="mb-2 flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-accent"
+                  activeProps={{ className: "text-primary bg-primary/10" }}
+                >
+                  <UserRound className="h-3.5 w-3.5 text-primary" /> Profil Saya
+                </Link>
+
                 {/* Status Akun */}
                 <div className="mb-2 border-b border-border px-2 pb-2 text-[11px]">
                   <span className="text-muted-foreground">Login sebagai: </span>
