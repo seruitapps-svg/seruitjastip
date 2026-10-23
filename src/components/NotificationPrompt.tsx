@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle, Bell, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { requestAndSavePushToken, type PushPermissionStatus } from "@/lib/push-notifications";
@@ -17,15 +17,34 @@ export function NotificationPrompt() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<PushPermissionStatus | null>(null);
   const [dismissed, setDismissed] = useState(false);
+  const [registered, setRegistered] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id || typeof window === "undefined" || !("Notification" in window) || Notification.permission !== "granted") return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { data, error } = await (await import("@/integrations/supabase/client")).supabase
+          .from("user_push_tokens" as never)
+          .select("id")
+          .eq("user_id", user.id);
+        if (!cancelled && !error && data && data.length > 0) setRegistered(true);
+      } catch {
+        // Keep the prompt available if registration state cannot be checked.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   if (!user || typeof window === "undefined" || !("Notification" in window)) return null;
-  if (Notification.permission === "granted" || dismissed) return null;
+  if ((Notification.permission === "granted" && registered) || status === "granted" || dismissed) return null;
 
   async function handleEnable() {
     if (!user?.id || loading) return;
     setLoading(true);
     const result = await requestAndSavePushToken(user.id);
     setStatus(result.status);
+    if (result.status === "granted") setRegistered(true);
     setLoading(false);
   }
 
@@ -34,7 +53,7 @@ export function NotificationPrompt() {
       <div className="flex min-w-0 flex-1 items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
         <Bell className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-foreground">Aktifkan Notifikasi Order</p>
+          <p className="text-sm font-semibold text-foreground">{Notification.permission === "granted" ? "Daftarkan Notifikasi Order" : "Aktifkan Notifikasi Order"}</p>
           <p className="mt-1 text-xs text-muted-foreground">
             Terima pemberitahuan pesanan dan pesan chat meski aplikasi tidak sedang terbuka.
           </p>
