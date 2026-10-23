@@ -55,7 +55,7 @@ serve(async (req) => {
     });
     const { data: order, error: orderError } = await admin
       .from("orders")
-      .select("id,user_id,driver_id,status,service,food_order_type,merchant_response")
+      .select("id,user_id,driver_id,status,service,food_order_type,merchant_response,merchant_id")
       .eq("id", orderId)
       .maybeSingle();
     if (orderError) throw orderError;
@@ -109,7 +109,16 @@ serve(async (req) => {
         return json({ sent: 0, message: "Tidak ada penerima untuk perubahan ini" });
       }
     } else if (eventType === "merchant_order_ready") {
-      if (!isOwner && !isDriver && !isAdmin) return json({ error: "Forbidden" }, 403);
+      let isOrderMerchant = false;
+      if (order.merchant_id) {
+        const { data: merchant } = await admin
+          .from("merchants")
+          .select("user_id")
+          .eq("id", order.merchant_id)
+          .maybeSingle();
+        isOrderMerchant = merchant?.user_id === callerId;
+      }
+      if (!isOwner && !isDriver && !isAdmin && !isOrderMerchant) return json({ error: "Forbidden" }, 403);
       if (order.food_order_type !== "mitra" || order.merchant_response !== "accepted" || !order.driver_id) {
         return json({ sent: 0, message: "Order Mitra Resto belum siap atau belum memiliki driver" });
       }
