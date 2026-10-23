@@ -3,7 +3,6 @@ import { Bell, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ensureOneSignalReady } from "@/lib/onesignal";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
 
 export function NotificationPrompt() {
   const { user } = useAuth();
@@ -20,7 +19,7 @@ export function NotificationPrompt() {
     try {
       setLocationDismissed(window.localStorage.getItem(`mider-location-prompt-dismissed:${user.id}`) === "true");
     } catch {
-      // Pengingat tetap dapat ditutup selama sesi jika penyimpanan browser tidak tersedia.
+      // Keep the prompt usable when browser storage is unavailable.
     }
   }, [user?.id]);
 
@@ -29,7 +28,7 @@ export function NotificationPrompt() {
       try {
         window.localStorage.removeItem(`mider-location-prompt-dismissed:${user.id}`);
       } catch {
-        // Izin aktif tetap berlaku meski penyimpanan browser tidak tersedia.
+        // Location permission still applies when storage is unavailable.
       }
       setLocationDismissed(false);
     }
@@ -58,6 +57,25 @@ export function NotificationPrompt() {
     return () => { cancelled = true; };
   }, []);
 
+  // Disable only the legacy Firebase messaging worker; do not unregister other PWA workers.
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+    void navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const registration of registrations) {
+        const scriptUrls = [
+          registration.active?.scriptURL,
+          registration.waiting?.scriptURL,
+          registration.installing?.scriptURL,
+        ].filter(Boolean) as string[];
+        if (scriptUrls.some((url) => url.includes("/firebase-messaging-sw.js"))) {
+          void registration.unregister();
+        }
+      }
+    }).catch((error) => {
+      console.warn("Could not unregister legacy Firebase notification worker:", error);
+    });
+  }, []);
+
   async function handleEnableLocation() {
     if (!navigator.geolocation) {
       setLocationStatus("unsupported");
@@ -83,32 +101,6 @@ export function NotificationPrompt() {
     );
   }
 
-  // Disable the legacy Firebase root-scope worker. Keep unrelated PWA workers untouched.
-  useEffect(() => {
-    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
-    void navigator.serviceWorker.getRegistrations().then((registrations) => {
-      for (const registration of registrations) {
-        const scriptUrls = [
-          registration.active?.scriptURL,
-          registration.waiting?.scriptURL,
-          registration.installing?.scriptURL,
-        ].filter(Boolean) as string[];
-        if (scriptUrls.some((url) => url.includes("/firebase-messaging-sw.js"))) {
-          void registration.unregister();
-        }
-      }
-    }).catch((error) => {
-      console.warn("Could not unregister legacy Firebase notification worker:", error);
-    });
-  }, []);
-
-
-  if (!user || typeof window === "undefined") return null;
-  const notificationSupported = "Notification" in window;
-  const pushNeedsSetup = notificationSupported && !((Notification.permission === "granted" && registered) || status === "granted" || dismissed);
-  const locationNeedsSetup = locationStatus !== "granted" && locationStatus !== "unsupported" && !locationDismissed;
-  if (!pushNeedsSetup && !locationNeedsSetup) return null;
-
   async function handleEnableOneSignal() {
     if (!user?.id || oneSignalLoading) return;
     setOneSignalLoading(true);
@@ -119,24 +111,25 @@ export function NotificationPrompt() {
       if (typeof window === "undefined" || !("Notification" in window) || !("serviceWorker" in navigator)) {
         throw new Error("Browser ini belum mendukung Web Push.");
       }
-
       const OneSignal = await ensureOneSignalReady();
       await OneSignal.Notifications.requestPermission();
-
       if (Notification.permission !== "granted") {
         throw new Error("Izin notifikasi belum diizinkan di browser.");
       }
-
       await OneSignal.User.PushSubscription.optIn();
-      setOneSignalStatus(
-        "Permintaan berlangganan OneSignal dikirim. Periksa daftar Subscriptions beberapa saat lagi.",
-      );
+      setOneSignalStatus("Permintaan berlangganan dikirim. Periksa Subscriptions OneSignal beberapa saat lagi.");
     } catch (error) {
       setOneSignalError(error instanceof Error ? error.message : String(error));
     } finally {
       setOneSignalLoading(false);
     }
   }
+
+  if (!user || typeof window === "undefined") return null;
+  const notificationSupported = "Notification" in window;
+  const pushNeedsSetup = notificationSupported && !dismissed;
+  const locationNeedsSetup = locationStatus !== "granted" && locationStatus !== "unsupported" && !locationDismissed;
+  if (!pushNeedsSetup && !locationNeedsSetup) return null;
 
   return (
     <div className="mx-auto my-3 flex max-w-3xl items-start gap-3 px-4">
@@ -146,7 +139,7 @@ export function NotificationPrompt() {
           {pushNeedsSetup && (
             <>
               <p className="text-sm font-semibold text-foreground">
-                {notificationSupported ? (Notification.permission === "granted" ? "Daftarkan Notifikasi Order" : "Aktifkan Notifikasi Order") : "Pengaturan Izin Perangkat"}
+                {Notification.permission === "granted" ? "Daftarkan Notifikasi Order" : "Aktifkan Notifikasi Order"}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Terima pemberitahuan pesanan dan pesan chat meski aplikasi tidak sedang terbuka.
@@ -164,20 +157,19 @@ export function NotificationPrompt() {
               {locationMessage && <p className="mt-1 text-muted-foreground">{locationMessage}</p>}
             </div>
           )}
-          {oneSignalStatus && (
-            <p className="mt-2 text-xs text-primary" role="status">{oneSignalStatus}</p>
-          )}
+          {oneSignalStatus && <p className="mt-2 text-xs text-primary" role="status">{oneSignalStatus}</p>}
           {oneSignalError && (
             <p className="mt-2 break-all text-xs text-destructive" role="alert">
               OneSignal: {oneSignalError}
             </p>
           )}
-}
         </div>
         <div className="flex shrink-0 flex-col gap-2">
-          <Button size="sm" variant="outline" onClick={handleEnableOneSignal} disabled={oneSignalLoading}>
-            {oneSignalLoading ? "Memproses OneSignal…" : "Aktifkan OneSignal"}
-          </Button>
+          {pushNeedsSetup && (
+            <Button size="sm" variant="outline" onClick={handleEnableOneSignal} disabled={oneSignalLoading}>
+              {oneSignalLoading ? "Memproses OneSignal…" : "Aktifkan OneSignal"}
+            </Button>
+          )}
           {locationNeedsSetup && (
             <Button size="sm" variant="outline" onClick={handleEnableLocation}>
               Aktifkan Lokasi
@@ -198,7 +190,7 @@ export function NotificationPrompt() {
                   try {
                     window.localStorage.setItem(`mider-location-prompt-dismissed:${user.id}`, "true");
                   } catch {
-                    // State lokal tetap menyembunyikan pengingat sampai komponen dimuat ulang.
+                    // Session state still hides the prompt.
                   }
                 }
               }}
