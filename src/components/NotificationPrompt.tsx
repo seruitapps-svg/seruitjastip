@@ -92,7 +92,7 @@ export function NotificationPrompt() {
   const notificationSupported = "Notification" in window;
   const pushNeedsSetup = notificationSupported && !((Notification.permission === "granted" && registered) || status === "granted" || dismissed);
   const locationNeedsSetup = locationStatus !== "granted" && locationStatus !== "unsupported";
-  if (!pushNeedsSetup && !locationNeedsSetup && locationStatus !== "unsupported") return null;
+  if (!pushNeedsSetup && !locationNeedsSetup) return null;
 
   async function handleEnable() {
     if (!user?.id || loading) return;
