@@ -37,8 +37,7 @@ export async function requestAndSavePushToken(
   if (
     typeof window === "undefined" ||
     !("Notification" in window) ||
-    !("serviceWorker" in navigator) ||
-    !(await isSupported())
+    !("serviceWorker" in navigator)
   ) {
     return { status: "unsupported" };
   }
@@ -46,6 +45,7 @@ export async function requestAndSavePushToken(
   if (window.top !== window.self) return { status: "open-in-new-tab" };
 
   try {
+    if (!(await isSupported())) return { status: "unsupported" };
     const permission = await Notification.requestPermission();
     if (permission !== "granted") return { status: "denied" };
 
