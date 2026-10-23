@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bell, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { requestAndSavePushToken } from "@/lib/push-notifications";
+import { requestAndSavePushSubscription } from "@/lib/push-notifications";
 import { useAuth } from "@/hooks/use-auth";
 
 export function NotificationPrompt() {
@@ -89,17 +89,17 @@ export function NotificationPrompt() {
     setPushError(null);
 
     try {
-      const result = await requestAndSavePushToken(user.id);
+      const result = await requestAndSavePushSubscription();
       if (result.status === "granted") {
-        setPushStatus("Notifikasi Firebase berhasil didaftarkan di perangkat ini.");
+        setPushStatus("Notifikasi Web Push berhasil didaftarkan di perangkat ini.");
       } else if (result.status === "denied") {
-        throw new Error(result.error || "Izin notifikasi ditolak atau token Firebase gagal didaftarkan.");
+        throw new Error(result.error || "Izin notifikasi ditolak atau subscription Web Push gagal didaftarkan.");
       } else if (result.status === "unsupported") {
-        throw new Error("Browser ini belum mendukung notifikasi push Firebase.");
+        throw new Error("Browser ini belum mendukung notifikasi Web Push.");
       } else if (result.status === "open-in-new-tab") {
         throw new Error("Buka Mider langsung di tab browser, bukan dari pratinjau atau iframe.");
       } else {
-        throw new Error("Konfigurasi Firebase Web Push belum lengkap.");
+        throw new Error("Konfigurasi kunci publik VAPID belum lengkap.");
       }
     } catch (error) {
       setPushError(error instanceof Error ? error.message : String(error));
@@ -143,14 +143,14 @@ export function NotificationPrompt() {
           {pushStatus && <p className="mt-2 text-xs text-primary" role="status">{pushStatus}</p>}
           {pushError && (
             <p className="mt-2 break-all text-xs text-destructive" role="alert">
-              Firebase: {pushError}
+              Web Push: {pushError}
             </p>
           )}
         </div>
         <div className="flex shrink-0 flex-col gap-2">
           {pushNeedsSetup && (
             <Button size="sm" variant="outline" onClick={handleEnablePush} disabled={pushLoading}>
-              {pushLoading ? "Memproses Firebase…" : "Aktifkan Notifikasi"}
+              {pushLoading ? "Memproses Web Push…" : "Aktifkan Notifikasi"}
             </Button>
           )}
           {locationNeedsSetup && (
