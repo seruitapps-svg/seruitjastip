@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, Bell, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, Bell, CheckCircle2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { requestAndSavePushToken, type PushPermissionStatus } from "@/lib/push-notifications";
 import { useAuth } from "@/hooks/use-auth";
@@ -19,9 +19,30 @@ export function NotificationPrompt() {
   const [status, setStatus] = useState<PushPermissionStatus | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
+  const [locationDismissed, setLocationDismissed] = useState(false);
   const [registered, setRegistered] = useState(false);
   const [locationStatus, setLocationStatus] = useState<"checking" | "granted" | "prompt" | "denied" | "unsupported" | "error">("checking");
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user?.id || typeof window === "undefined") return;
+    try {
+      setLocationDismissed(window.localStorage.getItem(`mider-location-prompt-dismissed:${user.id}`) === "true");
+    } catch {
+      // Pengingat tetap dapat ditutup selama sesi jika penyimpanan browser tidak tersedia.
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (locationStatus === "granted" && user?.id && typeof window !== "undefined") {
+      try {
+        window.localStorage.removeItem(`mider-location-prompt-dismissed:${user.id}`);
+      } catch {
+        // Izin aktif tetap berlaku meski penyimpanan browser tidak tersedia.
+      }
+      setLocationDismissed(false);
+    }
+  }, [locationStatus, user?.id]);
 
   useEffect(() => {
     if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
@@ -91,7 +112,7 @@ export function NotificationPrompt() {
   if (!user || typeof window === "undefined") return null;
   const notificationSupported = "Notification" in window;
   const pushNeedsSetup = notificationSupported && !((Notification.permission === "granted" && registered) || status === "granted" || dismissed);
-  const locationNeedsSetup = locationStatus !== "granted" && locationStatus !== "unsupported";
+  const locationNeedsSetup = locationStatus !== "granted" && locationStatus !== "unsupported" && !locationDismissed;
   if (!pushNeedsSetup && !locationNeedsSetup) return null;
 
   async function handleEnable() {
@@ -111,29 +132,29 @@ export function NotificationPrompt() {
   return (
     <div className="mx-auto my-3 flex max-w-3xl items-start gap-3 px-4">
       <div className="flex min-w-0 flex-1 items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
-        <Bell className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+        {pushNeedsSetup ? <Bell className="mt-0.5 h-5 w-5 shrink-0 text-primary" /> : <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-primary" />}
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-foreground">
-            {pushNeedsSetup ? (notificationSupported ? (Notification.permission === "granted" ? "Daftarkan Notifikasi Order" : "Aktifkan Notifikasi Order") : "Pengaturan Izin Perangkat") : "Aktifkan Izin Lokasi"}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Terima pemberitahuan pesanan dan pesan chat meski aplikasi tidak sedang terbuka.
-          </p>
-          {locationStatus !== "granted" && (
-            <div className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-foreground" role="status">
-              <p className="font-semibold">Izin lokasi belum aktif</p>
-              <p className="mt-1 text-muted-foreground">
-                Lokasi diperlukan untuk titik penjemputan dan pelacakan driver. Tekan Aktifkan Lokasi lalu izinkan akses di browser.
+          {pushNeedsSetup && (
+            <>
+              <p className="text-sm font-semibold text-foreground">
+                {notificationSupported ? (Notification.permission === "granted" ? "Daftarkan Notifikasi Order" : "Aktifkan Notifikasi Order") : "Pengaturan Izin Perangkat"}
               </p>
-              {locationStatus === "denied" && (
-                <p className="mt-1 text-destructive">Izin pernah ditolak. Ubah izin Lokasi melalui pengaturan situs di browser, lalu muat ulang halaman.</p>
-              )}
-              {locationStatus === "unsupported" && (
-                <p className="mt-1 text-muted-foreground">Browser ini tidak menyediakan akses lokasi.</p>
-              )}
-              {locationMessage && <p className="mt-1">{locationMessage}</p>}
-            </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Terima pemberitahuan pesanan dan pesan chat meski aplikasi tidak sedang terbuka.
+              </p>
+            </>
           )}
+          {locationNeedsSetup && (
+            <div className={pushNeedsSetup ? "mt-2 rounded-lg border border-border bg-background/70 p-2.5 text-xs" : "text-xs"} role="status">
+              <p className="font-semibold text-foreground">{locationStatus === "denied" ? "Lokasi belum diizinkan" : "Aktifkan lokasi saat dibutuhkan"}</p>
+              <p className="mt-1 text-muted-foreground">
+                {locationStatus === "denied"
+                  ? "Untuk memakai fitur jemput dan pelacakan, ubah izin lokasi situs melalui pengaturan browser."
+                  : "Lokasi membantu menentukan titik penjemputan dan melacak perjalanan."}
+              </p>
+              {locationMessage && <p className="mt-1 text-muted-foreground">{locationMessage}</p>}
+            </div>
+          }
           {status && (
             <div className="mt-2 text-xs text-muted-foreground" role="status">
               <p className="flex items-start gap-1.5">
@@ -163,8 +184,26 @@ export function NotificationPrompt() {
               Aktifkan Lokasi
             </Button>
           )}
-          {(pushNeedsSetup || locationNeedsSetup) && (
+          {pushNeedsSetup && (
             <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setDismissed(true)}>
+              Nanti
+            </button>
+          )}
+          {locationNeedsSetup && (
+            <button
+              type="button"
+              className="text-xs text-muted-foreground underline"
+              onClick={() => {
+                setLocationDismissed(true);
+                if (user?.id) {
+                  try {
+                    window.localStorage.setItem(`mider-location-prompt-dismissed:${user.id}`, "true");
+                  } catch {
+                    // State lokal tetap menyembunyikan pengingat sampai komponen dimuat ulang.
+                  }
+                }
+              }}
+            >
               Nanti
             </button>
           )}
