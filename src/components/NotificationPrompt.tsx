@@ -154,7 +154,7 @@ export function NotificationPrompt() {
               </p>
               {locationMessage && <p className="mt-1 text-muted-foreground">{locationMessage}</p>}
             </div>
-          }
+          )}
           {status && (
             <div className="mt-2 text-xs text-muted-foreground" role="status">
               <p className="flex items-start gap-1.5">
