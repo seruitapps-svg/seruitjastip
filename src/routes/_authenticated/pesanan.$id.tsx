@@ -254,8 +254,8 @@ function OrderDetail() {
             orderId={o.id}
             trackingActive
             followDriver
-            origin={{ lat: o.origin_lat, lng: o.origin_lng }}
-            destination={{ lat: o.dest_lat, lng: o.dest_lng }}
+            origin={Number.isFinite(Number(o.origin_lat)) && Number.isFinite(Number(o.origin_lng)) ? { lat: Number(o.origin_lat), lng: Number(o.origin_lng) } : null}
+            destination={Number.isFinite(Number(o.dest_lat)) && Number.isFinite(Number(o.dest_lng)) ? { lat: Number(o.dest_lat), lng: Number(o.dest_lng) } : null}
             encodedPolyline={o.encoded_polyline}
             className="h-full w-full"
           />
@@ -430,8 +430,8 @@ function OrderDetail() {
           <RouteMap
             orderId={o.id}
             trackingActive={["diambil", "dijemput", "diantar"].includes(o.status)}
-            origin={{ lat: o.origin_lat, lng: o.origin_lng }}
-            destination={{ lat: o.dest_lat, lng: o.dest_lng }}
+            origin={Number.isFinite(Number(o.origin_lat)) && Number.isFinite(Number(o.origin_lng)) ? { lat: Number(o.origin_lat), lng: Number(o.origin_lng) } : null}
+            destination={Number.isFinite(Number(o.dest_lat)) && Number.isFinite(Number(o.dest_lng)) ? { lat: Number(o.dest_lat), lng: Number(o.dest_lng) } : null}
             encodedPolyline={o.encoded_polyline}
             className="h-52 w-full rounded-xl border border-border"
           />
