@@ -1,0 +1,21 @@
+{
+  "id": "/",
+  "name": "Mider — Metro Jastip Order",
+  "short_name": "Mider",
+  "description": "Pesan jasa titip, kirim barang, dan kelola pesanan Mider.",
+  "lang": "id-ID",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#16a34a",
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
