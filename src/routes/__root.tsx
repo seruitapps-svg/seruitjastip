@@ -136,6 +136,33 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const oneSignalWindow = window as Window & {
+      __miderOneSignalInit?: boolean;
+      OneSignalDeferred?: Array<(OneSignal: any) => void>;
+    };
+
+    // Avoid duplicate SDK initialization during client re-renders or React Strict Mode.
+    if (oneSignalWindow.__miderOneSignalInit) return;
+    oneSignalWindow.__miderOneSignalInit = true;
+    oneSignalWindow.OneSignalDeferred = oneSignalWindow.OneSignalDeferred || [];
+    oneSignalWindow.OneSignalDeferred.push(async (OneSignal) => {
+      await OneSignal.init({
+        appId: "1dc83317-d6c7-43ce-aa95-fdfff1ab2364",
+        // Keep OneSignal separate from Mider's existing Firebase worker at scope "/".
+        serviceWorkerPath: "/onesignal/OneSignalSDKWorker.js",
+        serviceWorkerParam: { scope: "/onesignal/" },
+      });
+    });
+
+    const script = document.createElement("script");
+    script.src = "https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";
+    script.defer = true;
+    document.head.appendChild(script);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
