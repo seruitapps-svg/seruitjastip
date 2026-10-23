@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { Bell, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ensureOneSignalReady } from "@/lib/onesignal";
+import { requestAndSavePushToken } from "@/lib/push-notifications";
 import { useAuth } from "@/hooks/use-auth";
 
 export function NotificationPrompt() {
   const { user } = useAuth();
   const [dismissed, setDismissed] = useState(false);
   const [locationDismissed, setLocationDismissed] = useState(false);
-  const [oneSignalLoading, setOneSignalLoading] = useState(false);
-  const [oneSignalStatus, setOneSignalStatus] = useState<string | null>(null);
-  const [oneSignalError, setOneSignalError] = useState<string | null>(null);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushStatus, setPushStatus] = useState<string | null>(null);
+  const [pushError, setPushError] = useState<string | null>(null);
   const [locationStatus, setLocationStatus] = useState<"checking" | "granted" | "prompt" | "denied" | "unsupported" | "error">("checking");
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
 
@@ -57,25 +57,6 @@ export function NotificationPrompt() {
     return () => { cancelled = true; };
   }, []);
 
-  // Disable only the legacy Firebase messaging worker; do not unregister other PWA workers.
-  useEffect(() => {
-    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
-    void navigator.serviceWorker.getRegistrations().then((registrations) => {
-      for (const registration of registrations) {
-        const scriptUrls = [
-          registration.active?.scriptURL,
-          registration.waiting?.scriptURL,
-          registration.installing?.scriptURL,
-        ].filter(Boolean) as string[];
-        if (scriptUrls.some((url) => url.includes("/firebase-messaging-sw.js"))) {
-          void registration.unregister();
-        }
-      }
-    }).catch((error) => {
-      console.warn("Could not unregister legacy Firebase notification worker:", error);
-    });
-  }, []);
-
   async function handleEnableLocation() {
     if (!navigator.geolocation) {
       setLocationStatus("unsupported");
@@ -101,64 +82,29 @@ export function NotificationPrompt() {
     );
   }
 
-  async function handleEnableOneSignal() {
-    if (!user?.id || oneSignalLoading) return;
-    setOneSignalLoading(true);
-    setOneSignalStatus(null);
-    setOneSignalError(null);
+  async function handleEnablePush() {
+    if (!user?.id || pushLoading) return;
+    setPushLoading(true);
+    setPushStatus(null);
+    setPushError(null);
 
     try {
-      if (typeof window === "undefined" || !("Notification" in window) || !("serviceWorker" in navigator)) {
-        throw new Error("Browser ini belum mendukung Web Push.");
+      const result = await requestAndSavePushToken(user.id);
+      if (result.status === "granted") {
+        setPushStatus("Notifikasi Firebase berhasil didaftarkan di perangkat ini.");
+      } else if (result.status === "denied") {
+        throw new Error(result.error || "Izin notifikasi ditolak atau token Firebase gagal didaftarkan.");
+      } else if (result.status === "unsupported") {
+        throw new Error("Browser ini belum mendukung notifikasi push Firebase.");
+      } else if (result.status === "open-in-new-tab") {
+        throw new Error("Buka Mider langsung di tab browser, bukan dari pratinjau atau iframe.");
+      } else {
+        throw new Error("Konfigurasi Firebase Web Push belum lengkap.");
       }
-      const OneSignal = await Promise.race([
-        ensureOneSignalReady(),
-        new Promise<never>((_, reject) =>
-          window.setTimeout(
-            () => reject(new Error("Inisialisasi OneSignal melewati batas 15 detik. Tutup PWA, buka ulang, lalu coba lagi.")),
-            15000,
-          ),
-        ),
-      ]);
-
-      await Promise.race([
-        OneSignal.Notifications.requestPermission(),
-        new Promise<never>((_, reject) =>
-          window.setTimeout(
-            () => reject(new Error("Permintaan izin notifikasi tidak merespons dalam 15 detik.")),
-            15000,
-          ),
-        ),
-      ]);
-
-      if (Notification.permission !== "granted") {
-        throw new Error("Izin notifikasi belum diizinkan di browser.");
-      }
-
-      // Link this browser subscription to the authenticated Mider user so the
-      // Edge Function can target the correct account through OneSignal aliases.
-      await OneSignal.login(user.id);
-
-      await Promise.race([
-        OneSignal.User.PushSubscription.optIn(),
-        new Promise<never>((_, reject) =>
-          window.setTimeout(
-            () => reject(new Error("Pendaftaran subscription tidak merespons dalam 15 detik.")),
-            15000,
-          ),
-        ),
-      ]);
-
-      const subscriptionId = OneSignal.User.PushSubscription.id;
-      setOneSignalStatus(
-        subscriptionId
-          ? "OneSignal aktif. ID subscription: " + subscriptionId
-          : "Permintaan aktivasi selesai, tetapi ID subscription belum tersedia. Periksa tab Subscriptions OneSignal.",
-      );
     } catch (error) {
-      setOneSignalError(error instanceof Error ? error.message : String(error));
+      setPushError(error instanceof Error ? error.message : String(error));
     } finally {
-      setOneSignalLoading(false);
+      setPushLoading(false);
     }
   }
 
@@ -194,17 +140,17 @@ export function NotificationPrompt() {
               {locationMessage && <p className="mt-1 text-muted-foreground">{locationMessage}</p>}
             </div>
           )}
-          {oneSignalStatus && <p className="mt-2 text-xs text-primary" role="status">{oneSignalStatus}</p>}
-          {oneSignalError && (
+          {pushStatus && <p className="mt-2 text-xs text-primary" role="status">{pushStatus}</p>}
+          {pushError && (
             <p className="mt-2 break-all text-xs text-destructive" role="alert">
-              OneSignal: {oneSignalError}
+              Firebase: {pushError}
             </p>
           )}
         </div>
         <div className="flex shrink-0 flex-col gap-2">
           {pushNeedsSetup && (
-            <Button size="sm" variant="outline" onClick={handleEnableOneSignal} disabled={oneSignalLoading}>
-              {oneSignalLoading ? "Memproses OneSignal…" : "Aktifkan OneSignal"}
+            <Button size="sm" variant="outline" onClick={handleEnablePush} disabled={pushLoading}>
+              {pushLoading ? "Memproses Firebase…" : "Aktifkan Notifikasi"}
             </Button>
           )}
           {locationNeedsSetup && (
