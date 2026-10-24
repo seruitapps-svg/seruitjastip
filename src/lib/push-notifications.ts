@@ -53,7 +53,7 @@ export async function requestAndSavePushToken(
   try {
     if (!(await isSupported())) return { status: "unsupported" };
     const permission = await Notification.requestPermission();
-    if (permission !== "granted") return { status: "denied" };
+    if (permission !== "granted") return { status: "denied", error: "Izin notifikasi tidak diizinkan di browser." };
 
     const query = new URLSearchParams(
       Object.entries(firebaseConfig).filter((entry): entry is [string, string] => Boolean(entry[1])),
@@ -77,14 +77,31 @@ export async function requestAndSavePushToken(
 
     if (!fcmToken) return { status: "denied", error: "Token FCM tidak ditemukan" };
 
-    // RPC safely reassigns a token already registered to a previous account.
-    // The database function must verify auth.uid() = p_user_id.
-    const { error: dbError } = await (supabase as any).rpc("register_user_push_token", {
+    const platform = /Android/i.test(navigator.userAgent) ? "android_twa" : "pwa";
+
+    // 1. Coba simpan via RPC
+    const { error: rpcError } = await (supabase as any).rpc("register_user_push_token", {
       p_user_id: userId,
       p_token: fcmToken,
-      p_platform: /Android/i.test(navigator.userAgent) ? "android_twa" : "pwa",
+      p_platform: platform,
     });
-    if (dbError) throw dbError;
+
+    // 2. Fallback: simpan langsung ke tabel jika RPC belum siap
+    if (rpcError) {
+      console.warn("RPC register_user_push_token gagal, mencoba simpan langsung ke tabel:", rpcError);
+      const { error: tableError } = await (supabase as any)
+        .from("user_push_tokens")
+        .upsert(
+          {
+            user_id: userId,
+            token: fcmToken,
+            platform,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,token" }
+        );
+      if (tableError) throw tableError;
+    }
 
     return { status: "granted", token: fcmToken };
   } catch (error: any) {
