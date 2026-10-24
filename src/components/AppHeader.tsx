@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { Bike, ChevronDown, LogOut, ShoppingBag, Store, UserRound } from "lucide-react";
+import { Bike, ChevronDown, LogOut, ShoppingBag, Store, UserRound, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { AppAnnouncements } from "@/components/AppAnnouncements";
@@ -63,7 +63,6 @@ export function AppHeader() {
     icon.href = url;
   }, [branding.data?.favicon_url]);
 
-
   async function signOut() {
     await queryClient.cancelQueries();
     if (user?.id) {
@@ -75,172 +74,130 @@ export function AppHeader() {
   }
 
   const linkCls =
-    "rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground";
-  const activeCls = "!text-primary font-bold";
+    "rounded-md px-2 py-2 text-xs sm:text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground";
+  const dashboardPath = isAdmin ? "/admin" : isDriver ? "/driver" : isMitra ? "/mitra" : "/";
+  const dashboardLabel = isAdmin ? "Admin" : isDriver ? "Mode Driver" : isMitra ? "Mode Resto" : "Beranda";
 
   return (
     <>
-    <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur">
+        <div className="mx-auto flex max-w-3xl items-center gap-2 px-3 py-2.5">
+          <Link to={dashboardPath} className="flex shrink-0 items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-primary">
+              {branding.data?.logo_url ? (
+                <img src={branding.data.logo_url} alt="" className="h-full w-full object-contain bg-card" />
+              ) : (
+                <Bike className="h-5 w-5 text-primary-foreground" />
+              )}
+            </div>
+            <span className="text-lg font-bold tracking-tight text-foreground">{branding.data?.app_name || "Mider"}</span>
+          </Link>
 
-      <div className="mx-auto flex max-w-3xl items-center gap-2 px-4 py-2.5">
-        {/* Logo Mider */}
-        <Link to="/" className="flex shrink-0 items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-primary">
-            {branding.data?.logo_url ? (
-              <img src={branding.data.logo_url} alt="" className="h-full w-full object-contain bg-card" />
-            ) : (
-              <Bike className="h-5 w-5 text-primary-foreground" />
-            )}
-          </div>
-          <span className="text-lg font-bold tracking-tight text-foreground">{branding.data?.app_name || "Mider"}</span>
-        </Link>
-
-        {user ? (
-          <nav aria-label="Navigasi utama" className="ml-auto flex items-center gap-1.5 sm:gap-2">
-            {/* Dropdown Akun */}
-            <details className="relative">
-              <summary className="flex cursor-pointer list-none items-center gap-1 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground [&::-webkit-details-marker]:hidden">
-                <UserRound className="h-4 w-4" />
-                <ChevronDown className="h-3.5 w-3.5" />
-              </summary>
-              <div className="absolute right-0 top-full z-50 mt-2 min-w-56 rounded-xl border border-border bg-card p-2 shadow-lg">
-                <Link
-                  to="/profil"
-                  className="mb-2 flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-accent"
-                  activeProps={{ className: "text-primary bg-primary/10" }}
-                >
-                  <UserRound className="h-3.5 w-3.5 text-primary" /> Profil Saya
+          {user ? (
+            <nav aria-label="Navigasi utama" className="ml-auto flex min-w-0 items-center gap-0.5 sm:gap-1">
+              {/* Navigasi utama dipertahankan di header */}
+              {isDriver && !isAdmin && (
+                <Link to="/driver" className={linkCls} activeProps={{ className: "!text-primary font-bold" }}>
+                  <span className="whitespace-nowrap">Mode Driver</span>
                 </Link>
-
-                <Link
-                  to="/pesanan"
-                  className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent"
-                  activeProps={{ className: "text-primary bg-primary/10" }}
-                >
-                  <ShoppingBag className="h-3.5 w-3.5" /> Pesanan Saya
+              )}
+              {isMitra && !isAdmin && (
+                <Link to="/mitra" className={linkCls} activeProps={{ className: "!text-primary font-bold" }}>
+                  <span className="whitespace-nowrap">Mode Resto</span>
                 </Link>
-                <Link
-                  to="/saldo"
-                  className="mb-2 flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent"
-                  activeProps={{ className: "text-primary bg-primary/10" }}
-                >
-                  <Store className="h-3.5 w-3.5" /> Saldo
-                </Link>
+              )}
+              <Link to="/pesanan" className={linkCls} activeProps={{ className: "!text-primary font-bold" }}>
+                <span className="whitespace-nowrap">Pesanan</span>
+              </Link>
+              <Link to="/saldo" className={linkCls} activeProps={{ className: "!text-primary font-bold" }}>
+                <span className="whitespace-nowrap">Saldo</span>
+              </Link>
 
-                {/* Status Akun */}
-                <div className="mb-2 border-b border-border px-2 pb-2 text-[11px]">
-                  <span className="text-muted-foreground">Login sebagai: </span>
-                  <span className="font-bold text-foreground">
-                    {isAdmin
-                      ? "Superadmin"
-                      : isDriver
-                      ? "Mitra Driver"
-                      : isMitra
-                      ? "Mitra Resto"
-                      : "Pelanggan"}
-                  </span>
-                </div>
-
-                {/* Skenario Driver: hanya dashboard driver & link pemesan */}
-                {isDriver && !isAdmin && (
-                  <div className="mb-1 space-y-0.5">
-                    <p className="px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Akses Driver</p>
-                    <Link
-                      to="/driver"
-                      className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-accent"
-                      activeProps={{ className: "text-primary bg-primary/10" }}
-                    >
-                      <Bike className="h-3.5 w-3.5 text-primary" /> Dashboard Driver
-                    </Link>
-                    <Link
-                      to="/"
-                      className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent"
-                    >
-                      <ShoppingBag className="h-3.5 w-3.5" /> Beranda Pemesanan
-                    </Link>
-                  </div>
-                )}
-
-                {/* Skenario Mitra Resto: hanya dashboard resto & link pemesan */}
-                {isMitra && !isAdmin && (
-                  <div className="mb-1 space-y-0.5">
-                    <p className="px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Akses Resto</p>
-                    <Link
-                      to="/mitra"
-                      className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-accent"
-                      activeProps={{ className: "text-primary bg-primary/10" }}
-                    >
-                      <Store className="h-3.5 w-3.5 text-primary" /> Dashboard Mitra Resto
-                    </Link>
-                    <Link
-                      to="/"
-                      className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent"
-                    >
-                      <ShoppingBag className="h-3.5 w-3.5" /> Beranda Pemesanan
-                    </Link>
-                  </div>
-                )}
-
-                {/* Skenario Pelanggan: matikan kedua dashboard, tampilkan opsi pendaftaran */}
-                {isCustomerOnly && (
-                  <div className="mb-1 space-y-0.5">
-                    <p className="px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Daftar Mitra</p>
-                    <Link
-                      to="/daftar-driver"
-                      className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent"
-                    >
-                      <Bike className="h-3.5 w-3.5 text-primary" /> Daftar Menjadi Driver
-                    </Link>
-                    <Link
-                      to="/merchant"
-                      className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent"
-                    >
-                      <Store className="h-3.5 w-3.5 text-primary" /> Daftar Mitra Resto
-                    </Link>
-                  </div>
-                )}
-
-                {/* Panel Superadmin (jika admin) */}
-                {isAdmin && (
-                  <div className="mb-1 border-t border-border pt-1">
-                    <Link
-                      to="/admin"
-                      className="block rounded-lg px-2.5 py-2 text-xs font-bold text-foreground hover:bg-accent"
-                      activeProps={{ className: "text-primary" }}
-                    >
-                      ⚙️ Panel Superadmin
-                    </Link>
-                  </div>
-                )}
-
-                {/* Tombol Logout */}
-                <div className="border-t border-border pt-1">
-                  <button
-                    type="button"
-                    onClick={signOut}
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-destructive hover:bg-destructive/10"
+              {/* Dropdown hanya untuk profil, akses peran, dan keluar */}
+              <details className="relative shrink-0">
+                <summary className="flex cursor-pointer list-none items-center gap-1 rounded-md px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground [&::-webkit-details-marker]:hidden">
+                  <UserRound className="h-4 w-4" />
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </summary>
+                <div className="absolute right-0 top-full z-50 mt-2 min-w-56 rounded-xl border border-border bg-card p-2 shadow-lg">
+                  <Link
+                    to="/profil"
+                    className="mb-2 flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-accent"
+                    activeProps={{ className: "text-primary bg-primary/10" }}
                   >
-                    <LogOut className="h-3.5 w-3.5" />
-                    Keluar Akun
-                  </button>
+                    <UserRound className="h-3.5 w-3.5 text-primary" /> Profil Saya
+                  </Link>
+
+                  <div className="mb-2 border-b border-border px-2 pb-2 text-[11px]">
+                    <span className="text-muted-foreground">Login sebagai: </span>
+                    <span className="font-bold text-foreground">
+                      {isAdmin ? "Superadmin" : isDriver ? "Mitra Driver" : isMitra ? "Mitra Resto" : "Pelanggan"}
+                    </span>
+                  </div>
+
+                  {isDriver && !isAdmin && (
+                    <div className="mb-1 space-y-0.5">
+                      <p className="px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Akses Driver</p>
+                      <Link to="/driver" className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-accent" activeProps={{ className: "text-primary bg-primary/10" }}>
+                        <Bike className="h-3.5 w-3.5 text-primary" /> Dashboard Driver
+                      </Link>
+                      <Link to="/" className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent">
+                        <ShoppingBag className="h-3.5 w-3.5" /> Beranda Pemesanan
+                      </Link>
+                    </div>
+                  )}
+
+                  {isMitra && !isAdmin && (
+                    <div className="mb-1 space-y-0.5">
+                      <p className="px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Akses Resto</p>
+                      <Link to="/mitra" className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-accent" activeProps={{ className: "text-primary bg-primary/10" }}>
+                        <Store className="h-3.5 w-3.5 text-primary" /> Dashboard Mitra Resto
+                      </Link>
+                      <Link to="/" className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent">
+                        <ShoppingBag className="h-3.5 w-3.5" /> Beranda Pemesanan
+                      </Link>
+                    </div>
+                  )}
+
+                  {isCustomerOnly && (
+                    <div className="mb-1 space-y-0.5">
+                      <p className="px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Daftar Mitra</p>
+                      <Link to="/daftar-driver" className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent">
+                        <Bike className="h-3.5 w-3.5 text-primary" /> Daftar Menjadi Driver
+                      </Link>
+                      <Link to="/merchant" className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent">
+                        <Store className="h-3.5 w-3.5 text-primary" /> Daftar Mitra Resto
+                      </Link>
+                    </div>
+                  )}
+
+                  {isAdmin && (
+                    <div className="mb-1 border-t border-border pt-1">
+                      <Link to="/admin" className="block rounded-lg px-2.5 py-2 text-xs font-bold text-foreground hover:bg-accent" activeProps={{ className: "text-primary" }}>
+                        ⚙️ Panel Superadmin
+                      </Link>
+                    </div>
+                  )}
+
+                  <div className="border-t border-border pt-1">
+                    <button type="button" onClick={signOut} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-destructive hover:bg-destructive/10">
+                      <LogOut className="h-3.5 w-3.5" /> Keluar Akun
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </details>
-          </nav>
-        ) : (
-          <div className="ml-auto">
-            <Link
-              to="/auth"
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground"
-            >
-              Masuk
-            </Link>
-          </div>
-        )}
-      </div>
-      <AppAnnouncements />
-    </header>
-    <NotificationPrompt />
+              </details>
+            </nav>
+          ) : (
+            <div className="ml-auto">
+              <Link to="/auth" className="rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground">
+                Masuk
+              </Link>
+            </div>
+          )}
+        </div>
+        <AppAnnouncements />
+      </header>
+      <NotificationPrompt />
     </>
   );
 }
