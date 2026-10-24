@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { AppAnnouncements } from "@/components/AppAnnouncements";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
 import { unregisterCurrentPushToken } from "@/lib/push-notifications";
+import { setOrderingMode } from "@/lib/app-mode";
 
 export function AppHeader() {
   const { user, isAdmin, isDriver, isMitra, isCustomerOnly } = useAuth();
@@ -129,7 +130,7 @@ export function AppHeader() {
                       <Link to="/driver" className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-accent" activeProps={{ className: "text-primary bg-primary/10" }}>
                         <Bike className="h-3.5 w-3.5 text-primary" /> Dashboard Driver
                       </Link>
-                      <Link to="/" className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent">
+                      <Link to="/" onClick={() => setOrderingMode(true)} className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent">
                         <ShoppingBag className="h-3.5 w-3.5" /> Beranda Pemesanan
                       </Link>
                     </div>
@@ -141,7 +142,7 @@ export function AppHeader() {
                       <Link to="/mitra" className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-accent" activeProps={{ className: "text-primary bg-primary/10" }}>
                         <Store className="h-3.5 w-3.5 text-primary" /> Dashboard Mitra Resto
                       </Link>
-                      <Link to="/" className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent">
+                      <Link to="/" onClick={() => setOrderingMode(true)} className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent">
                         <ShoppingBag className="h-3.5 w-3.5" /> Beranda Pemesanan
                       </Link>
                     </div>
