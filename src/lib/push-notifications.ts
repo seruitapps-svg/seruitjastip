@@ -1,5 +1,5 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
-import { getMessaging, getToken, isSupported } from "firebase/messaging";
+import { getMessaging, getToken, isSupported, onMessage } from "firebase/messaging";
 import { supabase } from "@/integrations/supabase/client";
 
 const appId =
@@ -25,6 +25,36 @@ const firebaseConfig = {
   appId,
   messagingSenderId: appId ? appId.split(":")[1] || "803891035138" : "803891035138",
 };
+
+let foregroundListenerRegistered = false;
+
+function registerForegroundMessageHandler(messaging: ReturnType<typeof getMessaging>) {
+  if (foregroundListenerRegistered || typeof window === "undefined") return;
+
+  onMessage(messaging, (payload) => {
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+
+    const title = payload.notification?.title || "Pemberitahuan Mider";
+    const body = payload.notification?.body || "Ada pembaruan pesanan.";
+    const targetUrl = payload.data?.url || "/";
+    const orderId = payload.data?.order_id;
+
+    void navigator.serviceWorker.ready
+      .then((registration) =>
+        registration.showNotification(title, {
+          body,
+          tag: orderId ? "mider-order-" + orderId : "mider-foreground-update",
+          data: { url: targetUrl },
+          vibrate: [250, 100, 250],
+        }),
+      )
+      .catch((error) => {
+        console.warn("Gagal menampilkan notifikasi saat aplikasi terbuka:", error);
+      });
+  });
+
+  foregroundListenerRegistered = true;
+}
 
 export type PushPermissionStatus =
   | "granted"
@@ -70,6 +100,7 @@ export async function requestAndSavePushToken(
 
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     const messaging = getMessaging(app);
+    registerForegroundMessageHandler(messaging);
     const fcmToken = await getToken(messaging, {
       vapidKey,
       serviceWorkerRegistration: registration,
