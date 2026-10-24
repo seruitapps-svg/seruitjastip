@@ -7,7 +7,13 @@ export const sendOrderPush = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) =>
     z
       .object({
-        eventType: z.enum(["order_created", "order_status_changed", "merchant_order_ready", "chat_message"]),
+        eventType: z.enum([
+          "order_created",
+          "order_status_changed",
+          "merchant_order_ready",
+          "merchant_rejected",
+          "chat_message",
+        ]),
         orderId: z.string().uuid(),
         messageId: z.string().uuid().optional(),
       })
