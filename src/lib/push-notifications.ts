@@ -47,8 +47,10 @@ function registerForegroundMessageHandler(messaging: ReturnType<typeof getMessag
     // Hindari notifikasi sistem ganda pada dashboard driver/mitra yang sudah menampilkan
     // popup lokal untuk order baru; halaman lain tetap menampilkan notifikasi sistem.
     const path = window.location.pathname;
-    const onRoleDashboard = path.startsWith("/driver") || path.startsWith("/mitra");
-    if (!(onRoleDashboard && document.visibilityState === "visible" &&
+    // Dashboard driver sudah memiliki popup order lokal; mitra tidak boleh ikut disupresi
+    // karena notifikasi order masuk perlu tetap terlihat pada dashboard mitra.
+    const onDriverDashboard = path.startsWith("/driver");
+    if (!(onDriverDashboard && document.visibilityState === "visible" &&
       (evt === "order_created" || evt === "merchant_order_ready"))) {
       void navigator.serviceWorker.ready
         .then((registration) =>
