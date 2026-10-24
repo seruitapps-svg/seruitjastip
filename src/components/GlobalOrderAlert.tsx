@@ -44,15 +44,10 @@ export function GlobalOrderAlert() {
       const detail = (event as CustomEvent<PushDetail>).detail;
       if (!detail) return;
 
-      // Hindari popup ganda saat dashboard khusus sedang menangani order mendesak.
+      // Dashboard driver sudah memiliki popup lokal dari Realtime.
+      // Dashboard mitra belum memilikinya, jadi tetap gunakan popup global di sana.
       const path = window.location.pathname;
-      if (
-        detail.urgent &&
-        (detail.url === "/driver" || detail.url === "/mitra") &&
-        path.startsWith(detail.url)
-      ) {
-        return;
-      }
+      if (detail.urgent && path.startsWith("/driver")) return;
 
       stopSound();
       setAlert(detail);
