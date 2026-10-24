@@ -294,6 +294,26 @@ function DriverPage() {
   const done = mine.data?.filter((o) => o.status === "selesai") ?? [];
   const availableOrders = pool.data?.filter((o) => driverProfile.data?.accepts_ojek !== false || o.service !== "ojek") ?? [];
 
+  // Fallback: jika event Realtime terlewat atau order sudah tersedia sebelum dashboard dibuka,
+  // tampilkan popup dari pool yang sudah termuat. Tidak mengubah sumber data atau klaim order.
+  useEffect(() => {
+    if (!isDriver || !isOnline || !availableOrders.length || alertOrderId) return;
+    const nextOrder = availableOrders.find((order) => !alertedOrderIds.current.has(order.id));
+    if (!nextOrder) return;
+    alertedOrderIds.current.add(nextOrder.id);
+    setAlertOrderId(nextOrder.id);
+    playOrderAlertSound();
+  }, [isDriver, isOnline, availableOrders, alertOrderId]);
+
+  // Jika order yang sedang ditampilkan sudah tidak tersedia (misalnya diambil driver lain),
+  // tutup popup setelah pool diperbarui.
+  useEffect(() => {
+    if (!alertOrderId || pool.isFetching) return;
+    if (!availableOrders.some((order) => order.id === alertOrderId)) {
+      setAlertOrderId(null);
+    }
+  }, [alertOrderId, availableOrders, pool.isFetching]);
+
   // Hook harus dipanggil tanpa syarat dan sebelum early return agar urutan hook React tetap konsisten.
   useEffect(() => {
     setDriverProfilePopupOpen(active.length > 0 && hasDriverProfile);
