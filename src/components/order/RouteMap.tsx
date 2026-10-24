@@ -18,6 +18,11 @@ interface Props {
   trackingActive?: boolean;
   followDriver?: boolean;
   className?: string;
+  variant?: "card" | "tracking";
+  nextStop?: Point | null;
+  viewPadding?: { top: number; bottom: number };
+  recenterBottom?: number;
+  onDriverPosition?: (position: Point, timestamp: number) => void;
 }
 
 interface DriverLocationRow {
@@ -35,7 +40,19 @@ export function RouteMap({
   trackingActive = true,
   followDriver = false,
   className,
+  variant = "card",
+  nextStop = null,
+  viewPadding = { top: 90, bottom: 240 },
+  recenterBottom = 240,
+  onDriverPosition,
 }: Props) {
+  const isTracking = variant === "tracking";
+  const onDriverPositionRef = useRef(onDriverPosition);
+  onDriverPositionRef.current = onDriverPosition;
+  const paddingRef = useRef(viewPadding);
+  paddingRef.current = viewPadding;
+  const [following, setFollowing] = useState(true);
+  const haloRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
@@ -63,6 +80,7 @@ export function RouteMap({
     latestUpdatedAtRef.current = timestamp;
     setDriverPosition(position);
     setLastUpdatedAt(timestamp);
+    onDriverPositionRef.current?.(position, timestamp);
   }, []);
 
   const fetchLatestPosition = useCallback(async (manual = false) => {
@@ -101,6 +119,7 @@ export function RouteMap({
 
   // Perbarui label waktu agar pelanggan bisa mengetahui kesegaran posisi.
   useEffect(() => {
+    if (isTracking) return;
     const interval = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(interval);
   }, []);
@@ -115,11 +134,15 @@ export function RouteMap({
           center: { lat: -5.45, lng: 105.26 },
           zoom: 12,
           clickableIcons: false,
-          disableDefaultUI: false,
-          zoomControl: true,
+          disableDefaultUI: isTracking,
+          zoomControl: !isTracking,
           mapTypeControl: false,
           streetViewControl: false,
+          fullscreenControl: false,
+          keyboardShortcuts: false,
+          gestureHandling: isTracking ? "greedy" : "auto",
         });
+        if (isTracking) map.addListener("dragstart", () => setFollowing(false));
         setMapReady(true);
       })
       .catch((err) => {
@@ -217,7 +240,7 @@ export function RouteMap({
       path.forEach((point: any) => bounds.extend(point));
       hasPoint = true;
     }
-    if (hasPoint) map.fitBounds(bounds, 60);
+    if (hasPoint) map.fitBounds(bounds, isTracking ? { top: paddingRef.current.top, bottom: paddingRef.current.bottom, left: 40, right: 40 } : 60);
   }, [mapReady, origin, destination, encodedPolyline]);
 
   // Marker bergerak mulus mengikuti selang update, dengan panah searah gerak.
@@ -225,10 +248,10 @@ export function RouteMap({
     const map = mapRef.current;
     if (!mapReady || !map || !window.google?.maps) return;
     const maps = window.google.maps;
-    const makeIcon = (rotation:number) => ({path:maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:6,rotation,fillColor:"#0d9488",fillOpacity:1,strokeColor:"#ffffff",strokeWeight:2});
+    const makeIcon = (rotation:number) => ({path:maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:isTracking ? 8 : 6,rotation,fillColor:"#0d9488",fillOpacity:1,strokeColor:"#ffffff",strokeWeight:2});
     if (followDriver && driverPosition) map.panTo(driverPosition);
     if (!driverPosition) { if (driverMarkerRef.current) driverMarkerRef.current.setMap(null); driverMarkerRef.current=null; return; }
-    if (!driverMarkerRef.current) { driverMarkerRef.current=new maps.Marker({map,position:driverPosition,title:"Posisi driver",zIndex:1000,icon:makeIcon(driverHeadingRef.current)}); return; }
+    if (!driverMarkerRef.current) { if (isTracking) haloRef.current = new maps.Marker({map,position:driverPosition,clickable:false,zIndex:900,icon:{path:maps.SymbolPath.CIRCLE,scale:16,fillColor:"#0d9488",fillOpacity:0.22,strokeOpacity:0}}); driverMarkerRef.current=new maps.Marker({map,position:driverPosition,title:"Posisi driver",zIndex:1000,icon:makeIcon(driverHeadingRef.current)}); return; }
     const marker=driverMarkerRef.current,current=marker.getPosition();
     if (!current) { marker.setPosition(driverPosition); return; }
     const a={lat:current.lat(),lng:current.lng()},b=driverPosition,dist=Math.abs(a.lat-b.lat)+Math.abs(a.lng-b.lng);
@@ -237,9 +260,9 @@ export function RouteMap({
     const computed=(Math.atan2(y,x)*180/Math.PI+360)%360,rotation=dist>0.00002?computed:driverHeadingRef.current;
     marker.setIcon(makeIcon(rotation));
     let frame=0;const started=performance.now(),duration=updateGapRef.current;
-    const animate=(time:number)=>{const p=Math.min(1,(time-started)/duration);marker.setPosition({lat:a.lat+(b.lat-a.lat)*p,lng:a.lng+(b.lng-a.lng)*p});if(p<1)frame=requestAnimationFrame(animate);};
+    const animate=(time:number)=>{const p=Math.min(1,(time-started)/duration);const pos={lat:a.lat+(b.lat-a.lat)*p,lng:a.lng+(b.lng-a.lng)*p};marker.setPosition(pos);haloRef.current?.setPosition(pos);if(p<1)frame=requestAnimationFrame(animate);};
     frame=requestAnimationFrame(animate);return()=>cancelAnimationFrame(frame);
-  }, [mapReady, driverPosition, followDriver]);
+  }, [mapReady, driverPosition, followDriver, isTracking]);
 
   const secondsSinceUpdate = lastUpdatedAt === null
     ? null
@@ -261,7 +284,8 @@ export function RouteMap({
   return (
     <div className={`relative overflow-hidden ${className ?? "h-64 w-full rounded-xl border border-border"}`}>
       <div ref={containerRef} className="h-full w-full" />
-      {orderId && trackingActive && (
+      {isTracking && orderId && trackingActive && !following && <button type="button" onClick={() => setFollowing(true)} style={{ bottom: recenterBottom }} className="absolute right-3 z-10 inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2.5 text-sm font-bold text-foreground shadow-lg"><LocateFixed className="h-4 w-4 text-primary" />Ikuti driver</button>}
+      {!isTracking && orderId && trackingActive && (
         <div className="absolute left-3 right-3 top-3 z-10 flex items-start justify-between gap-2 rounded-lg border border-border bg-background/95 px-3 py-2 shadow-sm">
           <div className="min-w-0 text-xs">
             <p className="font-semibold text-foreground">{positionStatus}</p>
