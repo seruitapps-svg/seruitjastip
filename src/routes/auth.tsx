@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
@@ -40,65 +40,74 @@ function AuthPage() {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const handledRef = useRef(false);
 
   useEffect(() => {
     if (redirect) sessionStorage.setItem("seruit-after-login", safePath(redirect));
-    
-    const go = async (userObj?: any) => {
-      // 1. Jika ada tujuan spesifik sebelumnya (misal klik link chat pesanan), buka link tersebut
-      const explicit = sessionStorage.getItem("seruit-after-login");
-      if (explicit && explicit !== "/") {
-        sessionStorage.removeItem("seruit-after-login");
-        navigate({ to: explicit, replace: true });
-        return;
-      }
-      sessionStorage.removeItem("seruit-after-login");
 
-      // 2. Ambil data user & roles
-      const u = userObj ?? (await supabase.auth.getUser()).data.user;
-      if (!u) {
-        navigate({ to: "/", replace: true });
-        return;
-      }
+    const DASHBOARDS = ["/admin", "/driver", "/mitra"];
 
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", u.id);
-
-      // Jangan mengarahkan ke beranda pelanggan jika pembacaan role gagal.
-      // Coba ulang sekali agar hasil login tidak bergantung pada respons role yang sesaat gagal.
-      let resolvedRoles = roles;
-      if (rolesError) {
-        const retry = await supabase
+    async function fetchRoles(userId: string): Promise<string[] | null> {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { data, error } = await supabase
           .from("user_roles")
           .select("role")
-          .eq("user_id", u.id);
-        if (retry.error) {
-          console.error("Gagal membaca peran akun setelah login:", retry.error);
-          setErr("Peran akun belum berhasil dimuat. Silakan muat ulang halaman dan coba lagi.");
-          return;
-        }
-        resolvedRoles = retry.data;
+          .eq("user_id", userId);
+        if (!error) return (data ?? []).map((r: any) => String(r.role));
+        console.error("Gagal membaca peran akun:", error);
+        await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
       }
+      return null;
+    }
 
-      const roleList = (resolvedRoles || []).map((r: any) => r.role);
+    const go = async (userObj?: any) => {
+      if (handledRef.current) return;
+      handledRef.current = true;
 
-      // 3. Pendaratan default sesuai peran akun. Urutan prioritas harus sama dengan AppHeader/useAuth.
-      if (roleList.includes("superadmin")) {
-        navigate({ to: "/admin", replace: true });
-      } else if (roleList.includes("driver")) {
-        navigate({ to: "/driver", replace: true });
-      } else if (roleList.includes("mitra")) {
-        navigate({ to: "/mitra", replace: true });
-      } else {
+      const explicit = sessionStorage.getItem("seruit-after-login");
+      sessionStorage.removeItem("seruit-after-login");
+
+      const u = userObj ?? (await supabase.auth.getUser()).data.user;
+      if (!u) {
+        handledRef.current = false;
         navigate({ to: "/", replace: true });
+        return;
       }
+
+      const explicitIsDashboard = !!explicit && DASHBOARDS.some((d) => explicit.startsWith(d));
+      if (explicit && explicit !== "/" && !explicitIsDashboard) {
+        navigate({ to: explicit as any, replace: true });
+        return;
+      }
+
+      const roleList = await fetchRoles(u.id);
+      if (!roleList) {
+        handledRef.current = false;
+        setErr("Peran akun belum berhasil dimuat. Muat ulang halaman lalu coba lagi.");
+        return;
+      }
+
+      const landing = roleList.includes("superadmin")
+        ? "/admin"
+        : roleList.includes("driver")
+          ? "/driver"
+          : roleList.includes("mitra")
+            ? "/mitra"
+            : "/";
+
+      const target = explicit && landing !== "/" && explicit.startsWith(landing) ? explicit : landing;
+      navigate({ to: target as any, replace: true });
     };
 
-    supabase.auth.getUser().then(({ data }) => data.user && go(data.user));
-    const { data: sub } = supabase.auth.onAuthStateChange((e, session) => {
-      if (e === "SIGNED_IN" && session?.user) go(session.user);
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) void go(data.user);
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        const u = session.user;
+        setTimeout(() => void go(u), 0);
+      }
     });
     return () => sub.subscription.unsubscribe();
   }, [redirect, navigate]);
