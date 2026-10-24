@@ -79,16 +79,16 @@ export async function requestAndSavePushToken(
 
     const platform = /Android/i.test(navigator.userAgent) ? "android_twa" : "pwa";
 
-    // 1. Coba simpan via RPC
+    // 1. Simpan via RPC
     const { error: rpcError } = await (supabase as any).rpc("register_user_push_token", {
       p_user_id: userId,
       p_token: fcmToken,
       p_platform: platform,
     });
 
-    // 2. Fallback: simpan langsung ke tabel jika RPC belum siap
+    // 2. Fallback jika RPC belum ada atau gagal: simpan langsung ke tabel dengan onConflict "token"
     if (rpcError) {
-      console.warn("RPC register_user_push_token gagal, mencoba simpan langsung ke tabel:", rpcError);
+      console.warn("RPC register_user_push_token gagal, menyimpan langsung ke tabel:", rpcError);
       const { error: tableError } = await (supabase as any)
         .from("user_push_tokens")
         .upsert(
@@ -98,7 +98,7 @@ export async function requestAndSavePushToken(
             platform,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: "user_id,token" }
+          { onConflict: "token" },
         );
       if (tableError) throw tableError;
     }
