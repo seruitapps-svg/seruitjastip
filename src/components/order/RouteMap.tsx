@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { decodePolyline, loadGoogleMaps } from "@/lib/google-maps-loader";
 import { supabase } from "@/integrations/supabase/client";
+import { joinTracking } from "@/lib/tracking-channel";
 
 interface Point {
   lat: number;
@@ -131,62 +132,31 @@ export function RouteMap({
     };
   }, []);
 
-  // Ambil posisi terakhir, lalu dengarkan Broadcast realtime dan perubahan database cadangan.
+  // Ambil posisi terakhir, lalu dengarkan saluran realtime bersama dan perubahan database cadangan.
   useEffect(() => {
     if (!orderId || !trackingActive) {
-      setDriverPosition(null);
-      setLastUpdatedAt(null);
-      latestUpdatedAtRef.current = 0;
-      return;
+      setDriverPosition(null); setLastUpdatedAt(null); latestUpdatedAtRef.current = 0; return;
     }
-
     let cancelled = false;
-    setDriverPosition(null);
-    setLastUpdatedAt(null);
-    latestUpdatedAtRef.current = 0;
-    setTrackingError("");
+    setDriverPosition(null); setLastUpdatedAt(null); latestUpdatedAtRef.current = 0; setTrackingError("");
     void fetchLatestPosition();
-
-    const channel = supabase
-      .channel(`tracking-${orderId}`, { config: { private: true } })
-      .on("broadcast", { event: "driver_pos" }, (event) => {
+    const handle = joinTracking(orderId, {
+      onBroadcast: (payload) => {
         if (cancelled) return;
-        const payload = event.payload as { lat?: number; lng?: number; heading?: number | null; updated_at?: string };
         if (typeof payload.lat === "number" && typeof payload.lng === "number") {
           lastBroadcastRxRef.current = Date.now();
           applyDriverPosition({ lat: payload.lat, lng: payload.lng }, payload.updated_at, payload.heading);
           setTrackingError("");
         }
-      })
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "driver_locations",
-          filter: `order_id=eq.${orderId}`,
-        },
-        (payload) => {
-          if (cancelled) return;
-          const row = payload.new as Partial<DriverLocationRow>;
-          if (
-            typeof row.latitude === "number" &&
-            typeof row.longitude === "number"
-          ) {
-            applyDriverPosition(
-              { lat: row.latitude, lng: row.longitude },
-              row.updated_at,
-              row.heading,
-            );
-          }
-        },
-      )
-      .subscribe();
-
-    return () => {
-      cancelled = true;
-      void supabase.removeChannel(channel);
-    };
+      },
+      onRow: (row) => {
+        if (cancelled) return;
+        if (typeof row.latitude === "number" && typeof row.longitude === "number") {
+          applyDriverPosition({ lat: row.latitude, lng: row.longitude }, row.updated_at, row.heading);
+        }
+      },
+    });
+    return () => { cancelled = true; handle.release(); };
   }, [orderId, trackingActive, fetchLatestPosition, applyDriverPosition]);
 
   useEffect(() => {
