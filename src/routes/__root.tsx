@@ -13,6 +13,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { GlobalOrderAlert } from "@/components/GlobalOrderAlert";
+import { AccountModeGuard } from "@/components/AccountModeGuard";
 
 function NotFoundComponent() {
   return (
@@ -141,6 +142,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      <AccountModeGuard />
       <GlobalOrderAlert />
     </QueryClientProvider>
   );
