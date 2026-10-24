@@ -7,7 +7,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { OrderCard, btnPrimary, btnOutline } from "@/components/order/OrderCard";
 import { useAuth } from "@/hooks/use-auth";
 import { sendOrderPushEvent } from "@/lib/push-notifications";
-import { unlockAudioContext, playOrderAlertSound } from "@/lib/audio-alert";
+import { unlockAudioContext, installAudioUnlock, startAlertLoop } from "@/lib/audio-alert";
 import { DRIVER_NEXT_LABEL } from "@/lib/order-status";
 import { WalletPanel } from "@/components/wallet/WalletPanel";
 import { DriverEarningsSettings } from "@/components/driver/DriverEarningsSettings";
@@ -238,7 +238,6 @@ function DriverPage() {
 
             // Popup hanya untuk order baru; suara/getaran memakai helper yang sudah ada.
             setAlertOrderId(newOrderId);
-            playOrderAlertSound();
 
             toast("Ada Pesanan Baru!", {
               description: `Pesanan #${newOrder.code || ""} siap diambil. Periksa daftar order sekarang!`,
@@ -302,7 +301,6 @@ function DriverPage() {
     if (!nextOrder) return;
     alertedOrderIds.current.add(nextOrder.id);
     setAlertOrderId(nextOrder.id);
-    playOrderAlertSound();
   }, [isDriver, isOnline, availableOrders, alertOrderId]);
 
   // Jika order yang sedang ditampilkan sudah tidak tersedia (misalnya diambil driver lain),
@@ -313,6 +311,16 @@ function DriverPage() {
       setAlertOrderId(null);
     }
   }, [alertOrderId, availableOrders, pool.isFetching]);
+
+  useEffect(() => {
+    installAudioUnlock();
+  }, []);
+
+  // Dering + getar berulang selama popup order baru masih terbuka.
+  useEffect(() => {
+    if (!alertOrderId || !isOnline) return;
+    return startAlertLoop();
+  }, [alertOrderId, isOnline]);
 
   // Hook harus dipanggil tanpa syarat dan sebelum early return agar urutan hook React tetap konsisten.
   useEffect(() => {
