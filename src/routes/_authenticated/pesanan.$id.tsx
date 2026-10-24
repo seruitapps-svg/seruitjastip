@@ -15,6 +15,9 @@ import { DriverItemCostCard } from "@/components/order/DriverItemCostCard";
 import { DriverLiveTracking } from "@/components/order/DriverLiveTracking";
 import { sendOrderPushEvent } from "@/lib/push-notifications";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/error-message";
+import { confirmDialog, promptDialog } from "@/components/ConfirmDialog";
+import { ButtonLabel, PageLoader } from "@/components/Loading";
 
 export const Route = createFileRoute("/_authenticated/pesanan/$id")({
   head: () => ({
@@ -97,7 +100,7 @@ function OrderDetail() {
     return (
       <div className="min-h-screen bg-background">
         <AppHeader />
-        <p className="px-4 py-10 text-center text-sm text-muted-foreground">Memuat…</p>
+        <PageLoader label="Memuat pesanan…" />
       </div>
     );
   if (!o)
@@ -155,7 +158,7 @@ function OrderDetail() {
     setErr("");
     const { error } = await fn();
     setBusy(false);
-    if (error) return setErr(error.message);
+    if (error) return setErr(friendlyError(error));
     void sendOrderPushEvent("order_status_changed", id);
     qc.invalidateQueries({ queryKey: ["order", id] });
     qc.invalidateQueries({ queryKey: ["order-history", id] });
@@ -172,9 +175,12 @@ function OrderDetail() {
       (o.service === "belanja" || String(o.service) === "point_food") &&
       itemCost === 0
     ) {
-      const proceed = window.confirm(
-        "Perhatian: Nominal belanjaan masih Rp 0. Jika ada talangan belanjaan/makanan, simpan nominal terlebih dahulu. Tetap selesaikan tanpa talangan?"
-      );
+      const proceed = await confirmDialog({
+        title: "Nominal belanjaan masih Rp 0",
+        message: "Jika ada talangan belanjaan atau makanan, simpan nominalnya terlebih dahulu. Tetap selesaikan tanpa talangan?",
+        confirmText: "Tetap selesaikan",
+        cancelText: "Kembali",
+      });
       if (!proceed) return;
     }
 
@@ -187,6 +193,31 @@ function OrderDetail() {
       return;
     }
     await act(() => supabase.rpc("driver_advance_order", { _order_id: o.id }));
+  }
+
+  async function handleCancel() {
+    const ok = await confirmDialog({
+      title: "Batalkan pesanan?",
+      message: "Pesanan akan dihentikan dan tidak bisa diaktifkan kembali.",
+      confirmText: "Ya, batalkan",
+      cancelText: "Kembali",
+      tone: "danger",
+    });
+    if (!ok) return;
+    await act(() => supabase.rpc("cancel_order", { _order_id: o.id }));
+  }
+
+  async function handleReject() {
+    const reason = await promptDialog({
+      title: "Tolak pesanan",
+      message: "Tulis alasan penolakan agar pemesan paham.",
+      placeholder: "Contoh: lokasi di luar jangkauan",
+      confirmText: "Tolak pesanan",
+      tone: "danger",
+      required: true,
+    });
+    if (reason === null) return;
+    await act(() => supabase.rpc("admin_review_order", { _order_id: o.id, _approve: false, _note: reason }));
   }
 
   async function confirmMitraRestoPin() {
@@ -203,7 +234,7 @@ function OrderDetail() {
     });
     setBusy(false);
     if (error) {
-      setErr(error.message);
+      setErr(friendlyError(error));
       return;
     }
     setShowPinModal(false);
@@ -231,7 +262,7 @@ function OrderDetail() {
     setBusy(false);
 
     if (error) {
-      setErr(error.message);
+      setErr(friendlyError(error));
       return;
     }
     setRatingSent(true);
@@ -404,21 +435,17 @@ function OrderDetail() {
           {isAdmin && o.status === "menunggu_verifikasi" && (
             <>
               <button className={btnPrimary} disabled={busy} onClick={() => act(() => supabase.rpc("admin_review_order", { _order_id: o.id, _approve: true }))}>
-                Setujui → pool driver
+                <ButtonLabel busy={busy}>Setujui → pool driver</ButtonLabel>
               </button>
-              <button className={btnDanger} disabled={busy} onClick={() => act(() => supabase.rpc("admin_review_order", { _order_id: o.id, _approve: false, _note: window.prompt("Alasan penolakan") ?? "" }))}>
-                Tolak
+              <button className={btnDanger} disabled={busy} onClick={() => void handleReject()}>
+                <ButtonLabel busy={busy}>Tolak</ButtonLabel>
               </button>
             </>
           )}
           {((isOwner && ["menunggu_verifikasi", "tersedia"].includes(o.status)) ||
             (isAdmin && !["selesai", "dibatalkan", "ditolak", "menunggu_verifikasi"].includes(o.status))) && (
-            <button
-              className={btnDanger}
-              disabled={busy}
-              onClick={() => window.confirm("Batalkan pesanan ini?") && act(() => supabase.rpc("cancel_order", { _order_id: o.id }))}
-            >
-              Batalkan pesanan
+            <button className={btnDanger} disabled={busy} onClick={() => void handleCancel()}>
+              <ButtonLabel busy={busy}>Batalkan pesanan</ButtonLabel>
             </button>
           )}
         </div>
@@ -557,7 +584,7 @@ function OrderDetail() {
               <div className="flex gap-2">
                 <button type="button" disabled={busy} onClick={() => { setShowPinModal(false); setDriverPinInput(""); setErr(""); }} className="flex-1 rounded-xl border border-border px-3 py-2.5 text-sm font-semibold text-foreground">Batal</button>
                 <button type="button" disabled={busy || driverPinInput.length !== 4} onClick={() => void confirmMitraRestoPin()} className={`flex-1 ${btnPrimary}`}>
-                  {busy ? "Memverifikasi..." : "Konfirmasi PIN"}
+                  <ButtonLabel busy={busy} busyText="Memverifikasi...">Konfirmasi PIN</ButtonLabel>
                 </button>
               </div>
             </div>
@@ -595,7 +622,7 @@ function OrderDetail() {
               </div>
             )}
             <button type="button" disabled={busy} onClick={() => void submitRating()} className={btnPrimary}>
-              {busy ? "Mengirim..." : "Kirim penilaian"}
+              <ButtonLabel busy={busy} busyText="Mengirim...">Kirim penilaian</ButtonLabel>
             </button>
           </section>
         )}
