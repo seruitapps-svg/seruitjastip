@@ -316,6 +316,15 @@ function DriverPage() {
     installAudioUnlock();
   }, []);
 
+  useEffect(() => {
+    if (!alertOrderId || !isOnline) return;
+    return startAlertLoop();
+  }, [alertOrderId, isOnline]);
+
+  useEffect(() => {
+    installAudioUnlock();
+  }, []);
+
   // Dering + getar berulang selama popup order baru masih terbuka.
   useEffect(() => {
     if (!alertOrderId || !isOnline) return;
