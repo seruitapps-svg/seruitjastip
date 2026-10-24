@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { MessageSquare, Phone, QrCode, Send, Navigation, X, ReceiptText, ExternalLink, Star } from "lucide-react";
+import { MessageSquare, Phone, QrCode, Send, Navigation, X, ReceiptText, ExternalLink, Star, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { RouteMap } from "@/components/order/RouteMap";
@@ -511,8 +511,14 @@ function OrderDetail() {
             origin={{ lat: o.origin_lat, lng: o.origin_lng }}
             destination={{ lat: o.dest_lat, lng: o.dest_lng }}
             encodedPolyline={o.encoded_polyline}
-            className="h-52 w-full rounded-xl border border-border"
+            className="h-[50dvh] min-h-[320px] w-full rounded-xl border border-border"
           />
+          <details className="group rounded-xl border border-border bg-background">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-3 text-sm font-bold text-foreground [&::-webkit-details-marker]:hidden">
+              Rincian pesanan
+              <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="space-y-3 border-t border-border p-3">
           {row("Layanan", (o as any).food_order_type === "mitra" ? "Mitra Resto Resmi" : (o as any).food_order_type === "point" ? "Point Resto" : SERVICE_NAME[o.service] ?? o.service)}
           {row("Dari", o.origin_address)}
           {row("Ke", o.dest_address)}
@@ -539,7 +545,17 @@ function OrderDetail() {
           {o.service === "kirim" && row("Penerima", `${o.recipient_name} (${o.recipient_wa})`)}
           {o.notes && row("Catatan", o.notes)}
           {row("Pembayaran", o.payment_method === "cod" ? "COD (tunai ke driver)" : "Transfer (QRIS)")}
-          <div className="space-y-1 rounded-xl bg-muted p-3 text-sm">
+            </div>
+          </details>
+          <details className="group rounded-xl border border-border bg-background">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-3 text-sm font-bold text-foreground [&::-webkit-details-marker]:hidden">
+              <span>Rincian biaya</span>
+              <span className="flex items-center gap-2 text-primary">
+                {formatRupiah(finalTotal)}
+                <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+              </span>
+            </summary>
+            <div className="space-y-1 border-t border-border bg-muted p-3 text-sm">
             {row(o.service === "ojek" ? "Tarif Perjalanan" : "Ongkos Kirim", formatRupiah(o.shipping_fare))}
             {row("Biaya Layanan Aplikasi", formatRupiah(o.consumer_service_fee))}
             {((o as any).food_order_type === "mitra" || o.service === "belanja" || Number((o as any).item_cost ?? 0) > 0) && (
@@ -562,7 +578,8 @@ function OrderDetail() {
                 </button>
               </div>
             )}
-          </div>
+            </div>
+          </details>
           {isMyDriver && (o.service === "belanja" || String(o.service) === "point_food" || (o.service === "food" && (o as any).food_order_type === "point")) && (o as any).food_order_type !== "mitra" && (
             <DriverItemCostCard
               order={o}
