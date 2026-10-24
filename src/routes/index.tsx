@@ -2,7 +2,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { createOrder } from "@/lib/orders.functions";
 import { useAuth } from "@/hooks/use-auth";
-import { sendOrderPushEvent } from "@/lib/push-notifications";
 import { AppHeader } from "@/components/AppHeader";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -549,7 +548,6 @@ function Index() {
               : undefined,
         },
       });
-      void sendOrderPushEvent("order_created", res.id);
       navigate({ to: "/pesanan/$id", params: { id: res.id } });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Gagal mengirim pesanan.");
