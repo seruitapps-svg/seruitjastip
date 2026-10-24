@@ -103,6 +103,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
+    scripts: [
+      {
+        children: `(function(){try{var t=navigator.maxTouchPoints>0;var c=window.matchMedia&&matchMedia("(pointer: coarse)").matches;if(!t||!c)return;var d=window.devicePixelRatio||1;var s=Math.min(screen.width,screen.height);if(s>600&&d>=2)s=s/d;if(s>600)return;var g=Math.min(412,Math.max(360,s));var w=window.innerWidth;if(w<=g*1.3)return;var z=Math.min(3.4,w/g).toFixed(3);var r=document.documentElement;r.style.setProperty("zoom",z);r.style.setProperty("--mider-zoom",z);r.setAttribute("data-force-mobile","1");}catch(e){}})();`,
+      },
+    ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       {
