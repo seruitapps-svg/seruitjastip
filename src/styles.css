@@ -269,3 +269,45 @@ html[data-force-mobile] .mobile-shell-wide {
   max-width: none;
   box-shadow: none;
 }
+
+/* ===== Tipografi nyaman HP (menimpa aturan 15px sebelumnya) ===== */
+html,
+html[data-force-mobile] {
+  font-size: 16px;
+}
+
+:root {
+  --foreground: oklch(0.2 0.03 190);
+  --muted-foreground: oklch(0.42 0.035 200);
+}
+
+body {
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: -0.003em;
+}
+
+/* Bobot: teks bermakna dibuat sedikit lebih tebal agar jelas di layar kecil. */
+.mobile-shell .font-medium { font-weight: 600; }
+.mobile-shell .font-semibold { font-weight: 700; }
+
+/* Ukuran: batas bawah yang nyaman dibaca. */
+.mobile-shell .text-xs { font-size: 0.8125rem; line-height: 1.2rem; }
+.mobile-shell .text-sm { font-size: 0.9375rem; line-height: 1.4rem; }
+.mobile-shell [class*="text-[10px]"] { font-size: 0.72rem; line-height: 1rem; }
+.mobile-shell [class*="text-[11px]"] { font-size: 0.75rem; line-height: 1.05rem; }
+.mobile-shell [class*="text-[12px]"] { font-size: 0.8125rem; line-height: 1.2rem; }
+
+/* Menu atas (Pesanan, Saldo, akun) */
+.mobile-shell header a,
+.mobile-shell header button {
+  font-weight: 600;
+}
+
+/* Isian */
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted-foreground);
+  opacity: 0.75;
+  font-weight: 500;
+}
