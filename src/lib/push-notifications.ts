@@ -29,42 +29,41 @@ const firebaseConfig = {
 
 let foregroundListenerRegistered = false;
 
+const URGENT_EVENTS = new Set(["order_created", "merchant_order_ready"]);
+
 function registerForegroundMessageHandler(messaging: ReturnType<typeof getMessaging>) {
   if (foregroundListenerRegistered || typeof window === "undefined") return;
 
   onMessage(messaging, (payload) => {
+    const data = payload.data ?? {};
+    const evt = data.event_type ?? "";
+    const title = data.title || payload.notification?.title || "Pemberitahuan Mider";
+    const body = data.body || payload.notification?.body || "Ada pembaruan pesanan.";
+    const orderId = data.order_id;
+    const url = data.url || (orderId ? "/pesanan/" + orderId : "/");
+    const urgent = URGENT_EVENTS.has(evt);
+
+    // Beri tahu UI global agar popup dan bunyi dapat berjalan di halaman mana pun.
+    window.dispatchEvent(
+      new CustomEvent("mider:push", { detail: { title, body, url, evt, orderId, urgent } }),
+    );
+
+    // Jika popup dalam aplikasi menangani event mendesak saat terlihat, hindari notifikasi ganda.
+    if (urgent && document.visibilityState === "visible") return;
     if (!("Notification" in window) || Notification.permission !== "granted") return;
 
-    // Pesan foreground harus ditangani di semua halaman, bukan hanya dashboard driver.
-    // Toast memberi umpan balik saat aplikasi sedang terbuka; notifikasi sistem tetap tersedia
-    // untuk halaman lain dan ketika dashboard khusus tidak sedang aktif.
-    const evt = payload.data?.event_type;
-    const title = payload.data?.title || payload.notification?.title || "Pemberitahuan Mider";
-    const body = payload.data?.body || payload.notification?.body || "Ada pembaruan pesanan.";
-    const targetUrl = payload.data?.url || "/";
-    const orderId = payload.data?.order_id;
+    const options = {
+      body,
+      tag: orderId ? "mider-order-" + orderId : "mider-foreground-update",
+      data: { url },
+      vibrate: [250, 100, 250],
+    } as NotificationOptions;
 
-    // Hindari notifikasi sistem ganda pada dashboard driver/mitra yang sudah menampilkan
-    // popup lokal untuk order baru; halaman lain tetap menampilkan notifikasi sistem.
-    const path = window.location.pathname;
-    // Dashboard driver sudah memiliki popup order lokal; mitra tidak boleh ikut disupresi
-    // karena notifikasi order masuk perlu tetap terlihat pada dashboard mitra.
-    const onDriverDashboard = path.startsWith("/driver");
-    if (!(onDriverDashboard && document.visibilityState === "visible" &&
-      (evt === "order_created" || evt === "merchant_order_ready"))) {
-      void navigator.serviceWorker.ready
-        .then((registration) =>
-          registration.showNotification(title, {
-            body,
-            tag: orderId ? "mider-order-" + orderId : "mider-foreground-update",
-            data: { url: targetUrl },
-            vibrate: [250, 100, 250],
-          }),
-        )
-        .catch((error) => {
-          console.warn("Gagal menampilkan notifikasi saat aplikasi terbuka:", error);
-        });
-    }
+    void navigator.serviceWorker.ready
+      .then((registration) => registration.showNotification(title, options))
+      .catch((error) => {
+        console.warn("Gagal menampilkan notifikasi saat aplikasi terbuka:", error);
+      });
   });
 
   foregroundListenerRegistered = true;
