@@ -5,6 +5,7 @@ import { KeyRound, LoaderCircle, Mail, Save, ShieldCheck, UserRound } from "luci
 import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { PushTestButton } from "@/components/PushTestButton";
 
 export const Route = createFileRoute("/_authenticated/profil")({
   head: () => ({
@@ -307,6 +308,14 @@ function ProfilePage() {
                   {passwordBusy ? "Memperbarui…" : "Ganti kata sandi"}
                 </button>
               </form>
+            </section>
+
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+              <div className="mb-3">
+                <h2 className="font-bold text-foreground">Notifikasi perangkat</h2>
+                <p className="mt-1 mb-3 text-xs text-muted-foreground">Uji apakah HP dapat menampilkan notifikasi melalui service worker.</p>
+                <PushTestButton />
+              </div>
             </section>
 
             <section className="rounded-2xl border border-border bg-card p-4 sm:p-6">
