@@ -30,10 +30,25 @@ function distanceKm(a: {lat:number;lng:number}, b: {lat:number;lng:number}) {
 
 export function CustomerTrackingView({ order, chat, details }: Props) {
   const [vh,setVh]=useState(800), [snap,setSnap]=useState(0), [dragY,setDragY]=useState<number|null>(null);
+  const [scale,setScale]=useState(1);
   const [driverPos,setDriverPos]=useState<{lat:number;lng:number;ts:number}|null>(null), [now,setNow]=useState(Date.now());
+  const rootRef=useRef<HTMLDivElement>(null);
   const startRef=useRef<{y:number;base:number;moved:boolean}|null>(null);
   const bodyRef=useRef<HTMLDivElement>(null), chatRef=useRef<HTMLDivElement>(null);
-  useEffect(()=>{const update=()=>setVh(window.innerHeight);update();window.addEventListener("resize",update);return()=>window.removeEventListener("resize",update);},[]);
+  useEffect(()=>{
+    const el=rootRef.current;
+    if(!el)return;
+    const update=()=>{
+      const h=el.clientHeight||window.innerHeight;
+      setVh(h);
+      setScale(Math.max(1,window.innerHeight/h));
+    };
+    update();
+    const ro=new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener("resize",update);
+    return()=>{ro.disconnect();window.removeEventListener("resize",update);};
+  },[]);
   useEffect(()=>{const t=window.setInterval(()=>setNow(Date.now()),1000);return()=>window.clearInterval(t);},[]);
   const {data:driver}=useQuery({
     queryKey:["order-driver-info",order.id],
@@ -51,8 +66,8 @@ export function CustomerTrackingView({ order, chat, details }: Props) {
   function onPointerMove(e:React.PointerEvent<HTMLDivElement>){const st=startRef.current;if(!st)return;const delta=e.clientY-st.y;if(Math.abs(delta)>6)st.moved=true;setDragY(Math.min(positions[0],Math.max(0,st.base+delta)));}
   function onPointerUp(){const st=startRef.current;startRef.current=null;if(!st)return;if(!st.moved){setSnap(snap===0?1:0);setDragY(null);return;}const finalY=dragY??st.base;let best=0;positions.forEach((p,i)=>{if(Math.abs(p-finalY)<Math.abs(positions[best]-finalY))best=i;});setSnap(best);setDragY(null);}
   function openChat(){setSnap(1);window.setTimeout(()=>{if(bodyRef.current&&chatRef.current)bodyRef.current.scrollTo({top:chatRef.current.offsetTop-8,behavior:"smooth"});},300);}
-  return <div className="fixed inset-0 z-[90] overflow-hidden bg-background">
-    <RouteMap variant="tracking" orderId={order.id} trackingActive origin={{lat:order.origin_lat,lng:order.origin_lng}} destination={{lat:order.dest_lat,lng:order.dest_lng}} encodedPolyline={order.encoded_polyline??undefined} nextStop={nextStop} viewPadding={{top:96,bottom:PEEK+32}} recenterBottom={PEEK+16} onDriverPosition={(p,ts)=>setDriverPos({lat:p.lat,lng:p.lng,ts})} className="h-full w-full"/>
+  return <div ref={rootRef} className="fixed inset-0 z-[90] overflow-hidden bg-background">
+    <RouteMap variant="tracking" orderId={order.id} trackingActive origin={{lat:order.origin_lat,lng:order.origin_lng}} destination={{lat:order.dest_lat,lng:order.dest_lng}} encodedPolyline={order.encoded_polyline??undefined} nextStop={nextStop} viewPadding={{top:96*scale,bottom:(PEEK+32)*scale}} recenterBottom={PEEK+16} onDriverPosition={(p,ts)=>setDriverPos({lat:p.lat,lng:p.lng,ts})} className="h-full w-full"/>
     <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center gap-2 p-3 pt-[max(12px,env(safe-area-inset-top))]">
       <Link to="/pesanan" aria-label="Kembali ke daftar pesanan" className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background shadow-lg"><ArrowLeft className="h-5 w-5 text-foreground"/></Link>
       <div className="pointer-events-auto flex min-w-0 flex-1 items-center gap-2 rounded-full border border-border bg-background px-4 py-2.5 shadow-lg"><span className={`h-2.5 w-2.5 shrink-0 rounded-full ${stale?"bg-amber-500":age===null?"bg-muted-foreground":"bg-emerald-500"}`}/><p className="truncate text-sm font-bold text-foreground">{freshness}</p>{order.code&&<span className="ml-auto shrink-0 text-xs font-semibold text-muted-foreground">#{order.code}</span>}</div>
