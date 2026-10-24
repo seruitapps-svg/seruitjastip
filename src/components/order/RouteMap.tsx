@@ -23,6 +23,7 @@ interface DriverLocationRow {
   latitude: number;
   longitude: number;
   updated_at: string;
+  heading?: number | null;
 }
 
 export function RouteMap({
@@ -40,6 +41,9 @@ export function RouteMap({
   const polylineRef = useRef<any>(null);
   const driverMarkerRef = useRef<any>(null);
   const latestUpdatedAtRef = useRef(0);
+  const updateGapRef = useRef(1500);
+  const lastBroadcastRxRef = useRef(0);
+  const driverHeadingRef = useRef(0);
   const [mapReady, setMapReady] = useState(false);
   const [driverPosition, setDriverPosition] = useState<Point | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
@@ -48,11 +52,13 @@ export function RouteMap({
   const [loadError, setLoadError] = useState("");
   const [trackingError, setTrackingError] = useState("");
 
-  const applyDriverPosition = useCallback((position: Point, updatedAt?: string) => {
+  const applyDriverPosition = useCallback((position: Point, updatedAt?: string, heading?: number | null) => {
     const parsedTimestamp = updatedAt ? Date.parse(updatedAt) : Date.now();
     const timestamp = Number.isFinite(parsedTimestamp) ? parsedTimestamp : Date.now();
-    if (timestamp < latestUpdatedAtRef.current) return;
-
+    const previous = latestUpdatedAtRef.current;
+    if (timestamp < previous) return;
+    updateGapRef.current = previous ? Math.min(4000, Math.max(800, timestamp - previous)) : 1500;
+    if (typeof heading === "number" && Number.isFinite(heading)) driverHeadingRef.current = heading;
     latestUpdatedAtRef.current = timestamp;
     setDriverPosition(position);
     setLastUpdatedAt(timestamp);
@@ -65,7 +71,7 @@ export function RouteMap({
     try {
       const { data, error } = await supabase
         .from("driver_locations")
-        .select("latitude, longitude, updated_at")
+        .select("latitude, longitude, updated_at, heading")
         .eq("order_id", orderId)
         .maybeSingle();
 
@@ -79,6 +85,7 @@ export function RouteMap({
         applyDriverPosition(
           { lat: row.latitude, lng: row.longitude },
           row.updated_at,
+          row.heading,
         );
         setLoadError("");
       } else if (manual) {
@@ -144,16 +151,10 @@ export function RouteMap({
       .channel(`tracking-${orderId}`, { config: { private: true } })
       .on("broadcast", { event: "driver_pos" }, (event) => {
         if (cancelled) return;
-        const payload = event.payload as {
-          lat?: number;
-          lng?: number;
-          updated_at?: string;
-        };
+        const payload = event.payload as { lat?: number; lng?: number; heading?: number | null; updated_at?: string };
         if (typeof payload.lat === "number" && typeof payload.lng === "number") {
-          applyDriverPosition(
-            { lat: payload.lat, lng: payload.lng },
-            payload.updated_at,
-          );
+          lastBroadcastRxRef.current = Date.now();
+          applyDriverPosition({ lat: payload.lat, lng: payload.lng }, payload.updated_at, payload.heading);
           setTrackingError("");
         }
       })
@@ -175,6 +176,7 @@ export function RouteMap({
             applyDriverPosition(
               { lat: row.latitude, lng: row.longitude },
               row.updated_at,
+              row.heading,
             );
           }
         },
@@ -186,6 +188,12 @@ export function RouteMap({
       void supabase.removeChannel(channel);
     };
   }, [orderId, trackingActive, fetchLatestPosition, applyDriverPosition]);
+
+  useEffect(() => {
+    if (!orderId || !trackingActive) return;
+    const timer = window.setInterval(() => { if (Date.now() - lastBroadcastRxRef.current > 8000) void fetchLatestPosition(); }, 5000);
+    return () => window.clearInterval(timer);
+  }, [orderId, trackingActive, fetchLatestPosition]);
 
   // Perbarui marker & polyline saat titik berubah.
   useEffect(() => {
@@ -242,63 +250,25 @@ export function RouteMap({
     if (hasPoint) map.fitBounds(bounds, 60);
   }, [mapReady, origin, destination, encodedPolyline]);
 
-  // Gerakkan marker driver secara halus saat koordinat GPS baru diterima.
+  // Marker bergerak mulus mengikuti selang update, dengan panah searah gerak.
   useEffect(() => {
     const map = mapRef.current;
     if (!mapReady || !map || !window.google?.maps) return;
     const maps = window.google.maps;
-
+    const makeIcon = (rotation:number) => ({path:maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:6,rotation,fillColor:"#0d9488",fillOpacity:1,strokeColor:"#ffffff",strokeWeight:2});
     if (followDriver && driverPosition) map.panTo(driverPosition);
-
-    if (!driverPosition) {
-      if (driverMarkerRef.current) driverMarkerRef.current.setMap(null);
-      driverMarkerRef.current = null;
-      return;
-    }
-
-    if (!driverMarkerRef.current) {
-      driverMarkerRef.current = new maps.Marker({
-        map,
-        position: driverPosition,
-        title: "Posisi driver",
-        zIndex: 1000,
-        icon: {
-          path: maps.SymbolPath.FORWARD_CLOSED_ARROW,
-          scale: 6,
-          fillColor: "#0d9488",
-          fillOpacity: 1,
-          strokeColor: "#ffffff",
-          strokeWeight: 2,
-        },
-      });
-      return;
-    }
-
-    const marker = driverMarkerRef.current;
-    const current = marker.getPosition();
-    if (!current) {
-      marker.setPosition(driverPosition);
-      return;
-    }
-    const start = { lat: current.lat(), lng: current.lng() };
-    const end = driverPosition;
-    const distance = Math.abs(start.lat - end.lat) + Math.abs(start.lng - end.lng);
-    if (distance < 0.000001) return;
-
-    let frame = 0;
-    const startedAt = performance.now();
-    const duration = 700;
-    const animate = (timestamp: number) => {
-      const progress = Math.min(1, (timestamp - startedAt) / duration);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      marker.setPosition({
-        lat: start.lat + (end.lat - start.lat) * eased,
-        lng: start.lng + (end.lng - start.lng) * eased,
-      });
-      if (progress < 1) frame = requestAnimationFrame(animate);
-    };
-    frame = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(frame);
+    if (!driverPosition) { if (driverMarkerRef.current) driverMarkerRef.current.setMap(null); driverMarkerRef.current=null; return; }
+    if (!driverMarkerRef.current) { driverMarkerRef.current=new maps.Marker({map,position:driverPosition,title:"Posisi driver",zIndex:1000,icon:makeIcon(driverHeadingRef.current)}); return; }
+    const marker=driverMarkerRef.current,current=marker.getPosition();
+    if (!current) { marker.setPosition(driverPosition); return; }
+    const a={lat:current.lat(),lng:current.lng()},b=driverPosition,dist=Math.abs(a.lat-b.lat)+Math.abs(a.lng-b.lng);
+    if(dist<0.0000005)return;
+    const rad=(v:number)=>v*Math.PI/180,y=Math.sin(rad(b.lng-a.lng))*Math.cos(rad(b.lat)),x=Math.cos(rad(a.lat))*Math.sin(rad(b.lat))-Math.sin(rad(a.lat))*Math.cos(rad(b.lat))*Math.cos(rad(b.lng-a.lng));
+    const computed=(Math.atan2(y,x)*180/Math.PI+360)%360,rotation=dist>0.00002?computed:driverHeadingRef.current;
+    marker.setIcon(makeIcon(rotation));
+    let frame=0;const started=performance.now(),duration=updateGapRef.current;
+    const animate=(time:number)=>{const p=Math.min(1,(time-started)/duration);marker.setPosition({lat:a.lat+(b.lat-a.lat)*p,lng:a.lng+(b.lng-a.lng)*p});if(p<1)frame=requestAnimationFrame(animate);};
+    frame=requestAnimationFrame(animate);return()=>cancelAnimationFrame(frame);
   }, [mapReady, driverPosition, followDriver]);
 
   const secondsSinceUpdate = lastUpdatedAt === null
