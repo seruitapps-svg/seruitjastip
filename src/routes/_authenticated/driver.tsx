@@ -36,8 +36,15 @@ function getDriverErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+function isEligibleForDriver(o: any, acceptsOjek: boolean): boolean {
+  if (!o || o.status !== "tersedia") return false;
+  if (o.service === "ojek" && !acceptsOjek) return false;
+  const type = o.food_order_type;
+  return !type || type === "point" || (type === "mitra" && o.merchant_response === "accepted");
+}
+
 function DriverPage() {
-  const { user, isDriver, ready } = useAuth();
+  const { user, isDriver, ready, rolesError, refetchRoles } = useAuth();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<DriverTab>("onbid");
@@ -69,6 +76,9 @@ function DriverPage() {
       return data as { id: string; user_id: string; full_name: string; phone: string; vehicle_type: string; vehicle_plate: string; photo_selfie?: string | null; accepts_ojek: boolean; is_online?: boolean } | null;
     },
   });
+
+  const acceptsOjekRef = useRef(true);
+  acceptsOjekRef.current = driverProfile.data?.accepts_ojek !== false;
 
   const isOnline = driverProfile.data?.is_online === true;
   const hasDriverProfile = !!driverProfile.data;
@@ -223,22 +233,18 @@ function DriverPage() {
         qc.invalidateQueries({ queryKey: ["driver-jobs"] });
 
         const newOrder = payload.new as any;
-        const oldOrder = payload.old as any;
 
-        // Tangkap order jika baru dibuat (INSERT) ATAU baru disetujui/tersedia (UPDATE)
-        const isNewlyAvailable =
-          newOrder &&
-          newOrder.status === "tersedia" &&
-          (payload.eventType === "INSERT" || (payload.eventType === "UPDATE" && oldOrder?.status !== "tersedia"));
-
-        if (isNewlyAvailable && isOnline) {
+        // Alert hanya untuk order yang benar-benar bisa diambil driver ini.
+        // payload.old tidak diandalkan karena Realtime sering hanya mengirim primary key.
+        if (
+          payload.eventType !== "DELETE" &&
+          isOnline &&
+          isEligibleForDriver(newOrder, acceptsOjekRef.current)
+        ) {
           const newOrderId = String(newOrder.id);
           if (!alertedOrderIds.current.has(newOrderId)) {
             alertedOrderIds.current.add(newOrderId);
-
-            // Popup hanya untuk order baru; suara/getaran memakai helper yang sudah ada.
             setAlertOrderId(newOrderId);
-
             toast("Ada Pesanan Baru!", {
               description: `Pesanan #${newOrder.code || ""} siap diambil. Periksa daftar order sekarang!`,
               duration: 10000,
@@ -325,6 +331,22 @@ function DriverPage() {
   useEffect(() => {
     setDriverProfilePopupOpen(active.length > 0 && hasDriverProfile);
   }, [active.length, hasDriverProfile]);
+
+  if (ready && !isDriver && rolesError) {
+    return (
+      <div className="min-h-screen bg-background">
+        <AppHeader />
+        <div className="mx-auto max-w-md px-4 py-16 text-center">
+          <AlertCircle className="mx-auto h-12 w-12 text-destructive" />
+          <h2 className="mt-4 text-base font-bold text-foreground">Peran akun belum berhasil dimuat</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Periksa koneksi lalu coba lagi.</p>
+          <button type="button" className={btnPrimary + " mt-4 px-4 py-2"} onClick={() => void refetchRoles()}>
+            Coba lagi
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (ready && !isDriver) {
     return (
