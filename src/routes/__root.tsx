@@ -16,6 +16,8 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { GlobalOrderAlert } from "@/components/GlobalOrderAlert";
 import { AccountModeGuard } from "@/components/AccountModeGuard";
 import { DesktopModeNotice } from "@/components/DesktopModeNotice";
+import { ConfirmHost } from "@/components/ConfirmDialog";
+import { TopProgress } from "@/components/Loading";
 
 function NotFoundComponent() {
   return (
@@ -153,6 +155,8 @@ function RootComponent() {
       </div>
       <AccountModeGuard />
       <GlobalOrderAlert />
+      <TopProgress />
+      <ConfirmHost />
       <DesktopModeNotice />
     </QueryClientProvider>
   );
