@@ -321,16 +321,6 @@ function DriverPage() {
     return startAlertLoop();
   }, [alertOrderId, isOnline]);
 
-  useEffect(() => {
-    installAudioUnlock();
-  }, []);
-
-  // Dering + getar berulang selama popup order baru masih terbuka.
-  useEffect(() => {
-    if (!alertOrderId || !isOnline) return;
-    return startAlertLoop();
-  }, [alertOrderId, isOnline]);
-
   // Hook harus dipanggil tanpa syarat dan sebelum early return agar urutan hook React tetap konsisten.
   useEffect(() => {
     setDriverProfilePopupOpen(active.length > 0 && hasDriverProfile);
