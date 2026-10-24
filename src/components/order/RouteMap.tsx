@@ -142,7 +142,7 @@ export function RouteMap({
           keyboardShortcuts: false,
           gestureHandling: isTracking ? "greedy" : "auto",
         });
-        if (isTracking) map.addListener("dragstart", () => setFollowing(false));
+        if (isTracking) mapRef.current.addListener("dragstart", () => setFollowing(false));
         setMapReady(true);
       })
       .catch((err) => {
@@ -241,7 +241,7 @@ export function RouteMap({
       hasPoint = true;
     }
     if (hasPoint) map.fitBounds(bounds, isTracking ? { top: paddingRef.current.top, bottom: paddingRef.current.bottom, left: 40, right: 40 } : 60);
-  }, [mapReady, origin, destination, encodedPolyline]);
+  }, [mapReady, origin?.lat, origin?.lng, destination?.lat, destination?.lng, encodedPolyline, isTracking]);
 
   // Marker bergerak mulus mengikuti selang update, dengan panah searah gerak.
   useEffect(() => {
@@ -320,7 +320,7 @@ export function RouteMap({
 
   if (loadError && !mapReady) {
     return (
-      <div className="flex items-center justify-center rounded-xl border border-border bg-muted p-6 text-sm text-muted-foreground">
+      <div className={`flex items-center justify-center bg-muted p-6 text-sm text-muted-foreground ${className ?? "rounded-xl border border-border"}`}>
         Peta tidak dapat dimuat: {loadError}
       </div>
     );
