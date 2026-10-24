@@ -142,6 +142,17 @@ export async function requestAndSavePushToken(
   }
 }
 
+async function logPushClient(row: { event_type: string; order_id: string; ok: boolean; detail: unknown }) {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const uid = data.session?.user.id;
+    if (!uid) return;
+    await (supabase as any).from("push_delivery_log").insert({ source: "client", user_id: uid, ...row });
+  } catch {
+    // pencatatan tidak boleh mengganggu alur utama
+  }
+}
+
 export async function sendOrderPushEvent(
   eventType: "order_created" | "order_status_changed" | "merchant_order_ready" | "chat_message",
   orderId: string,
@@ -152,27 +163,29 @@ export async function sendOrderPushEvent(
       body: { eventType, orderId, messageId },
     });
     if (error) {
-      console.error("Notifikasi push tidak terkirim:", {
-        eventType,
-        orderId,
-        message: error.message,
-        details: (error as any).details,
-        hint: (error as any).hint,
-        context: (error as any).context,
+      console.error("Notifikasi push tidak terkirim:", { eventType, orderId, message: error.message });
+      void logPushClient({
+        event_type: eventType,
+        order_id: orderId,
+        ok: false,
+        detail: { message: error.message, status: (error as any).context?.status ?? null },
       });
       return;
     }
     if (!data?.success) {
-      console.warn("Push tidak terkirim atau tidak memiliki penerima/token:", {
-        eventType,
-        orderId,
-        response: data,
-      });
+      console.warn("Push tidak terkirim atau tidak memiliki penerima/token:", { eventType, orderId, response: data });
     } else {
       console.info("Push notification accepted:", { eventType, orderId, response: data });
     }
+    void logPushClient({ event_type: eventType, order_id: orderId, ok: Boolean(data?.success), detail: data ?? null });
   } catch (error) {
     console.error("Gagal memanggil layanan push notification:", error);
+    void logPushClient({
+      event_type: eventType,
+      order_id: orderId,
+      ok: false,
+      detail: { exception: error instanceof Error ? error.message : String(error) },
+    });
   }
 }
 
