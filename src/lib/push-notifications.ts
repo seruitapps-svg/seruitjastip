@@ -105,7 +105,7 @@ export async function requestAndSavePushToken(
     // Daftarkan Service Worker
     const registration = await navigator.serviceWorker.register(
       `/firebase-messaging-sw.js?${query}`,
-      { scope: "/" },
+      { scope: "/", updateViaCache: "none" },
     );
 
     // Tunggu sampai Service Worker aktif
@@ -232,3 +232,29 @@ export async function unregisterCurrentPushToken(userId: string): Promise<void> 
     console.warn("Could not remove push token during sign-out:", error);
   }
 }
+
+/**
+ * Menampilkan notifikasi uji lewat service worker, tanpa FCM.
+ */
+export async function showLocalTestNotification(): Promise<{ ok: boolean; error?: string }> {
+  try {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("Notification" in window)) {
+      return { ok: false, error: "Browser ini tidak mendukung notifikasi." };
+    }
+    if (Notification.permission !== "granted") {
+      return { ok: false, error: "Izin notifikasi belum diberikan." };
+    }
+    const registration = await navigator.serviceWorker.ready;
+    await registration.showNotification("Tes notifikasi Mider", {
+      body: "Jika Anda melihat ini di bar notifikasi, izin sudah benar.",
+      icon: "/pwa-192.png",
+      badge: "/pwa-badge-96.png",
+      tag: "mider-test",
+      data: { url: "/" },
+    });
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
