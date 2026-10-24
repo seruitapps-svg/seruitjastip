@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { requestAndSavePushToken } from "@/lib/push-notifications";
 import { useAuth } from "@/hooks/use-auth";
 
+const syncedUsers = new Set<string>();
+
 export function NotificationPrompt() {
   const { user, isDriver, isMitra } = useAuth();
   const mustKeepPrompt = isDriver || isMitra;
@@ -23,10 +25,13 @@ export function NotificationPrompt() {
     // Jika browser sudah mengizinkan notifikasi sebelumnya, lakukan auto-sync token di background
     if (Notification.permission === "granted") {
       setHasPermission(true);
-      if (user?.id) {
+      if (user?.id && !syncedUsers.has(user.id)) {
+        const uid = user.id;
+        syncedUsers.add(uid);
         setSyncError(null);
-        void requestAndSavePushToken(user.id).then((result) => {
+        void requestAndSavePushToken(uid).then((result) => {
           if (result.status !== "granted") {
+            syncedUsers.delete(uid);
             setSyncError(
               result.error ||
                 "Notifikasi belum aktif di perangkat ini (" + result.status + "). Coba buka ulang aplikasi.",
