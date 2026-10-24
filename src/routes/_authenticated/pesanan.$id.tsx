@@ -1,11 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { MessageSquare, Phone, QrCode, Send, Navigation, X, ReceiptText, ExternalLink, Star, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { RouteMap } from "@/components/order/RouteMap";
-import { CustomerTrackingView } from "@/components/order/CustomerTrackingView";
 import { DriverInfoCard } from "@/components/order/DriverInfoCard";
 import { StatusBadge, btnPrimary, btnDanger } from "@/components/order/OrderCard";
 import { useAuth } from "@/hooks/use-auth";
@@ -378,56 +377,6 @@ function OrderDetail() {
     );
   }
 
-  if (isOwner && user && o.driver_id && ["diambil", "dijemput", "diantar"].includes(o.status)) {
-    return (
-      <CustomerTrackingView
-        order={o}
-        chat={<OrderChat orderId={o.id} myId={user.id} />}
-        details={
-          <div className="space-y-3">
-            {o.payment_method === "transfer" && (
-              <div className="rounded-2xl border border-border bg-card p-4 text-center">
-                <p className="text-sm font-semibold text-foreground">Bayar via QRIS</p>
-                <p className="mt-1 text-xs text-muted-foreground">QRIS resmi segera hadir. Admin akan kirim lewat chat.</p>
-                <p className="mt-1 text-lg font-bold text-primary">{formatRupiah(finalTotal)}</p>
-              </div>
-            )}
-            <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
-              {row("Layanan", (o as any).food_order_type === "mitra" ? "Mitra Resto Resmi" : (o as any).food_order_type === "point" ? "Point Resto" : SERVICE_NAME[o.service] ?? o.service)}
-              {row("Dari", o.origin_address)}
-              {row("Ke", o.dest_address)}
-              {row("Jarak", `${(o.distance_meters / 1000).toFixed(1)} km · ±${Math.round(o.duration_seconds / 60)} menit`)}
-              {row("Pembayaran", o.payment_method === "cod" ? "COD (tunai ke driver)" : "Transfer (QRIS)")}
-              {o.notes && row("Catatan", o.notes)}
-              <div className="space-y-1 rounded-xl bg-muted p-3 text-sm">
-                {row(o.service === "ojek" ? "Tarif Perjalanan" : "Ongkos Kirim", formatRupiah(o.shipping_fare))}
-                {row("Biaya Layanan Aplikasi", formatRupiah(o.consumer_service_fee))}
-                {itemCost > 0 && row("Belanjaan / Menu", formatRupiah(itemCost))}
-                <div className="flex justify-between border-t border-border pt-2 font-bold">
-                  <span className="text-foreground">Total Tagihan</span>
-                  <span className="text-primary">{formatRupiah(finalTotal)}</span>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-2xl border border-border bg-card p-4">
-              <h2 className="text-sm font-bold text-foreground">Riwayat status</h2>
-              <ol className="mt-2 space-y-1">
-                {history.data?.map((h) => (
-                  <li key={h.id} className="flex justify-between text-xs">
-                    <span className="text-foreground">{STATUS_LABEL[h.status]}{h.note ? ` — ${h.note}` : ""}</span>
-                    <span className="text-muted-foreground">
-                      {new Date(h.created_at).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" })}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </div>
-        }
-      />
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
@@ -511,14 +460,9 @@ function OrderDetail() {
             origin={{ lat: o.origin_lat, lng: o.origin_lng }}
             destination={{ lat: o.dest_lat, lng: o.dest_lng }}
             encodedPolyline={o.encoded_polyline}
-            className="h-[50dvh] min-h-[320px] w-full rounded-xl border border-border"
+            className={`w-full rounded-xl border border-border ${isMyDriver || isAdmin ? "h-52" : "h-[50dvh] min-h-[320px]"}`}
           />
-          <details className="group rounded-xl border border-border bg-background">
-            <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-3 text-sm font-bold text-foreground [&::-webkit-details-marker]:hidden">
-              Rincian pesanan
-              <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
-            </summary>
-            <div className="space-y-3 border-t border-border p-3">
+          <Fold plain={isMyDriver || isAdmin} title="Rincian pesanan" innerClassName="space-y-3 border-t border-border p-3">
           {row("Layanan", (o as any).food_order_type === "mitra" ? "Mitra Resto Resmi" : (o as any).food_order_type === "point" ? "Point Resto" : SERVICE_NAME[o.service] ?? o.service)}
           {row("Dari", o.origin_address)}
           {row("Ke", o.dest_address)}
@@ -545,17 +489,15 @@ function OrderDetail() {
           {o.service === "kirim" && row("Penerima", `${o.recipient_name} (${o.recipient_wa})`)}
           {o.notes && row("Catatan", o.notes)}
           {row("Pembayaran", o.payment_method === "cod" ? "COD (tunai ke driver)" : "Transfer (QRIS)")}
-            </div>
-          </details>
-          <details className="group rounded-xl border border-border bg-background">
-            <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-3 text-sm font-bold text-foreground [&::-webkit-details-marker]:hidden">
-              <span>Rincian biaya</span>
-              <span className="flex items-center gap-2 text-primary">
-                {formatRupiah(finalTotal)}
-                <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
-              </span>
-            </summary>
-            <div className="space-y-1 border-t border-border bg-muted p-3 text-sm">
+
+          </Fold>
+          <Fold
+            plain={isMyDriver || isAdmin}
+            plainClassName="space-y-1 rounded-xl bg-muted p-3 text-sm"
+            title="Rincian biaya"
+            total={formatRupiah(finalTotal)}
+            innerClassName="space-y-1 border-t border-border bg-muted p-3 text-sm"
+          >
             {row(o.service === "ojek" ? "Tarif Perjalanan" : "Ongkos Kirim", formatRupiah(o.shipping_fare))}
             {row("Biaya Layanan Aplikasi", formatRupiah(o.consumer_service_fee))}
             {((o as any).food_order_type === "mitra" || o.service === "belanja" || Number((o as any).item_cost ?? 0) > 0) && (
@@ -578,8 +520,8 @@ function OrderDetail() {
                 </button>
               </div>
             )}
-            </div>
-          </details>
+
+          </Fold>
           {isMyDriver && (o.service === "belanja" || String(o.service) === "point_food" || (o.service === "food" && (o as any).food_order_type === "point")) && (o as any).food_order_type !== "mitra" && (
             <DriverItemCostCard
               order={o}
@@ -723,6 +665,26 @@ function OrderDetail() {
 }
 
 const ROLE_LABEL: Record<string, string> = { user: "Pemesan", driver: "Driver", admin: "Admin" };
+
+function Fold({
+  plain, plainClassName, title, total, innerClassName, children,
+}: {
+  plain: boolean; plainClassName?: string; title: string; total?: string; innerClassName: string; children: ReactNode;
+}) {
+  if (plain) return plainClassName ? <div className={plainClassName}>{children}</div> : <>{children}</>;
+  return (
+    <details className="group rounded-xl border border-border bg-background">
+      <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-3 text-sm font-bold text-foreground [&::-webkit-details-marker]:hidden">
+        <span>{title}</span>
+        <span className="flex items-center gap-2 text-primary">
+          {total}
+          <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+        </span>
+      </summary>
+      <div className={innerClassName}>{children}</div>
+    </details>
+  );
+}
 
 function OrderChat({ orderId, myId }: { orderId: string; myId: string }) {
   const qc = useQueryClient();
