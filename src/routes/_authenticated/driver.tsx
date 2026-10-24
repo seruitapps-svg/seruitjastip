@@ -53,6 +53,7 @@ function DriverPage() {
   const [driverProfilePopupOpen, setDriverProfilePopupOpen] = useState(false);
   const [profileForm, setProfileForm] = useState({ full_name: "", phone: "", vehicle_type: "Motor", vehicle_plate: "" });
   const alertedOrderIds = useRef<Set<string>>(new Set());
+  const [alertOrderId, setAlertOrderId] = useState<string | null>(null);
 
   // Profil driver (status online & accepts_ojek)
   const driverProfile = useQuery({
@@ -235,7 +236,8 @@ function DriverPage() {
           if (!alertedOrderIds.current.has(newOrderId)) {
             alertedOrderIds.current.add(newOrderId);
 
-            // Mainkan nada dering & getar
+            // Popup hanya untuk order baru; suara/getaran memakai helper yang sudah ada.
+            setAlertOrderId(newOrderId);
             playOrderAlertSound();
 
             toast("Ada Pesanan Baru!", {
@@ -366,6 +368,59 @@ function DriverPage() {
         </div>
       )}
 
+      {alertOrderId && (() => {
+        const alertOrder = availableOrders.find((order) => order.id === alertOrderId);
+        if (!alertOrder || !isOnline) return null;
+        return (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="driver-new-order-title">
+            <section className="w-full max-w-md space-y-4 rounded-2xl border border-primary/40 bg-card p-4 shadow-2xl sm:p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Zap className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-primary">Order baru tersedia</p>
+                    <h2 id="driver-new-order-title" className="mt-1 text-lg font-extrabold text-foreground">Siapa cepat dia dapat</h2>
+                    <p className="mt-1 text-xs text-muted-foreground">Order ini juga ditawarkan ke driver online lain.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Tutup popup order baru"
+                  onClick={() => setAlertOrderId(null)}
+                  className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <OrderCard order={alertOrder} driverView />
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  className={btnPrimary + " py-3"}
+                  disabled={busy !== null || !isOnline}
+                  onClick={() => {
+                    const id = alertOrder.id;
+                    setAlertOrderId(null);
+                    void run(id, async () => supabase.rpc("driver_take_order", { _order_id: id }), true);
+                  }}
+                >
+                  {busy === alertOrder.id ? "Memproses..." : "Ambil Order Ini"}
+                </button>
+                <button
+                  type="button"
+                  className={btnOutline + " py-3"}
+                  onClick={() => setAlertOrderId(null)}
+                >
+                  Nanti
+                </button>
+              </div>
+              <p className="text-center text-[11px] text-muted-foreground">Jika driver lain lebih dahulu berhasil mengambil, order ini akan hilang dari popup.</p>
+            </section>
+          </div>
+        );
+      })()}
       {pinOrderId && (() => {
         const pinOrder = active.find((order) => order.id === pinOrderId);
         if (!pinOrder) return null;
