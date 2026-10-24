@@ -1,4 +1,4 @@
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Bike, ChevronDown, LogOut, ShoppingBag, Store, UserRound } from "lucide-react";
@@ -12,8 +12,6 @@ export function AppHeader() {
   const { user, isAdmin, isDriver, isMitra, isCustomerOnly } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const routerState = useRouterState();
-  const currentPath = routerState.location.pathname;
   type AppBranding = { app_name: string; logo_url: string | null; favicon_url: string | null };
   const brandingCacheKey = "mider-app-branding";
 
@@ -65,8 +63,6 @@ export function AppHeader() {
     icon.href = url;
   }, [branding.data?.favicon_url]);
 
-  const isDriverPage = currentPath.startsWith("/driver");
-  const isMitraPage = currentPath.startsWith("/mitra");
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -101,55 +97,6 @@ export function AppHeader() {
 
         {user ? (
           <nav aria-label="Navigasi utama" className="ml-auto flex items-center gap-1.5 sm:gap-2">
-            {/* 1. Switch Mode Cepat untuk Driver */}
-            {isDriver && !isAdmin && (
-              isDriverPage ? (
-                <Link
-                  to="/"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary/20"
-                >
-                  <ShoppingBag className="h-3.5 w-3.5" />
-                  <span>Mode Pemesan</span>
-                </Link>
-              ) : (
-                <Link
-                  to="/driver"
-                  className="inline-flex items-center gap-1.5 rounded-full bg-primary px-2.5 py-1 text-xs font-bold text-primary-foreground hover:bg-primary/90"
-                >
-                  <Bike className="h-3.5 w-3.5" />
-                  <span>Mode Driver</span>
-                </Link>
-              )
-            )}
-
-            {/* 2. Switch Mode Cepat untuk Mitra Resto */}
-            {isMitra && !isAdmin && (
-              isMitraPage ? (
-                <Link
-                  to="/"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary/20"
-                >
-                  <ShoppingBag className="h-3.5 w-3.5" />
-                  <span>Mode Pemesan</span>
-                </Link>
-              ) : (
-                <Link
-                  to="/mitra"
-                  className="inline-flex items-center gap-1.5 rounded-full bg-primary px-2.5 py-1 text-xs font-bold text-primary-foreground hover:bg-primary/90"
-                >
-                  <Store className="h-3.5 w-3.5" />
-                  <span>Mode Resto</span>
-                </Link>
-              )
-            )}
-
-            <Link to="/pesanan" className={linkCls} activeProps={{ className: activeCls }}>
-              Pesanan
-            </Link>
-            <Link to="/saldo" className={linkCls} activeProps={{ className: activeCls }}>
-              Saldo
-            </Link>
-
             {/* Dropdown Akun */}
             <details className="relative">
               <summary className="flex cursor-pointer list-none items-center gap-1 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground [&::-webkit-details-marker]:hidden">
@@ -163,6 +110,21 @@ export function AppHeader() {
                   activeProps={{ className: "text-primary bg-primary/10" }}
                 >
                   <UserRound className="h-3.5 w-3.5 text-primary" /> Profil Saya
+                </Link>
+
+                <Link
+                  to="/pesanan"
+                  className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent"
+                  activeProps={{ className: "text-primary bg-primary/10" }}
+                >
+                  <ShoppingBag className="h-3.5 w-3.5" /> Pesanan Saya
+                </Link>
+                <Link
+                  to="/saldo"
+                  className="mb-2 flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground hover:bg-accent"
+                  activeProps={{ className: "text-primary bg-primary/10" }}
+                >
+                  <Store className="h-3.5 w-3.5" /> Saldo
                 </Link>
 
                 {/* Status Akun */}
