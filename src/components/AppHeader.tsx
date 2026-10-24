@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { Bike, ChevronDown, LogOut, ShoppingBag, Store, UserRound, Wallet } from "lucide-react";
+import { Bike, ChevronDown, LogOut, ShoppingBag, Store, UserRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { AppAnnouncements } from "@/components/AppAnnouncements";
@@ -76,7 +76,6 @@ export function AppHeader() {
   const linkCls =
     "rounded-md px-2 py-2 text-xs sm:text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground";
   const dashboardPath = isAdmin ? "/admin" : isDriver ? "/driver" : isMitra ? "/mitra" : "/";
-  const dashboardLabel = isAdmin ? "Admin" : isDriver ? "Mode Driver" : isMitra ? "Mode Resto" : "Beranda";
 
   return (
     <>
