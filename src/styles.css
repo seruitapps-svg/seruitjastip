@@ -252,3 +252,20 @@ input, textarea, select {
 input[type="checkbox"], input[type="radio"] { -webkit-appearance: auto; appearance: auto; }
 
 img, svg { -webkit-user-drag: none; }
+
+/* ===== Mode layout lebar yang diskalakan ke ukuran HP ===== */
+/* Tinggi dibagi faktor zoom supaya halaman tidak jadi terlalu panjang. */
+html[data-force-mobile] { font-size: 15px; }
+html[data-force-mobile] body,
+html[data-force-mobile] .mobile-shell,
+html[data-force-mobile] .min-h-screen {
+  min-height: calc(100dvh / var(--mider-zoom, 1));
+}
+html[data-force-mobile] .h-screen {
+  height: calc(100dvh / var(--mider-zoom, 1));
+}
+html[data-force-mobile] .mobile-shell,
+html[data-force-mobile] .mobile-shell-wide {
+  max-width: none;
+  box-shadow: none;
+}
