@@ -12,6 +12,7 @@ import { formatRupiah } from "@/lib/config";
 import { STATUS_LABEL } from "@/lib/order-status";
 import { sendOrderPushEvent } from "@/lib/push-notifications";
 import { installAudioUnlock, startAlertLoop } from "@/lib/audio-alert";
+import { installAudioUnlock, startAlertLoop } from "@/lib/audio-alert";
 
 export const Route = createFileRoute("/_authenticated/mitra")({
   head: () => ({
@@ -122,6 +123,22 @@ function MitraDashboardPage() {
       void supabase.removeChannel(channel);
     };
   }, [merchant?.id, merchant?.status, queryClient]);
+
+  const hasPendingMitraOrder = (ordersQuery.data ?? []).some(
+    (order) =>
+      (order as any).food_order_type === "mitra" &&
+      (order as any).merchant_response === "pending" &&
+      order.status === "tersedia",
+  );
+
+  useEffect(() => {
+    installAudioUnlock();
+  }, []);
+
+  useEffect(() => {
+    if (!hasPendingMitraOrder || merchant?.status !== "approved") return;
+    return startAlertLoop();
+  }, [hasPendingMitraOrder, merchant?.status]);
 
   const hasPendingMitraOrder = (ordersQuery.data ?? []).some(
     (order) =>
