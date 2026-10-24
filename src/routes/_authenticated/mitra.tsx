@@ -11,6 +11,7 @@ import { uploadCompressedMedia } from "@/lib/image-compressor";
 import { formatRupiah } from "@/lib/config";
 import { STATUS_LABEL } from "@/lib/order-status";
 import { sendOrderPushEvent } from "@/lib/push-notifications";
+import { installAudioUnlock, startAlertLoop } from "@/lib/audio-alert";
 
 export const Route = createFileRoute("/_authenticated/mitra")({
   head: () => ({
@@ -121,6 +122,23 @@ function MitraDashboardPage() {
       void supabase.removeChannel(channel);
     };
   }, [merchant?.id, merchant?.status, queryClient]);
+
+  const hasPendingMitraOrder = (ordersQuery.data ?? []).some(
+    (order) =>
+      (order as any).food_order_type === "mitra" &&
+      (order as any).merchant_response === "pending" &&
+      order.status === "tersedia",
+  );
+
+  useEffect(() => {
+    installAudioUnlock();
+  }, []);
+
+  // Dering + getar berulang selama ada pesanan menunggu keputusan resto.
+  useEffect(() => {
+    if (!hasPendingMitraOrder || merchant?.status !== "approved") return;
+    return startAlertLoop();
+  }, [hasPendingMitraOrder, merchant?.status]);
 
   const merchantEarningsQuery = useQuery({
     queryKey: ["mitra-earnings", merchant?.id],
@@ -368,7 +386,7 @@ function MitraDashboardPage() {
         _decision: decision,
       });
       if (error) throw error;
-      if (decision === "accept") void sendOrderPushEvent("merchant_order_ready", orderId);
+      void sendOrderPushEvent(decision === "accept" ? "merchant_order_ready" : "merchant_rejected", orderId);
       setMessage(decision === "accept"
         ? "Pesanan diterima. PIN pengambilan telah dibuat dan pesanan diteruskan ke pencarian driver."
         : "Pesanan ditolak dan tidak diteruskan ke driver.");
