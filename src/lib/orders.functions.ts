@@ -208,5 +208,16 @@ export const createOrder = createServerFn({ method: "POST" })
       }
     }
 
+    // Kirim push dari server setelah order tersimpan dan pembayaran (jika ada) berhasil.
+    try {
+      const { dispatchOrderPush } = await import("./push.server");
+      await Promise.race([
+        dispatchOrderPush({ eventType: "order_created", orderId: row.id, callerId: context.userId }),
+        new Promise((resolve) => setTimeout(resolve, 8000)),
+      ]);
+    } catch (pushError) {
+      console.error("Push order baru gagal:", pushError);
+    }
+
     return { id: row.id };
   });
