@@ -5,7 +5,6 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const FIREBASE_SERVICE_ACCOUNT_JSON = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON") ?? "";
-const APP_ORIGIN = "https://mider-jastip.lovable.app";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -155,40 +154,89 @@ serve(async (req) => {
     }
 
     targetUserIds = uniqueIds(targetUserIds);
-    if (!targetUserIds.length) return json({ success: true, sent: 0, failed: 0, message: "Tidak ada penerima" });
+    if (!targetUserIds.length) {
+      console.log("send-order-push", { eventType, recipients: 0, note: "tidak ada penerima" });
+      return json({ success: true, sent: 0, failed: 0, message: "Tidak ada penerima" });
+    }
 
     const { data: tokens, error: tokenError } = await admin.from("user_push_tokens").select("user_id,token").in("user_id", targetUserIds);
     if (tokenError) throw new Error("Gagal membaca token Firebase: " + tokenError.message);
-    const tokenRows = (tokens ?? []).filter((row) => typeof row.token === "string" && row.token.length > 0);
-    if (!tokenRows.length) return json({ success: false, sent: 0, failed: 0, recipientCount: targetUserIds.length, message: "Penerima belum mendaftarkan token Firebase" }, 200);
+    // Buang token kosong dan duplikat sebelum mengirim.
+    const tokenRows = [...new Map(
+      (tokens ?? [])
+        .filter((row) => typeof row.token === "string" && row.token.length > 0)
+        .map((row) => [row.token as string, row] as const),
+    ).values()];
+    if (!tokenRows.length) {
+      console.log("send-order-push", { eventType, recipients: targetUserIds.length, tokens: 0, note: "penerima belum punya token" });
+      return json({ success: false, sent: 0, failed: 0, recipientCount: targetUserIds.length, message: "Penerima belum mendaftarkan token Firebase" }, 200);
+    }
 
     const account = JSON.parse(FIREBASE_SERVICE_ACCOUNT_JSON) as ServiceAccount;
     if (!account.project_id || !account.client_email || !account.private_key) throw new Error("FIREBASE_SERVICE_ACCOUNT_JSON tidak memiliki project_id, client_email, atau private_key");
     const accessToken = await getAccessToken(account);
-    const notificationUrl = new URL(targetPath, APP_ORIGIN).toString();
+
     const results = await Promise.all(tokenRows.map(async (row) => {
       try {
         const response = await fetch("https://fcm.googleapis.com/v1/projects/" + account.project_id + "/messages:send", {
           method: "POST",
           headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
+          // Data-only: hanya service worker / listener foreground yang menampilkan notifikasi, jadi tidak ganda.
           body: JSON.stringify({ message: {
             token: row.token,
-            notification: { title, body },
-            data: { event_type: eventType, order_id: String(order.id), url: targetPath },
-            webpush: { headers: { Urgency: "high" }, fcmOptions: { link: notificationUrl } },
+            data: { title, body, event_type: eventType, order_id: String(order.id), url: targetPath },
+            android: { priority: "high" },
+            webpush: { headers: { Urgency: "high", TTL: "3600" } },
           } }),
         });
         const responseText = await response.text();
-        if (!response.ok) console.error("FCM send failed", { status: response.status, response: responseText.slice(0, 500) });
-        return { ok: response.ok, status: response.status, response: response.ok ? undefined : responseText.slice(0, 300) };
+        let errorCode = "";
+        if (!response.ok) {
+          console.error("FCM send failed", { status: response.status, response: responseText.slice(0, 500) });
+          try {
+            const parsed = JSON.parse(responseText);
+            const detail = (parsed?.error?.details ?? []).find((d: { errorCode?: string }) => d?.errorCode);
+            errorCode = detail?.errorCode || parsed?.error?.status || "";
+          } catch { /* respons bukan JSON */ }
+        }
+        const stale = !response.ok && (
+          response.status === 404 ||
+          errorCode === "UNREGISTERED" ||
+          (errorCode === "INVALID_ARGUMENT" && /registration token/i.test(responseText))
+        );
+        return {
+          ok: response.ok,
+          status: response.status,
+          errorCode,
+          stale,
+          token: row.token as string,
+          response: response.ok ? undefined : responseText.slice(0, 300),
+        };
       } catch (error) {
-        return { ok: false, status: 0, response: error instanceof Error ? error.message : String(error) };
+        return { ok: false, status: 0, errorCode: "FETCH_ERROR", stale: false, token: row.token as string, response: error instanceof Error ? error.message : String(error) };
       }
     }));
-    const sent = results.filter((result) => result.ok).length;
+
+    // Hapus token yang sudah tidak valid.
+    const staleTokens = results.filter((r) => r.stale).map((r) => r.token);
+    if (staleTokens.length) {
+      const { error: deleteError } = await admin.from("user_push_tokens").delete().in("token", staleTokens);
+      if (deleteError) console.error("Gagal menghapus token kedaluwarsa:", deleteError.message);
+    }
+
+    const sent = results.filter((r) => r.ok).length;
     const failed = results.length - sent;
-    return json({ success: sent > 0 && failed === 0, provider: "firebase", sent, failed, recipientCount: targetUserIds.length, tokenCount: tokenRows.length,
-      ...(failed ? { failures: results.filter((result) => !result.ok).map(({ status, response }) => ({ status, response })) } : {}) }, sent > 0 ? 200 : 502);
+    console.log("send-order-push", { eventType, recipients: targetUserIds.length, tokens: tokenRows.length, sent, failed, removedStale: staleTokens.length });
+    return json({
+      success: sent > 0,
+      provider: "firebase",
+      sent,
+      failed,
+      removedStale: staleTokens.length,
+      recipientCount: targetUserIds.length,
+      tokenCount: tokenRows.length,
+      ...(failed ? { failures: results.filter((r) => !r.ok).map(({ status, errorCode, response }) => ({ status, errorCode, response })) } : {}),
+    }, sent > 0 ? 200 : 502);
   } catch (error) {
     console.error("send-order-push error:", error);
     return json({ error: error instanceof Error ? error.message : "Internal server error" }, 500);
