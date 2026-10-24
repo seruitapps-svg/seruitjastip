@@ -24,6 +24,8 @@ export function useAuth() {
   const rolesQuery = useQuery({
     queryKey: ["my-roles", user?.id],
     enabled: !!user,
+    retry: 2,
+    staleTime: 60_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_roles")
@@ -35,15 +37,18 @@ export function useAuth() {
   });
 
   const actualRoles = rolesQuery.data ?? [];
+  const rolesFailed = rolesQuery.isError;
   const isActualAdmin = actualRoles.includes("superadmin");
   const isDriver = !isActualAdmin && actualRoles.includes("driver");
   const isMitra = !isActualAdmin && actualRoles.includes("mitra");
-  const isCustomerOnly = !isDriver && !isMitra && !isActualAdmin;
+  const isCustomerOnly = !rolesFailed && !isDriver && !isMitra && !isActualAdmin;
 
   return {
     user,
     ready: ready && (!user || !rolesQuery.isLoading),
     roles: actualRoles,
+    rolesError: rolesFailed ? rolesQuery.error : null,
+    refetchRoles: rolesQuery.refetch,
     isAdmin: isActualAdmin,
     isDriver,
     isMitra,
