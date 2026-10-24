@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { GlobalOrderAlert } from "@/components/GlobalOrderAlert";
 import { AccountModeGuard } from "@/components/AccountModeGuard";
+import { DesktopModeNotice } from "@/components/DesktopModeNotice";
 
 function NotFoundComponent() {
   return (
@@ -79,7 +80,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "theme-color", content: "#16a34a" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
       { title: "Mider — Metro Jastip Order" },
       {
         name: "description",
@@ -112,7 +117,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
       { rel: "manifest", href: "/manifest.webmanifest" },
-      { name: "theme-color", content: "#16a34a" },
+      { rel: "apple-touch-icon", href: "/pwa-192.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -137,13 +142,17 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouter().state.location.pathname;
+  const wide = pathname.startsWith("/admin");
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <div className={wide ? "mobile-shell mobile-shell-wide" : "mobile-shell"}>
+        <Outlet />
+      </div>
       <AccountModeGuard />
       <GlobalOrderAlert />
+      <DesktopModeNotice />
     </QueryClientProvider>
   );
 }
