@@ -94,17 +94,6 @@ export function AppHeader() {
 
           {user ? (
             <nav aria-label="Navigasi utama" className="ml-auto flex min-w-0 items-center gap-0.5 sm:gap-1">
-              {/* Navigasi utama dipertahankan di header */}
-              {isDriver && !isAdmin && (
-                <Link to="/driver" className={linkCls} activeProps={{ className: "!text-primary font-bold" }}>
-                  <span className="whitespace-nowrap">Mode Driver</span>
-                </Link>
-              )}
-              {isMitra && !isAdmin && (
-                <Link to="/mitra" className={linkCls} activeProps={{ className: "!text-primary font-bold" }}>
-                  <span className="whitespace-nowrap">Mode Resto</span>
-                </Link>
-              )}
               <Link to="/pesanan" className={linkCls} activeProps={{ className: "!text-primary font-bold" }}>
                 <span className="whitespace-nowrap">Pesanan</span>
               </Link>
