@@ -10,6 +10,9 @@ export type PushEventType =
 type ServiceAccount = { project_id: string; client_email: string; private_key: string; token_uri?: string };
 type Notice = { userIds: string[]; title: string; body: string; path: string; ttl: number };
 
+const URGENT_TTL = 300;
+const NORMAL_TTL = 3600;
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const admin = () => supabaseAdmin as any;
 
