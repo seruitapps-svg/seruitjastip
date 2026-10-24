@@ -10,6 +10,7 @@ export function NotificationPrompt() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean>(false);
 
   useEffect(() => {
@@ -22,7 +23,15 @@ export function NotificationPrompt() {
     if (Notification.permission === "granted") {
       setHasPermission(true);
       if (user?.id) {
-        void requestAndSavePushToken(user.id);
+        setSyncError(null);
+        void requestAndSavePushToken(user.id).then((result) => {
+          if (result.status !== "granted") {
+            setSyncError(
+              result.error ||
+                "Notifikasi belum aktif di perangkat ini (" + result.status + "). Coba buka ulang aplikasi.",
+            );
+          }
+        });
       }
     }
 
@@ -70,6 +79,39 @@ export function NotificationPrompt() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (user && hasPermission && !success && syncError) {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-4 pt-2">
+        <div className="flex items-start gap-3 rounded-2xl border border-destructive/30 bg-card p-4 shadow-sm">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
+            <Bell className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4 className="text-sm font-semibold text-foreground">Notifikasi belum tersambung</h4>
+            <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">{syncError}</p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="mt-2 text-xs"
+              onClick={() => {
+                if (!user?.id) return;
+                setSyncError(null);
+                void requestAndSavePushToken(user.id).then((result) => {
+                  if (result.status !== "granted") {
+                    setSyncError(result.error || "Masih gagal (" + result.status + ").");
+                  }
+                });
+              }}
+            >
+              Coba lagi
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!user || dismissed || (hasPermission && !success)) {
