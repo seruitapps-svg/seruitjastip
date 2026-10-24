@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bell, MapPin } from "lucide-react";
+import { Bell, X, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { requestAndSavePushToken } from "@/lib/push-notifications";
 import { useAuth } from "@/hooks/use-auth";
@@ -7,181 +7,134 @@ import { useAuth } from "@/hooks/use-auth";
 export function NotificationPrompt() {
   const { user } = useAuth();
   const [dismissed, setDismissed] = useState(false);
-  const [locationDismissed, setLocationDismissed] = useState(false);
-  const [pushLoading, setPushLoading] = useState(false);
-  const [pushStatus, setPushStatus] = useState<string | null>(null);
-  const [pushError, setPushError] = useState<string | null>(null);
-  const [locationStatus, setLocationStatus] = useState<"checking" | "granted" | "prompt" | "denied" | "unsupported" | "error">("checking");
-  const [locationMessage, setLocationMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hasPermission, setHasPermission] = useState<boolean>(false);
 
+  // Periksa apakah browser mendukung & apakah sudah diizinkan sebelumnya
   useEffect(() => {
-    if (!user?.id || typeof window === "undefined") return;
-    try {
-      setLocationDismissed(window.localStorage.getItem(`mider-location-prompt-dismissed:${user.id}`) === "true");
-    } catch {
-      // Keep the prompt usable when browser storage is unavailable.
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      setDismissed(true);
+      return;
+    }
+
+    if (Notification.permission === "granted") {
+      setHasPermission(true);
+    }
+
+    // Cek apakah pengguna pernah menutup banner ini sebelumnya
+    if (user?.id) {
+      const isDismissed = localStorage.getItem(`mider_push_prompt_dismissed_${user.id}`);
+      if (isDismissed === "true") {
+        setDismissed(true);
+      }
     }
   }, [user?.id]);
 
-  useEffect(() => {
-    if (locationStatus === "granted" && user?.id && typeof window !== "undefined") {
+  function handleDismiss() {
+    setDismissed(true);
+    if (user?.id) {
       try {
-        window.localStorage.removeItem(`mider-location-prompt-dismissed:${user.id}`);
+        localStorage.setItem(`mider_push_prompt_dismissed_${user.id}`, "true");
       } catch {
-        // Location permission still applies when storage is unavailable.
+        // fallback
       }
-      setLocationDismissed(false);
     }
-  }, [locationStatus, user?.id]);
-
-  useEffect(() => {
-    if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
-      setLocationStatus("unsupported");
-      return;
-    }
-    if (!(navigator as Navigator & { permissions?: Permissions }).permissions?.query) {
-      setLocationStatus("prompt");
-      return;
-    }
-    let cancelled = false;
-    void navigator.permissions.query({ name: "geolocation" as PermissionName })
-      .then((permission) => {
-        if (!cancelled) {
-          setLocationStatus(permission.state === "granted" ? "granted" : permission.state === "denied" ? "denied" : "prompt");
-          permission.onchange = () => {
-            if (!cancelled) setLocationStatus(permission.state === "granted" ? "granted" : permission.state === "denied" ? "denied" : "prompt");
-          };
-        }
-      })
-      .catch(() => { if (!cancelled) setLocationStatus("prompt"); });
-    return () => { cancelled = true; };
-  }, []);
-
-  async function handleEnableLocation() {
-    if (!navigator.geolocation) {
-      setLocationStatus("unsupported");
-      return;
-    }
-    setLocationMessage(null);
-    navigator.geolocation.getCurrentPosition(
-      () => {
-        setLocationStatus("granted");
-        setLocationMessage("Izin lokasi aktif di browser ini.");
-      },
-      (error) => {
-        setLocationStatus(error.code === error.PERMISSION_DENIED ? "denied" : "error");
-        setLocationMessage(
-          error.code === error.PERMISSION_DENIED
-            ? "Izin lokasi ditolak. Ubah izin Lokasi untuk situs ini melalui pengaturan browser."
-            : error.code === error.POSITION_UNAVAILABLE
-            ? "Lokasi belum tersedia. Pastikan GPS/lokasi HP aktif."
-            : "Permintaan lokasi habis waktu. Aktifkan GPS lalu coba lagi."
-        );
-      },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
-    );
   }
 
   async function handleEnablePush() {
-    if (!user?.id || pushLoading) return;
-    setPushLoading(true);
-    setPushStatus(null);
-    setPushError(null);
+    if (!user?.id || loading) return;
+    setLoading(true);
+    setErrorMessage(null);
 
     try {
       const result = await requestAndSavePushToken(user.id);
       if (result.status === "granted") {
-        setPushStatus("Notifikasi Firebase berhasil didaftarkan di perangkat ini.");
+        setSuccess(true);
+        setHasPermission(true);
+        // Sembunyikan otomatis setelah 3 detik sukses
+        setTimeout(() => {
+          handleDismiss();
+        }, 3000);
       } else if (result.status === "denied") {
-        throw new Error(result.error || "Izin notifikasi ditolak atau token Firebase gagal didaftarkan.");
-      } else if (result.status === "unsupported") {
-        throw new Error("Browser ini belum mendukung notifikasi push Firebase.");
+        setErrorMessage("Izin notifikasi dinonaktifkan di browser. Anda dapat mengaktifkannya lewat pengaturan situs.");
       } else if (result.status === "open-in-new-tab") {
-        throw new Error("Buka Mider langsung di tab browser, bukan dari pratinjau atau iframe.");
+        setErrorMessage("Buka aplikasi di tab utama browser untuk mengaktifkan notifikasi.");
       } else {
-        throw new Error("Konfigurasi Firebase Web Push belum lengkap.");
+        setErrorMessage("Layanan notifikasi sedang disiapkan. Silakan coba beberapa saat lagi.");
       }
-    } catch (error) {
-      setPushError(error instanceof Error ? error.message : String(error));
+    } catch {
+      setErrorMessage("Tidak dapat menghubungkan notifikasi. Silakan coba lagi.");
     } finally {
-      setPushLoading(false);
+      setLoading(false);
     }
   }
 
-  if (!user || typeof window === "undefined") return null;
-  const notificationSupported = "Notification" in window;
-  const pushNeedsSetup = notificationSupported && !dismissed;
-  const locationNeedsSetup = locationStatus !== "granted" && locationStatus !== "unsupported" && !locationDismissed;
-  if (!pushNeedsSetup && !locationNeedsSetup) return null;
+  // Jangan tampilkan jika:
+  // 1. Belum login
+  // 2. Browser tidak mendukung
+  // 3. Ditutup oleh pengguna (dismissed)
+  // 4. Sudah aktif dan tidak sedang menampilkan status sukses
+  if (!user || dismissed || (hasPermission && !success)) {
+    return null;
+  }
 
   return (
-    <div className="mx-auto my-3 flex max-w-3xl items-start gap-3 px-4">
-      <div className="flex min-w-0 flex-1 items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
-        {pushNeedsSetup ? <Bell className="mt-0.5 h-5 w-5 shrink-0 text-primary" /> : <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-primary" />}
-        <div className="min-w-0 flex-1">
-          {pushNeedsSetup && (
-            <>
-              <p className="text-sm font-semibold text-foreground">
-                {Notification.permission === "granted" ? "Daftarkan Notifikasi Order" : "Aktifkan Notifikasi Order"}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Terima pemberitahuan pesanan dan pesan chat meski aplikasi tidak sedang terbuka.
-              </p>
-            </>
-          )}
-          {locationNeedsSetup && (
-            <div className={pushNeedsSetup ? "mt-2 rounded-lg border border-border bg-background/70 p-2.5 text-xs" : "text-xs"} role="status">
-              <p className="font-semibold text-foreground">{locationStatus === "denied" ? "Lokasi belum diizinkan" : "Aktifkan lokasi saat dibutuhkan"}</p>
-              <p className="mt-1 text-muted-foreground">
-                {locationStatus === "denied"
-                  ? "Untuk memakai fitur jemput dan pelacakan, ubah izin lokasi situs melalui pengaturan browser."
-                  : "Lokasi membantu menentukan titik penjemputan dan melacak perjalanan."}
-              </p>
-              {locationMessage && <p className="mt-1 text-muted-foreground">{locationMessage}</p>}
-            </div>
-          )}
-          {pushStatus && <p className="mt-2 text-xs text-primary" role="status">{pushStatus}</p>}
-          {pushError && (
-            <p className="mt-2 break-all text-xs text-destructive" role="alert">
-              Firebase: {pushError}
+    <div className="mx-auto w-full max-w-3xl px-4 pt-2">
+      <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-card p-4 shadow-sm">
+        {/* Tombol Tutup Silang di Kanan Atas */}
+        <button
+          type="button"
+          onClick={handleDismiss}
+          className="absolute right-3 top-3 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          aria-label="Tutup pemberitahuan"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        {/* Ikon & Penjelasan */}
+        <div className="flex items-start gap-3 pr-6 sm:pr-0">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            {success ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <Bell className="h-5 w-5" />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4 className="text-sm font-semibold text-foreground">
+              {success ? "Notifikasi Aktif!" : "Aktifkan Notifikasi Pesanan"}
+            </h4>
+            <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
+              {success
+                ? "Anda akan menerima info pesanan baru dan pembaruan langsung di perangkat ini."
+                : "Dapatkan pemberitahuan seketika saat pesanan masuk, status pengantaran, atau chat."}
             </p>
-          )}
+            {errorMessage && (
+              <p className="mt-1.5 text-xs font-medium text-destructive">
+                {errorMessage}
+              </p>
+            )}
+          </div>
         </div>
-        <div className="flex shrink-0 flex-col gap-2">
-          {pushNeedsSetup && (
-            <Button size="sm" variant="outline" onClick={handleEnablePush} disabled={pushLoading}>
-              {pushLoading ? "Memproses Firebase…" : "Aktifkan Notifikasi"}
-            </Button>
-          )}
-          {locationNeedsSetup && (
-            <Button size="sm" variant="outline" onClick={handleEnableLocation}>
-              Aktifkan Lokasi
-            </Button>
-          )}
-          {pushNeedsSetup && (
-            <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setDismissed(true)}>
-              Nanti
-            </button>
-          )}
-          {locationNeedsSetup && (
+
+        {/* Tombol Aksi */}
+        {!success && (
+          <div className="flex items-center gap-2 self-end sm:self-center pl-13 sm:pl-0">
             <button
               type="button"
-              className="text-xs text-muted-foreground underline"
-              onClick={() => {
-                setLocationDismissed(true);
-                if (user?.id) {
-                  try {
-                    window.localStorage.setItem(`mider-location-prompt-dismissed:${user.id}`, "true");
-                  } catch {
-                    // Session state still hides the prompt.
-                  }
-                }
-              }}
+              onClick={handleDismiss}
+              className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              Nanti
+              Nanti Saja
             </button>
-          )}
-        </div>
+            <Button
+              size="sm"
+              onClick={handleEnablePush}
+              disabled={loading}
+              className="rounded-xl px-4 text-xs font-semibold shadow-none"
+            >
+              {loading ? "Menghubungkan…" : "Aktifkan"}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
