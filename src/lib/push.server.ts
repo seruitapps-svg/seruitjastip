@@ -1,7 +1,14 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-export type PushEventType = "order_created" | "order_status_changed" | "merchant_order_ready" | "chat_message";
+export type PushEventType =
+  | "order_created"
+  | "order_status_changed"
+  | "merchant_order_ready"
+  | "merchant_rejected"
+  | "chat_message";
+
 type ServiceAccount = { project_id: string; client_email: string; private_key: string; token_uri?: string };
+type Notice = { userIds: string[]; title: string; body: string; path: string; ttl: number };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const admin = () => supabaseAdmin as any;
@@ -63,6 +70,24 @@ async function getAccessToken(account: ServiceAccount): Promise<string> {
   return tokenBody.access_token;
 }
 
+async function onlineDriverIds(order: { service?: string | null }, excludeIds: string[] = []): Promise<string[]> {
+  const { data, error } = await admin().from("driver_profiles").select("user_id,accepts_ojek").eq("is_online", true);
+  if (error) throw error;
+  return uniqueIds(
+    ((data ?? []) as Array<{ user_id: string; accepts_ojek: boolean | null }>)
+      .filter((row) => !(order.service === "ojek" && row.accepts_ojek === false))
+      .map((row) => row.user_id)
+      .filter((id) => !excludeIds.includes(id)),
+  );
+}
+
+async function merchantOwnerId(merchantId: string | null | undefined): Promise<string | null> {
+  if (!merchantId) return null;
+  const { data, error } = await admin().from("merchants").select("user_id").eq("id", merchantId).maybeSingle();
+  if (error) throw error;
+  return (data?.user_id as string | undefined) ?? null;
+}
+
 export async function dispatchOrderPush(input: {
   eventType: PushEventType;
   orderId: string;
@@ -83,14 +108,12 @@ export async function dispatchOrderPush(input: {
     return { success: false, sent: 0, failed: 0, error, ...extra };
   };
 
-  if (!serviceAccountJson) {
-    return stop("FIREBASE_SERVICE_ACCOUNT_JSON belum tersedia di server aplikasi");
-  }
+  if (!serviceAccountJson) return stop("FIREBASE_SERVICE_ACCOUNT_JSON belum tersedia di server aplikasi");
 
   try {
     const { data: order, error: orderError } = await admin()
       .from("orders")
-      .select("id,user_id,driver_id,status,food_order_type,merchant_response,merchant_id")
+      .select("id,code,user_id,driver_id,status,service,food_order_type,merchant_response,merchant_id")
       .eq("id", orderId)
       .maybeSingle();
     if (orderError) throw orderError;
@@ -98,58 +121,128 @@ export async function dispatchOrderPush(input: {
 
     const isOwner = order.user_id === callerId;
     const isDriver = order.driver_id === callerId;
+    const merchantUserId = await merchantOwnerId(order.merchant_id);
+    const isOrderMerchant = Boolean(merchantUserId) && merchantUserId === callerId;
     const { data: roles, error: roleError } = await admin().from("user_roles").select("role").eq("user_id", callerId);
     if (roleError) throw roleError;
     const isAdmin = ((roles ?? []) as Array<{ role: string }>).some((row) => row.role === "superadmin");
 
-    let targetUserIds: string[] = [];
-    let title = "";
-    let body = "";
-    let targetPath = "/pesanan/" + order.id;
+    const label = order.code ? "#" + order.code : "";
+    const orderPath = "/pesanan/" + order.id;
+    const isMitra = order.food_order_type === "mitra";
+    const notices: Notice[] = [];
 
     if (eventType === "order_created") {
       if (!isOwner) return stop("Forbidden");
       if (order.status !== "tersedia") return { success: true, sent: 0, message: "Order belum tersedia di pool" };
-      const { data, error } = await admin().from("driver_profiles").select("user_id").eq("is_online", true);
-      if (error) throw error;
-      targetUserIds = uniqueIds(((data ?? []) as Array<{ user_id: string }>).map((row) => row.user_id).filter((id) => id !== callerId));
-      title = "Ada Order Baru!";
-      body = "Order baru tersedia di pool. Buka aplikasi untuk melihat dan mengambil pesanan.";
-      targetPath = "/driver";
-    } else if (eventType === "order_status_changed") {
-      if (!isOwner && !isDriver && !isAdmin) return stop("Forbidden");
-      if (isDriver && order.user_id) {
-        targetUserIds = [order.user_id];
-        title = "Pembaruan Pesanan";
-        body = order.status === "diambil" ? "Driver menerima pesanan dan sedang menuju lokasi penjemputan."
-          : order.status === "dijemput" ? "Pesanan sudah dijemput driver."
-          : order.status === "diantar" ? "Pesanan sedang diantar ke tujuan."
-          : order.status === "selesai" ? "Pesanan telah selesai."
-          : "Status pesanan Anda telah diperbarui.";
-      } else if (isAdmin && order.status === "tersedia") {
-        const { data, error } = await admin().from("driver_profiles").select("user_id").eq("is_online", true);
-        if (error) throw error;
-        targetUserIds = uniqueIds(((data ?? []) as Array<{ user_id: string }>).map((row) => row.user_id));
-        title = "Ada Order Baru!";
-        body = "Order telah tersedia di pool dan bisa diambil.";
-        targetPath = "/driver";
+      if (isMitra && order.merchant_response === "pending") {
+        notices.push({
+          userIds: merchantUserId ? [merchantUserId] : [],
+          title: "Pesanan Baru Masuk!",
+          body: `Pesanan ${label} menunggu keputusan resto. Buka dashboard untuk menerima atau menolak.`,
+          path: "/mitra",
+          ttl: URGENT_TTL,
+        });
       } else {
-        return { success: true, sent: 0, message: "Tidak ada penerima untuk perubahan ini" };
+        notices.push({
+          userIds: await onlineDriverIds(order, [callerId]),
+          title: "Ada Order Baru!",
+          body: isMitra ? `Order ${label} sudah diterima resto dan tersedia untuk diambil.` : `Order ${label} tersedia. Buka aplikasi untuk melihat dan mengambil pesanan.`,
+          path: "/driver",
+          ttl: URGENT_TTL,
+        });
+      }
+    } else if (eventType === "order_status_changed") {
+      if (!isOwner && !isDriver && !isAdmin && !isOrderMerchant) return stop("Forbidden");
+
+      if (order.status === "dibatalkan") {
+        notices.push({
+          userIds: uniqueIds([order.user_id, order.driver_id].filter((id: string | null) => id !== callerId)),
+          title: "Pesanan Dibatalkan",
+          body: `Pesanan ${label} dibatalkan.`,
+          path: orderPath,
+          ttl: URGENT_TTL,
+        });
+        if (isMitra && order.merchant_response !== "rejected" && merchantUserId && merchantUserId !== callerId) {
+          notices.push({
+            userIds: [merchantUserId],
+            title: "Pesanan Dibatalkan",
+            body: `Pesanan ${label} dibatalkan oleh pelanggan atau admin.`,
+            path: "/mitra",
+            ttl: URGENT_TTL,
+          });
+        }
+      } else if (isDriver && order.user_id) {
+        notices.push({
+          userIds: [order.user_id],
+          title: "Pembaruan Pesanan",
+          body: order.status === "diambil" ? "Driver menerima pesanan dan sedang menuju lokasi penjemputan."
+            : order.status === "dijemput" ? "Pesanan sudah dijemput driver."
+            : order.status === "diantar" ? "Pesanan sedang diantar ke tujuan."
+            : order.status === "selesai" ? "Pesanan telah selesai."
+            : "Status pesanan Anda telah diperbarui.",
+          path: orderPath,
+          ttl: NORMAL_TTL,
+        });
+        if (isMitra && order.status === "diambil" && merchantUserId) {
+          notices.push({
+            userIds: [merchantUserId],
+            title: "Driver Menuju Resto",
+            body: `Driver mengambil pesanan ${label} dan sedang menuju resto. Siapkan pesanan dan PIN pengambilan.`,
+            path: "/mitra",
+            ttl: URGENT_TTL,
+          });
+        }
+      } else if (isAdmin && order.status === "tersedia") {
+        notices.push({
+          userIds: await onlineDriverIds(order),
+          title: "Ada Order Baru!",
+          body: "Order telah tersedia di pool dan bisa diambil.",
+          path: "/driver",
+          ttl: URGENT_TTL,
+        });
       }
     } else if (eventType === "merchant_order_ready") {
-      let isOrderMerchant = false;
-      if (order.merchant_id) {
-        const { data: merchant, error } = await admin().from("merchants").select("user_id").eq("id", order.merchant_id).maybeSingle();
-        if (error) throw error;
-        isOrderMerchant = merchant?.user_id === callerId;
-      }
       if (!isDriver && !isAdmin && !isOrderMerchant) return stop("Forbidden");
-      if (order.food_order_type !== "mitra" || order.merchant_response !== "accepted" || !order.driver_id) {
-        return { success: true, sent: 0, message: "Order Mitra Resto belum siap atau belum memiliki driver" };
+      if (!isMitra || order.merchant_response !== "accepted") {
+        return { success: true, sent: 0, message: "Order Mitra Resto belum diterima resto" };
       }
-      targetUserIds = [order.driver_id];
-      title = "Pesanan Siap Diambil";
-      body = "Mitra resto telah menerima pesanan. Datang ke resto dan ikuti instruksi PIN pickup.";
+      if (order.driver_id) {
+        notices.push({
+          userIds: [order.driver_id],
+          title: "Pesanan Siap Diambil",
+          body: "Mitra resto telah menerima pesanan. Datang ke resto dan ikuti instruksi PIN pickup.",
+          path: orderPath,
+          ttl: URGENT_TTL,
+        });
+      } else if (order.status === "tersedia") {
+        notices.push({
+          userIds: await onlineDriverIds(order),
+          title: "Ada Order Baru!",
+          body: `Order ${label} sudah diterima resto dan siap diambil.`,
+          path: "/driver",
+          ttl: URGENT_TTL,
+        });
+        notices.push({
+          userIds: order.user_id && order.user_id !== callerId ? [order.user_id] : [],
+          title: "Pesanan Diterima Resto",
+          body: "Resto menerima pesanan Anda. Sedang mencari driver.",
+          path: orderPath,
+          ttl: NORMAL_TTL,
+        });
+      }
+    } else if (eventType === "merchant_rejected") {
+      if (!isOrderMerchant && !isAdmin) return stop("Forbidden");
+      if (!isMitra || order.merchant_response !== "rejected") {
+        return { success: true, sent: 0, message: "Pesanan belum ditolak resto" };
+      }
+      notices.push({
+        userIds: order.user_id ? [order.user_id] : [],
+        title: "Pesanan Ditolak Resto",
+        body: `Maaf, resto menolak pesanan ${label}. Silakan pesan dari outlet lain.`,
+        path: orderPath,
+        ttl: NORMAL_TTL,
+      });
     } else {
       if (!messageId) return stop("Message ID wajib diisi");
       const { data: message, error } = await admin()
@@ -160,30 +253,47 @@ export async function dispatchOrderPush(input: {
         .maybeSingle();
       if (error) throw error;
       if (!message || message.sender_id !== callerId) return stop("Forbidden");
-      if (isOwner && order.driver_id) targetUserIds = [order.driver_id];
-      else if (isDriver) targetUserIds = [order.user_id];
-      else if (isAdmin) targetUserIds = uniqueIds([order.user_id, order.driver_id].filter((id: string | null) => id !== callerId));
+      let ids: string[] = [];
+      if (isOwner && order.driver_id) ids = [order.driver_id];
+      else if (isDriver) ids = [order.user_id];
+      else if (isAdmin) ids = uniqueIds([order.user_id, order.driver_id].filter((id: string | null) => id !== callerId));
+      else if (isOrderMerchant && order.driver_id) ids = [order.driver_id];
       else return stop("Forbidden");
-      title = isDriver ? "Pesan Baru dari Driver" : "Pesan Baru dari Pelanggan";
-      body = "Anda menerima pesan baru pada chat pesanan.";
+      const preview = typeof message.body === "string" ? message.body.slice(0, 80) : "";
+      notices.push({
+        userIds: ids,
+        title: isDriver ? "Pesan Baru dari Driver" : "Pesan Baru dari Pelanggan",
+        body: preview || "Anda menerima pesan baru pada chat pesanan.",
+        path: orderPath,
+        ttl: NORMAL_TTL,
+      });
     }
 
-    targetUserIds = uniqueIds(targetUserIds);
-    if (!targetUserIds.length) {
+    const active = notices.filter((notice) => notice.userIds.length > 0);
+    const allUserIds = uniqueIds(active.flatMap((notice) => notice.userIds));
+    if (!allUserIds.length) {
       await logPush({ event_type: eventType, order_id: orderId, ok: false, detail: { note: "tidak ada penerima" } });
       return { success: true, sent: 0, failed: 0, message: "Tidak ada penerima" };
     }
 
-    const { data: tokens, error: tokenError } = await admin().from("user_push_tokens").select("user_id,token").in("user_id", targetUserIds);
+    const { data: tokenData, error: tokenError } = await admin().from("user_push_tokens").select("user_id,token").in("user_id", allUserIds);
     if (tokenError) throw new Error("Gagal membaca token Firebase: " + tokenError.message);
-    const tokenRows = [...new Map(
-      ((tokens ?? []) as Array<{ user_id: string; token: string }>)
-        .filter((row) => typeof row.token === "string" && row.token.length > 0)
-        .map((row) => [row.token, row] as const),
-    ).values()];
-    if (!tokenRows.length) {
-      await logPush({ event_type: eventType, order_id: orderId, ok: false, detail: { note: "penerima belum punya token", recipients: targetUserIds.length } });
-      return { success: false, sent: 0, failed: 0, recipientCount: targetUserIds.length, message: "Penerima belum mendaftarkan token Firebase" };
+    const tokensByUser = new Map<string, Set<string>>();
+    for (const row of (tokenData ?? []) as Array<{ user_id: string; token: string }>) {
+      if (typeof row.token !== "string" || !row.token) continue;
+      const set = tokensByUser.get(row.user_id) ?? new Set<string>();
+      set.add(row.token);
+      tokensByUser.set(row.user_id, set);
+    }
+    const jobs: Array<{ token: string; notice: Notice }> = [];
+    for (const notice of active) {
+      const tokenSet = new Set<string>();
+      for (const uid of notice.userIds) for (const token of tokensByUser.get(uid) ?? []) tokenSet.add(token);
+      for (const token of tokenSet) jobs.push({ token, notice });
+    }
+    if (!jobs.length) {
+      await logPush({ event_type: eventType, order_id: orderId, ok: false, detail: { note: "penerima belum punya token", recipients: allUserIds.length } });
+      return { success: false, sent: 0, failed: 0, recipientCount: allUserIds.length, message: "Penerima belum mendaftarkan token Firebase" };
     }
 
     const account = JSON.parse(serviceAccountJson) as ServiceAccount;
@@ -192,17 +302,16 @@ export async function dispatchOrderPush(input: {
     }
     const accessToken = await getAccessToken(account);
 
-    const results = await Promise.all(tokenRows.map(async (row) => {
+    const results = await Promise.all(jobs.map(async ({ token, notice }) => {
       try {
         const response = await fetch("https://fcm.googleapis.com/v1/projects/" + account.project_id + "/messages:send", {
           method: "POST",
           headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
-          // Data-only: hanya service worker / listener foreground yang menampilkan notifikasi (tidak ganda).
           body: JSON.stringify({ message: {
-            token: row.token,
-            data: { title, body, event_type: eventType, order_id: String(order.id), url: targetPath },
-            android: { priority: "high" },
-            webpush: { headers: { Urgency: "high", TTL: "3600" } },
+            token,
+            data: { title: notice.title, body: notice.body, event_type: eventType, order_id: String(order.id), url: notice.path },
+            android: { priority: "high", ttl: notice.ttl + "s" },
+            webpush: { headers: { Urgency: "high", TTL: String(notice.ttl) } },
           } }),
         });
         const responseText = await response.text();
@@ -220,13 +329,13 @@ export async function dispatchOrderPush(input: {
           errorCode === "UNREGISTERED" ||
           (errorCode === "INVALID_ARGUMENT" && /registration token/i.test(responseText))
         );
-        return { ok: response.ok, status: response.status, errorCode, stale, token: row.token, response: response.ok ? undefined : responseText.slice(0, 300) };
+        return { ok: response.ok, status: response.status, errorCode, stale, token, response: response.ok ? undefined : responseText.slice(0, 300) };
       } catch (error) {
-        return { ok: false, status: 0, errorCode: "FETCH_ERROR", stale: false, token: row.token, response: error instanceof Error ? error.message : String(error) };
+        return { ok: false, status: 0, errorCode: "FETCH_ERROR", stale: false, token, response: error instanceof Error ? error.message : String(error) };
       }
     }));
 
-    const staleTokens = results.filter((r) => r.stale).map((r) => r.token);
+    const staleTokens = [...new Set(results.filter((r) => r.stale).map((r) => r.token))];
     if (staleTokens.length) {
       const { error: deleteError } = await admin().from("user_push_tokens").delete().in("token", staleTokens);
       if (deleteError) console.error("Gagal menghapus token kedaluwarsa:", deleteError.message);
@@ -239,7 +348,7 @@ export async function dispatchOrderPush(input: {
       event_type: eventType,
       order_id: orderId,
       ok: sent > 0,
-      detail: { sent, failed, removedStale: staleTokens.length, tokens: tokenRows.length, failures },
+      detail: { sent, failed, removedStale: staleTokens.length, tokens: jobs.length, failures },
     });
     return {
       success: sent > 0,
@@ -247,8 +356,8 @@ export async function dispatchOrderPush(input: {
       sent,
       failed,
       removedStale: staleTokens.length,
-      recipientCount: targetUserIds.length,
-      tokenCount: tokenRows.length,
+      recipientCount: allUserIds.length,
+      tokenCount: jobs.length,
       ...(failed ? { failures } : {}),
     };
   } catch (error) {
