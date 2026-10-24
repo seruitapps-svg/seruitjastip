@@ -5,6 +5,7 @@ import { MessageSquare, Phone, QrCode, Send, Navigation, X, ReceiptText, Externa
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { RouteMap } from "@/components/order/RouteMap";
+import { CustomerTrackingView } from "@/components/order/CustomerTrackingView";
 import { DriverInfoCard } from "@/components/order/DriverInfoCard";
 import { StatusBadge, btnPrimary, btnDanger } from "@/components/order/OrderCard";
 import { useAuth } from "@/hooks/use-auth";
@@ -374,6 +375,49 @@ function OrderDetail() {
           {err && <p className="mt-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{err}</p>}
         </div>
       </div>
+    );
+  }
+
+  if (isOwner && user && o.driver_id && ["diambil", "dijemput", "diantar"].includes(o.status)) {
+    return (
+      <CustomerTrackingView
+        order={o}
+        chat={<OrderChat orderId={o.id} myId={user.id} />}
+        details={
+          <div className="space-y-3">
+            <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
+              {row("Layanan", (o as any).food_order_type === "mitra" ? "Mitra Resto Resmi" : (o as any).food_order_type === "point" ? "Point Resto" : SERVICE_NAME[o.service] ?? o.service)}
+              {row("Dari", o.origin_address)}
+              {row("Ke", o.dest_address)}
+              {row("Jarak", `${(o.distance_meters / 1000).toFixed(1)} km · ±${Math.round(o.duration_seconds / 60)} menit`)}
+              {row("Pembayaran", o.payment_method === "cod" ? "COD (tunai ke driver)" : "Transfer (QRIS)")}
+              {o.notes && row("Catatan", o.notes)}
+              <div className="space-y-1 rounded-xl bg-muted p-3 text-sm">
+                {row(o.service === "ojek" ? "Tarif Perjalanan" : "Ongkos Kirim", formatRupiah(o.shipping_fare))}
+                {row("Biaya Layanan Aplikasi", formatRupiah(o.consumer_service_fee))}
+                {itemCost > 0 && row("Belanjaan / Menu", formatRupiah(itemCost))}
+                <div className="flex justify-between border-t border-border pt-2 font-bold">
+                  <span className="text-foreground">Total Tagihan</span>
+                  <span className="text-primary">{formatRupiah(finalTotal)}</span>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <h2 className="text-sm font-bold text-foreground">Riwayat status</h2>
+              <ol className="mt-2 space-y-1">
+                {history.data?.map((h) => (
+                  <li key={h.id} className="flex justify-between text-xs">
+                    <span className="text-foreground">{STATUS_LABEL[h.status]}{h.note ? ` — ${h.note}` : ""}</span>
+                    <span className="text-muted-foreground">
+                      {new Date(h.created_at).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" })}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        }
+      />
     );
   }
 
