@@ -4,8 +4,6 @@ importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-com
 
 const params = new URL(self.location.href).searchParams;
 const queryConfig = Object.fromEntries(params.entries());
-
-// Gunakan config dari URL atau fallback langsung ke project Mider
 const firebaseConfig = {
   apiKey: queryConfig.apiKey || "AIzaSyAuRDJSTHaKdJFsTHobXbqFaPy4D2IKMYA",
   projectId: queryConfig.projectId || "mider-web",
@@ -13,23 +11,23 @@ const firebaseConfig = {
   messagingSenderId: queryConfig.messagingSenderId || "803891035138",
 };
 
-// Inisialisasi Firebase di Service Worker
 if (firebaseConfig.apiKey && firebaseConfig.projectId) {
   firebase.initializeApp(firebaseConfig);
   const messaging = firebase.messaging();
-
   messaging.onBackgroundMessage((payload) => {
     const data = payload.data || {};
+    const urgent = data.event_type === "order_created" || data.event_type === "merchant_order_ready";
     const title = payload.notification?.title || data.title || "Mider Jastip";
     const options = {
       body: payload.notification?.body || data.body || "Ada pembaruan pesanan.",
       icon: "/favicon.ico",
-      tag: data.order_id || "mider-order",
+      tag: (data.event_type || "evt") + "-" + (data.order_id || "mider"),
       renotify: true,
-      vibrate: [200, 100, 200],
-      data: {
-        url: data.url || (data.order_id ? `/pesanan/${data.order_id}` : "/"),
-      },
+      silent: false,
+      requireInteraction: urgent,
+      vibrate: urgent ? [500, 200, 500, 200, 800] : [200, 100, 200],
+      timestamp: Date.now(),
+      data: { url: data.url || (data.order_id ? "/pesanan/" + data.order_id : "/") },
     };
     return self.registration.showNotification(title, options);
   });
@@ -38,7 +36,6 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const targetUrl = new URL(event.notification.data?.url || "/", self.location.origin).href;
-
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (windowClients) => {
       for (const client of windowClients) {
