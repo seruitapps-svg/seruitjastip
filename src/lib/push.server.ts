@@ -210,9 +210,19 @@ export async function dispatchOrderPush(input: {
       if (!isMitra || order.merchant_response !== "accepted") {
         return { success: true, sent: 0, message: "Order Mitra Resto belum diterima resto" };
       }
-      if (order.driver_id) {
+      if (isDriver && order.driver_id === callerId) {
+        // Driver baru mengambil order: kabari resto. Pelanggan sudah diberi tahu oleh order_status_changed.
         notices.push({
-          userIds: [order.driver_id],
+          userIds: merchantUserId && merchantUserId !== callerId ? [merchantUserId] : [],
+          title: "Driver Menuju Resto",
+          body: `Driver mengambil pesanan ${label} dan sedang menuju resto. Siapkan pesanan dan PIN pengambilan.`,
+          path: "/mitra",
+          ttl: URGENT_TTL,
+        });
+      } else if (order.driver_id) {
+        // Pemanggil adalah resto/admin yang mengirim pembaruan ke driver yang sudah ditetapkan.
+        notices.push({
+          userIds: [order.driver_id].filter((id: string) => id !== callerId),
           title: "Pesanan Siap Diambil",
           body: "Mitra resto telah menerima pesanan. Datang ke resto dan ikuti instruksi PIN pickup.",
           path: orderPath,
@@ -220,7 +230,7 @@ export async function dispatchOrderPush(input: {
         });
       } else if (order.status === "tersedia") {
         notices.push({
-          userIds: await onlineDriverIds(order),
+          userIds: await onlineDriverIds(order, [callerId]),
           title: "Ada Order Baru!",
           body: `Order ${label} sudah diterima resto dan siap diambil.`,
           path: "/driver",
