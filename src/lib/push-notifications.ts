@@ -48,15 +48,17 @@ function registerForegroundMessageHandler(messaging: ReturnType<typeof getMessag
       new CustomEvent("mider:push", { detail: { title, body, url, evt, orderId, urgent } }),
     );
 
-    // Jika popup dalam aplikasi menangani event mendesak saat terlihat, hindari notifikasi ganda.
-    if (urgent && document.visibilityState === "visible") return;
     if (!("Notification" in window) || Notification.permission !== "granted") return;
 
     const options = {
       body,
-      tag: orderId ? "mider-order-" + orderId : "mider-foreground-update",
+      icon: "/pwa-192.png",
+      badge: "/pwa-badge-96.png",
+      tag: (evt || "evt") + "-" + (orderId || "mider"),
+      renotify: true,
+      requireInteraction: urgent,
+      vibrate: urgent ? [500, 200, 500, 200, 800] : [250, 100, 250],
       data: { url },
-      vibrate: [250, 100, 250],
     } as NotificationOptions;
 
     void navigator.serviceWorker.ready
