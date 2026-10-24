@@ -15,6 +15,15 @@ type ServiceAccount = { project_id: string; client_email: string; private_key: s
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
+async function logPush(entry: Record<string, unknown>) {
+  try {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return;
+    const c = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+    await c.from("push_delivery_log").insert({ source: "edge", ...entry });
+  } catch (e) {
+    console.error("logPush gagal", e);
+  }
+}
 function uniqueIds(ids: Array<string | null | undefined>): string[] {
   return [...new Set(ids.filter((id): id is string => Boolean(id)))];
 }
@@ -63,6 +72,7 @@ async function getAccessToken(account: ServiceAccount): Promise<string> {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  await logPush({ event_type: "invoked", detail: { hasSupabaseSecrets: Boolean(SUPABASE_URL && SUPABASE_ANON_KEY && SUPABASE_SERVICE_ROLE_KEY), hasFirebaseSecret: Boolean(FIREBASE_SERVICE_ACCOUNT_JSON) } });
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) return json({ error: "Supabase secrets belum dikonfigurasi" }, 500);
   if (!FIREBASE_SERVICE_ACCOUNT_JSON) return json({ error: "FIREBASE_SERVICE_ACCOUNT_JSON belum dikonfigurasi pada Edge Function Secrets" }, 503);
   try {
@@ -156,6 +166,7 @@ serve(async (req) => {
     targetUserIds = uniqueIds(targetUserIds);
     if (!targetUserIds.length) {
       console.log("send-order-push", { eventType, recipients: 0, note: "tidak ada penerima" });
+      await logPush({ event_type: eventType, order_id: orderId, ok: false, detail: { note: "tidak ada penerima" } });
       return json({ success: true, sent: 0, failed: 0, message: "Tidak ada penerima" });
     }
 
@@ -169,6 +180,7 @@ serve(async (req) => {
     ).values()];
     if (!tokenRows.length) {
       console.log("send-order-push", { eventType, recipients: targetUserIds.length, tokens: 0, note: "penerima belum punya token" });
+      await logPush({ event_type: eventType, order_id: orderId, ok: false, detail: { note: "penerima belum punya token", recipients: targetUserIds.length } });
       return json({ success: false, sent: 0, failed: 0, recipientCount: targetUserIds.length, message: "Penerima belum mendaftarkan token Firebase" }, 200);
     }
 
@@ -227,6 +239,18 @@ serve(async (req) => {
     const sent = results.filter((r) => r.ok).length;
     const failed = results.length - sent;
     console.log("send-order-push", { eventType, recipients: targetUserIds.length, tokens: tokenRows.length, sent, failed, removedStale: staleTokens.length });
+    await logPush({
+      event_type: eventType,
+      order_id: orderId,
+      ok: sent > 0,
+      detail: {
+        sent,
+        failed,
+        removedStale: staleTokens.length,
+        tokens: tokenRows.length,
+        failures: results.filter((r) => !r.ok).map(({ status, errorCode, response }) => ({ status, errorCode, response })),
+      },
+    });
     return json({
       success: sent > 0,
       provider: "firebase",
@@ -238,6 +262,7 @@ serve(async (req) => {
       ...(failed ? { failures: results.filter((r) => !r.ok).map(({ status, errorCode, response }) => ({ status, errorCode, response })) } : {}),
     }, sent > 0 ? 200 : 502);
   } catch (error) {
+    await logPush({ event_type: "error", detail: { message: error instanceof Error ? error.message : String(error) } });
     console.error("send-order-push error:", error);
     return json({ error: error instanceof Error ? error.message : "Internal server error" }, 500);
   }
