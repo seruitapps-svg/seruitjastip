@@ -12,18 +12,20 @@ export function NotificationPrompt() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean>(false);
 
-  // Periksa apakah browser mendukung & apakah sudah diizinkan sebelumnya
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) {
       setDismissed(true);
       return;
     }
 
+    // Jika browser sudah mengizinkan notifikasi sebelumnya, lakukan auto-sync token di background
     if (Notification.permission === "granted") {
       setHasPermission(true);
+      if (user?.id) {
+        void requestAndSavePushToken(user.id);
+      }
     }
 
-    // Cek apakah pengguna pernah menutup banner ini sebelumnya
     if (user?.id) {
       const isDismissed = localStorage.getItem(`mider_push_prompt_dismissed_${user.id}`);
       if (isDismissed === "true") {
@@ -53,12 +55,11 @@ export function NotificationPrompt() {
       if (result.status === "granted") {
         setSuccess(true);
         setHasPermission(true);
-        // Sembunyikan otomatis setelah 3 detik sukses
         setTimeout(() => {
           handleDismiss();
         }, 3000);
       } else if (result.status === "denied") {
-        setErrorMessage("Izin notifikasi dinonaktifkan di browser. Anda dapat mengaktifkannya lewat pengaturan situs.");
+        setErrorMessage("Izin notifikasi dinonaktifkan di browser. Anda dapat mengaktifkannya lewat pengaturan situs Chrome.");
       } else if (result.status === "open-in-new-tab") {
         setErrorMessage("Buka aplikasi di tab utama browser untuk mengaktifkan notifikasi.");
       } else {
@@ -71,11 +72,6 @@ export function NotificationPrompt() {
     }
   }
 
-  // Jangan tampilkan jika:
-  // 1. Belum login
-  // 2. Browser tidak mendukung
-  // 3. Ditutup oleh pengguna (dismissed)
-  // 4. Sudah aktif dan tidak sedang menampilkan status sukses
   if (!user || dismissed || (hasPermission && !success)) {
     return null;
   }
@@ -83,7 +79,6 @@ export function NotificationPrompt() {
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pt-2">
       <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-card p-4 shadow-sm">
-        {/* Tombol Tutup Silang di Kanan Atas */}
         <button
           type="button"
           onClick={handleDismiss}
@@ -93,7 +88,6 @@ export function NotificationPrompt() {
           <X className="h-4 w-4" />
         </button>
 
-        {/* Ikon & Penjelasan */}
         <div className="flex items-start gap-3 pr-6 sm:pr-0">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
             {success ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <Bell className="h-5 w-5" />}
@@ -104,8 +98,8 @@ export function NotificationPrompt() {
             </h4>
             <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
               {success
-                ? "Anda akan menerima info pesanan baru dan pembaruan langsung di perangkat ini."
-                : "Dapatkan pemberitahuan seketika saat pesanan masuk, status pengantaran, atau chat."}
+                ? "Anda akan menerima info pesanan baru langsung di perangkat ini."
+                : "Dapatkan pemberitahuan seketika saat ada order baru yang siap diambil."}
             </p>
             {errorMessage && (
               <p className="mt-1.5 text-xs font-medium text-destructive">
@@ -115,23 +109,25 @@ export function NotificationPrompt() {
           </div>
         </div>
 
-        {/* Tombol Aksi */}
         {!success && (
-          <div className="flex items-center gap-2 self-end sm:self-center pl-13 sm:pl-0">
-            <button
+          <div className="flex items-center gap-2 pt-1 sm:pt-0">
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={handleDismiss}
-              className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="text-xs"
             >
               Nanti Saja
-            </button>
+            </Button>
             <Button
+              type="button"
               size="sm"
-              onClick={handleEnablePush}
               disabled={loading}
-              className="rounded-xl px-4 text-xs font-semibold shadow-none"
+              onClick={handleEnablePush}
+              className="text-xs font-semibold"
             >
-              {loading ? "Menghubungkan…" : "Aktifkan"}
+              {loading ? "Menghubungkan..." : "Izinkan Notifikasi"}
             </Button>
           </div>
         )}
