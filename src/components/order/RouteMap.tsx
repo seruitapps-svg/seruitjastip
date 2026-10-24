@@ -264,6 +264,51 @@ export function RouteMap({
     frame=requestAnimationFrame(animate);return()=>cancelAnimationFrame(frame);
   }, [mapReady, driverPosition, followDriver, isTracking]);
 
+  useEffect(() => {
+    if (!isTracking || !mapReady || !driverPosition || !following) return;
+    const map = mapRef.current;
+    const maps = window.google?.maps;
+    if (!map || !maps) return;
+    if (!nextStop) {
+      map.panTo(driverPosition);
+      if ((map.getZoom() ?? 0) < 17) map.setZoom(17);
+      return;
+    }
+    const distance = (() => {
+      const rad = (v: number) => v * Math.PI / 180;
+      const dLat = rad(nextStop.lat - driverPosition.lat);
+      const dLng = rad(nextStop.lng - driverPosition.lng);
+      const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(driverPosition.lat)) * Math.cos(rad(nextStop.lat)) * Math.sin(dLng / 2) ** 2;
+      return 12742000 * Math.asin(Math.sqrt(h));
+    })();
+    if (distance < 150) {
+      map.panTo(driverPosition);
+      if ((map.getZoom() ?? 0) < 17) map.setZoom(17);
+      return;
+    }
+    const bounds = new maps.LatLngBounds();
+    bounds.extend(driverPosition);
+    bounds.extend(nextStop);
+    map.fitBounds(bounds, { top: paddingRef.current.top, bottom: paddingRef.current.bottom, left: 56, right: 56 });
+    maps.event.addListenerOnce(map, "idle", () => {
+      if ((map.getZoom() ?? 0) > 17) map.setZoom(17);
+    });
+  }, [isTracking, mapReady, driverPosition, following, nextStop?.lat, nextStop?.lng]);
+
+  useEffect(() => {
+    if (!isTracking || !mapReady) return;
+    let pulse = 0;
+    const timer = window.setInterval(() => {
+      const halo = haloRef.current;
+      const maps = window.google?.maps;
+      if (!halo || !maps) return;
+      pulse += 0.14;
+      const k = (Math.sin(pulse) + 1) / 2;
+      halo.setIcon({ path: maps.SymbolPath.CIRCLE, scale: 14 + k * 10, fillColor: "#0d9488", fillOpacity: 0.3 - k * 0.22, strokeOpacity: 0 });
+    }, 120);
+    return () => window.clearInterval(timer);
+  }, [isTracking, mapReady]);
+
   const secondsSinceUpdate = lastUpdatedAt === null
     ? null
     : Math.max(0, Math.floor((now - lastUpdatedAt) / 1000));
