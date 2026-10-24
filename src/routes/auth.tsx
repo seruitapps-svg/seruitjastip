@@ -69,12 +69,12 @@ function AuthPage() {
       const roleList = (roles || []).map((r: any) => r.role);
 
       // 3. Pendaratan default sesuai peran akun
-      if (roleList.includes("driver")) {
+      if (roleList.includes("superadmin")) {
+        navigate({ to: "/admin", replace: true });
+      } else if (roleList.includes("driver")) {
         navigate({ to: "/driver", replace: true });
       } else if (roleList.includes("mitra")) {
         navigate({ to: "/mitra", replace: true });
-      } else if (roleList.includes("superadmin")) {
-        navigate({ to: "/admin", replace: true });
       } else {
         navigate({ to: "/", replace: true });
       }
