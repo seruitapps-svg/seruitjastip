@@ -35,6 +35,19 @@ function registerForegroundMessageHandler(messaging: ReturnType<typeof getMessag
   onMessage(messaging, (payload) => {
     if (!("Notification" in window) || Notification.permission !== "granted") return;
 
+    // Dashboard driver/mitra menangani order baru lewat popup dan dering di dalam aplikasi.
+    // Jangan tampilkan notifikasi status bar bersamaan ketika dashboard terkait sedang aktif.
+    const path = window.location.pathname;
+    const onDashboard = path.startsWith("/driver") || path.startsWith("/mitra");
+    const evt = payload.data?.event_type;
+    if (
+      onDashboard &&
+      document.visibilityState === "visible" &&
+      (evt === "order_created" || evt === "merchant_order_ready")
+    ) {
+      return;
+    }
+
     // Pesan dikirim data-only, jadi judul/isi ada di payload.data.
     const title = payload.data?.title || payload.notification?.title || "Pemberitahuan Mider";
     const body = payload.data?.body || payload.notification?.body || "Ada pembaruan pesanan.";
@@ -155,7 +168,7 @@ async function logPushClient(row: { event_type: string; order_id: string; ok: bo
 }
 
 export async function sendOrderPushEvent(
-  eventType: "order_created" | "order_status_changed" | "merchant_order_ready" | "chat_message",
+  eventType: "order_created" | "order_status_changed" | "merchant_order_ready" | "merchant_rejected" | "chat_message",
   orderId: string,
   messageId?: string,
 ): Promise<void> {
