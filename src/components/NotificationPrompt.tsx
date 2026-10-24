@@ -5,7 +5,8 @@ import { requestAndSavePushToken } from "@/lib/push-notifications";
 import { useAuth } from "@/hooks/use-auth";
 
 export function NotificationPrompt() {
-  const { user } = useAuth();
+  const { user, isDriver, isMitra } = useAuth();
+  const mustKeepPrompt = isDriver || isMitra;
   const [dismissed, setDismissed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -36,18 +37,23 @@ export function NotificationPrompt() {
     }
 
     if (user?.id) {
-      const isDismissed = localStorage.getItem(`mider_push_prompt_dismissed_${user.id}`);
-      if (isDismissed === "true") {
-        setDismissed(true);
+      // Driver dan mitra hanya dapat menunda prompt sampai sesi browser berakhir.
+      const store = mustKeepPrompt ? sessionStorage : localStorage;
+      let isDismissed: string | null = null;
+      try {
+        isDismissed = store.getItem(`mider_push_prompt_dismissed_${user.id}`);
+      } catch {
+        // penyimpanan tidak tersedia
       }
+      if (isDismissed === "true") setDismissed(true);
     }
-  }, [user?.id]);
+  }, [user?.id, mustKeepPrompt]);
 
   function handleDismiss() {
     setDismissed(true);
     if (user?.id) {
       try {
-        localStorage.setItem(`mider_push_prompt_dismissed_${user.id}`, "true");
+        (mustKeepPrompt ? sessionStorage : localStorage).setItem(`mider_push_prompt_dismissed_${user.id}`, "true");
       } catch {
         // fallback
       }
