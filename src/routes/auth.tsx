@@ -61,14 +61,30 @@ function AuthPage() {
         return;
       }
 
-      const { data: roles } = await supabase
+      const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", u.id);
 
-      const roleList = (roles || []).map((r: any) => r.role);
+      // Jangan mengarahkan ke beranda pelanggan jika pembacaan role gagal.
+      // Coba ulang sekali agar hasil login tidak bergantung pada respons role yang sesaat gagal.
+      let resolvedRoles = roles;
+      if (rolesError) {
+        const retry = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", u.id);
+        if (retry.error) {
+          console.error("Gagal membaca peran akun setelah login:", retry.error);
+          setErr("Peran akun belum berhasil dimuat. Silakan muat ulang halaman dan coba lagi.");
+          return;
+        }
+        resolvedRoles = retry.data;
+      }
 
-      // 3. Pendaratan default sesuai peran akun
+      const roleList = (resolvedRoles || []).map((r: any) => r.role);
+
+      // 3. Pendaratan default sesuai peran akun. Urutan prioritas harus sama dengan AppHeader/useAuth.
       if (roleList.includes("superadmin")) {
         navigate({ to: "/admin", replace: true });
       } else if (roleList.includes("driver")) {
