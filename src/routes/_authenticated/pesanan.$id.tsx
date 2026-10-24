@@ -385,6 +385,13 @@ function OrderDetail() {
         chat={<OrderChat orderId={o.id} myId={user.id} />}
         details={
           <div className="space-y-3">
+            {o.payment_method === "transfer" && (
+              <div className="rounded-2xl border border-border bg-card p-4 text-center">
+                <p className="text-sm font-semibold text-foreground">Bayar via QRIS</p>
+                <p className="mt-1 text-xs text-muted-foreground">QRIS resmi segera hadir. Admin akan kirim lewat chat.</p>
+                <p className="mt-1 text-lg font-bold text-primary">{formatRupiah(finalTotal)}</p>
+              </div>
+            )}
             <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
               {row("Layanan", (o as any).food_order_type === "mitra" ? "Mitra Resto Resmi" : (o as any).food_order_type === "point" ? "Point Resto" : SERVICE_NAME[o.service] ?? o.service)}
               {row("Dari", o.origin_address)}
