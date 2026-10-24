@@ -156,3 +156,30 @@ a#lovable-badge,
   opacity: 0 !important;
   pointer-events: none !important;
 }
+
+/* Paksa tata letak mobile: di layar lebar, aplikasi tampil sebagai kolom selebar HP di tengah. */
+html {
+  background: oklch(0.93 0.01 180);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  overscroll-behavior-y: none;
+}
+
+.mobile-shell {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100dvh;
+  margin-inline: auto;
+  background: var(--color-background);
+  overflow-x: clip;
+  box-shadow: 0 0 0 1px var(--color-border), 0 0 48px rgb(0 0 0 / 0.08);
+}
+
+.mobile-shell-wide {
+  max-width: 1100px;
+}
