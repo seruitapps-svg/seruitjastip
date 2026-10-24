@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { OrderCard, btnPrimary, btnOutline } from "@/components/order/OrderCard";
 import { useAuth } from "@/hooks/use-auth";
 import { sendOrderPushEvent } from "@/lib/push-notifications";
+import { unlockAudioContext, playOrderAlertSound } from "@/lib/audio-alert";
 import { DRIVER_NEXT_LABEL } from "@/lib/order-status";
 import { WalletPanel } from "@/components/wallet/WalletPanel";
 import { DriverEarningsSettings } from "@/components/driver/DriverEarningsSettings";
@@ -120,6 +121,7 @@ function DriverPage() {
   }
 
   async function toggleOnline(val: boolean) {
+    unlockAudioContext();
     if (onlineSaving) return;
     setOnlineSaving(true);
     setErr("");
@@ -219,50 +221,27 @@ function DriverPage() {
         qc.invalidateQueries({ queryKey: ["pool"] });
         qc.invalidateQueries({ queryKey: ["driver-jobs"] });
 
-        // Pesanan baru yang masuk saat driver sedang online harus langsung terlihat.
-        if (
-          payload.eventType === "INSERT" &&
-          isOnline &&
-          payload.new &&
-          typeof payload.new === "object" &&
-          "id" in payload.new &&
-          "status" in payload.new &&
-          payload.new.status === "tersedia"
-        ) {
-          const newOrderId = String(payload.new.id);
+        const newOrder = payload.new as any;
+        const oldOrder = payload.old as any;
+
+        // Tangkap order jika baru dibuat (INSERT) ATAU baru disetujui/tersedia (UPDATE)
+        const isNewlyAvailable =
+          newOrder &&
+          newOrder.status === "tersedia" &&
+          (payload.eventType === "INSERT" || (payload.eventType === "UPDATE" && oldOrder?.status !== "tersedia"));
+
+        if (isNewlyAvailable && isOnline) {
+          const newOrderId = String(newOrder.id);
           if (!alertedOrderIds.current.has(newOrderId)) {
             alertedOrderIds.current.add(newOrderId);
+
+            // Mainkan nada dering & getar
+            playOrderAlertSound();
+
             toast("Ada Pesanan Baru!", {
-              description: "Pesanan baru tersedia. Buka daftar order untuk melihat dan mengambilnya.",
+              description: `Pesanan #${newOrder.code || ""} siap diambil. Periksa daftar order sekarang!`,
               duration: 10000,
             });
-
-            // Bunyi singkat saat halaman aktif. Browser mungkin mensyaratkan interaksi
-            // pengguna terlebih dahulu; push notification tetap ditangani oleh service worker.
-            try {
-              const AudioContextConstructor = window.AudioContext;
-              if (AudioContextConstructor && document.visibilityState === "visible") {
-                const audioContext = new AudioContextConstructor();
-                if (audioContext.state === "running") {
-                  const oscillator = audioContext.createOscillator();
-                  const gain = audioContext.createGain();
-                  oscillator.type = "sine";
-                  oscillator.frequency.value = 880;
-                  gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
-                  gain.gain.exponentialRampToValueAtTime(0.12, audioContext.currentTime + 0.03);
-                  gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.45);
-                  oscillator.connect(gain);
-                  gain.connect(audioContext.destination);
-                  oscillator.start();
-                  oscillator.stop(audioContext.currentTime + 0.45);
-                  oscillator.onended = () => { void audioContext.close(); };
-                } else {
-                  void audioContext.close();
-                }
-              }
-            } catch (error) {
-              console.debug("Bunyi pesanan baru tidak tersedia di browser ini.", error);
-            }
           }
         }
       })
