@@ -14,6 +14,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { GlobalOrderAlert } from "@/components/GlobalOrderAlert";
+import { GlobalDriverTracker } from "@/components/GlobalDriverTracker";
 import { AccountModeGuard } from "@/components/AccountModeGuard";
 import { DesktopModeNotice } from "@/components/DesktopModeNotice";
 import { ConfirmHost } from "@/components/ConfirmDialog";
@@ -159,6 +160,7 @@ function RootComponent() {
         <Outlet />
       </div>
       <AccountModeGuard />
+      <GlobalDriverTracker />
       <GlobalOrderAlert />
       <TopProgress />
       <ConfirmHost />
