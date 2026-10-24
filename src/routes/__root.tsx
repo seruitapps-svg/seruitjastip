@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useLocation,
   HeadContent,
   type ErrorComponentProps,
   Scripts,
@@ -142,7 +143,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const pathname = useRouter().state.location.pathname;
+  const pathname = useLocation({ select: (location) => location.pathname });
   const wide = pathname.startsWith("/admin");
 
   return (
