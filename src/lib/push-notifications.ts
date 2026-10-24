@@ -1,6 +1,7 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { getMessaging, getToken, isSupported, onMessage } from "firebase/messaging";
 import { supabase } from "@/integrations/supabase/client";
+import { sendOrderPush } from "./push.functions";
 
 const appId =
   import.meta.env.VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_APP_ID ||
@@ -159,19 +160,9 @@ export async function sendOrderPushEvent(
   messageId?: string,
 ): Promise<void> {
   try {
-    const { data, error } = await supabase.functions.invoke("send-order-push", {
-      body: { eventType, orderId, messageId },
-    });
-    if (error) {
-      console.error("Notifikasi push tidak terkirim:", { eventType, orderId, message: error.message });
-      void logPushClient({
-        event_type: eventType,
-        order_id: orderId,
-        ok: false,
-        detail: { message: error.message, status: (error as any).context?.status ?? null },
-      });
-      return;
-    }
+    const data = (await sendOrderPush({ data: { eventType, orderId, messageId } })) as {
+      success?: boolean;
+    } | null;
     if (!data?.success) {
       console.warn("Push tidak terkirim atau tidak memiliki penerima/token:", { eventType, orderId, response: data });
     } else {
