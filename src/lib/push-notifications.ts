@@ -34,8 +34,9 @@ function registerForegroundMessageHandler(messaging: ReturnType<typeof getMessag
   onMessage(messaging, (payload) => {
     if (!("Notification" in window) || Notification.permission !== "granted") return;
 
-    const title = payload.notification?.title || "Pemberitahuan Mider";
-    const body = payload.notification?.body || "Ada pembaruan pesanan.";
+    // Pesan dikirim data-only, jadi judul/isi ada di payload.data.
+    const title = payload.data?.title || payload.notification?.title || "Pemberitahuan Mider";
+    const body = payload.data?.body || payload.notification?.body || "Ada pembaruan pesanan.";
     const targetUrl = payload.data?.url || "/";
     const orderId = payload.data?.order_id;
 
