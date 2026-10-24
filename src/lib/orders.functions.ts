@@ -141,6 +141,7 @@ export const createOrder = createServerFn({ method: "POST" })
       .insert({
         user_id: context.userId,
         service: data.serviceId,
+        status: "tersedia",
         merchant_id: data.foodOrderType ? data.merchantId : null,
         food_order_type: data.foodOrderType ?? null,
         confirmation_pin: null,
